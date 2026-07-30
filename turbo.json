@@ -20,6 +20,9 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "//#format:check": {
+      "cache": false
     }
   }
 }
