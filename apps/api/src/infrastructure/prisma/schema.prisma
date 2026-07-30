@@ -1,0 +1,20 @@
+// Financial Control — persistence schema.
+//
+// Money columns are BigInt cents or Decimal(19,4), never Float. Models arrive
+// with the aggregates that need them, starting at roadmap issue 2.1.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+
+  // Pooled connection (Supabase pgBouncer, port 6543) for the running app.
+  url = env("DATABASE_URL")
+
+  // Direct connection (port 5432) for migrations — they fail against the
+  // pooler, because pgBouncer in transaction mode cannot hold the advisory
+  // locks and prepared statements a migration needs.
+  directUrl = env("DIRECT_URL")
+}
