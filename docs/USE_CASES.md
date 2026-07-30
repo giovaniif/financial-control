@@ -1,7 +1,7 @@
 # Financial Control — Use Cases
 
 A personal finance application replacing a spreadsheet: payday-cycle budgeting, credit-card invoices, and
-savings-bucket projections. Single user, no authentication. English UI, Brazilian Real (`R$ 1.234,56`),
+savings-bucket projections. Single user, one login. English UI, Brazilian Real (`R$ 1.234,56`),
 `dd/MM/yyyy` dates.
 
 This document is the design brief and the source of scope. It describes **what the app must let its user do**,
@@ -78,6 +78,32 @@ in that order. Everything in the app is written in English; only currency and da
 ## 4. Use cases
 
 Each use case: an ID, a goal, the screen it lives on, the flow, and the data it shows.
+
+---
+
+### UC-0 — Access
+
+The app holds every number about one person's money and is reachable from the public internet. It is locked.
+
+There is **one account**, and it belongs to the owner. Authentication answers exactly one question — in or out —
+and nothing else in the app is conditional on it. No roles, no permissions, no per-record ownership.
+
+**UC-0.1 — Log in**
+Username and password. On success the session begins; on failure the app says *"Incorrect username or
+password"* and nothing more. It never reveals which half was wrong, and never that a username does or does not
+exist.
+
+**UC-0.2 — Stay signed in**
+A session survives a page reload and a closed tab, and expires on its own after long enough. The user should
+not be typing a password every time they open the app to settle one bill.
+
+**UC-0.3 — Log out**
+Ends the session deliberately and returns to the login screen, leaving no data from the session behind in the
+browser.
+
+**UC-0.4 — Arrive where you were going**
+Opening a link to a screen while logged out leads to login, and then to **that screen** — not to the
+Dashboard. Small, and irritating every single time it is got wrong.
 
 ---
 
@@ -409,7 +435,7 @@ measured in monthly income, not in a lump sum, because that is the question actu
 
 ## 5. Screens
 
-Seven screens. Every use case above maps to exactly one.
+Eight screens — seven behind the login, and the login itself. Every use case above maps to exactly one.
 
 ### Dashboard — *the answer to Q1*
 Opens on the current cycle, speaks about the next. Headline sentence; the qualifying trio (lowest point,
@@ -447,8 +473,15 @@ Payday anchor with its change preview, weekend rule, card configuration, account
 first-run checklist, backup and restore.
 *Primary action:* none — visited rarely, deliberately. → UC-1
 
+### Login — *the only screen reachable while logged out*
+Username, password, and one error message that distinguishes nothing. No registration link, no password
+reset, no "remember me" — the session already lasts.
+*Primary action:* log in. → UC-0
+
 **Persistent shell:** a sidebar carrying navigation and the live "In accounts now" total, and a header
-carrying the screen title, global cycle navigation, and the estimates toggle.
+carrying the screen title, global cycle navigation, and the estimates toggle. The shell is only ever rendered
+for a signed-in user, so it carries no logged-out state — the one account menu it does have is a log-out
+control.
 
 ---
 
@@ -472,7 +505,9 @@ carrying the screen title, global cycle navigation, and the estimates toggle.
 - **Empty states matter.** The app ships with no data and has no import path. First run is the ordered
   checklist in UC-1.5.
 
-- **Single user, no login.** No account menus, no sharing, no permission states.
+- **Single user, one login.** The app is deployed on the public internet, so it is locked — but there is
+  one account and it is the owner's. No account menus, no sharing, no roles, no permission states. The only
+  thing authentication decides is *in* or *out*.
 
 ---
 
@@ -489,4 +524,7 @@ Recorded as decisions, not oversights:
 - **Bank statement import** (CSV / OFX) and **spreadsheet migration**. All data is entered by hand or
   generated from templates.
 - **Asset-level investment holdings** and live market data. Buckets hold a balance, not positions.
-- **Multi-user, authentication, sharing.**
+- **Multi-user and sharing.** There is exactly one account, created by seeding — no registration screen, no
+  invitations, no roles. Authentication itself is in scope (UC-0); accounts as a concept are not.
+- **Self-service password management.** No reset-by-email flow and no change-password screen in v1. The
+  password is rotated by re-running the seed.

@@ -32,6 +32,31 @@ No product behaviour. Everything here exists so that phase 1 can be written test
 
 ---
 
+## Phase 0.5 — Authentication
+
+The app is deployed on the public internet, so it is locked before anything worth protecting exists. Added
+after phase 0 was planned: the original specification put authentication out of scope, and 0.5.0 is the issue
+that corrects the specification rather than letting the code contradict it.
+
+One account, seeded. No registration, no roles, no password reset.
+
+| # | Issue | Est | UC |
+|---|---|---|---|
+| 0.5.0 | Amend the specification to include authentication | 2 | UC-0 |
+| 0.5.1 | Prisma `User` model and migration | 2 | UC-0.1 |
+| 0.5.2 | `User` aggregate, `Username` / `PasswordHash`, hasher and token ports | 3 | UC-0.1 |
+| 0.5.3 | Log-in interactor | 3 | UC-0.1, 0.3 |
+| 0.5.4 | Argon2 hasher, JWT issuer, Prisma user repository | 3 | UC-0.1 |
+| 0.5.5 | Auth routes and the default-deny guard on everything else | 3 | UC-0.1–0.3 |
+| 0.5.6 | Seed the single user, wire the secrets and the same-origin rewrite | 2 | UC-0.1 |
+| 0.5.7 | Login page and the `features/auth` slice | 3 | UC-0.1, 0.3 |
+| 0.5.8 | Protect the routes, restore the requested screen after login | 2 | UC-0.2, 0.4 |
+
+**Subtotal 23.** 0.5.5 is the one worth care — the guard is default-deny, so a route added later is protected
+because it exists, not because someone remembered.
+
+---
+
 ## Phase 1 — The cycle spine
 
 Pure domain, no I/O. Written strictly test-first; this is the 95 %-coverage layer and the part the whole app
@@ -191,6 +216,7 @@ Each page is its own issue and its own PR, stacked on the shared layers below it
 | Phase | Issues | Points |
 |---|---|---|
 | 0 — Foundation | 10 | 25 |
+| 0.5 — Authentication | 9 | 23 |
 | 1 — Cycle spine | 10 | 22 |
 | 2 — Persistence & first API | 6 | 16 |
 | 3 — Recurring templates | 7 | 18 |
@@ -199,10 +225,12 @@ Each page is its own issue and its own PR, stacked on the shared layers below it
 | 6 — Buckets & allocation | 11 | 26 |
 | 7 — Projection read models | 7 | 17 |
 | 8 — Frontend | 19 | 49 |
-| **Total** | **85** | **209** |
+| **Total** | **94** | **232** |
 
 ## Sequencing notes
 
+- **Phase 0.5 comes before anything is publicly reachable.** `main` deploys to dev on merge, so the lock
+  ships before the data does.
 - **Phases 0 → 1 → 2 are strictly serial.** Everything after phase 2 can move in parallel tracks: cards
   (phase 5) and buckets (phase 6) touch different aggregates and never block each other.
 - **Phase 7 needs 3, 5 and 6 done** — the dashboard and the alerts read from all of them.

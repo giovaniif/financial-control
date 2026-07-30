@@ -20,6 +20,9 @@ Contexts communicate through application services and domain events, never by re
 aggregates. **Cards** publishes `InvoiceClosed` carrying a due date and a total; **Budgeting** consumes it and
 materialises a ledger entry. Budgeting knows nothing about purchases.
 
+**Authentication is not a context.** It guards the app rather than modelling any part of it — see the `User`
+aggregate in §3. No other aggregate carries a user reference.
+
 **Projection is read-only.** It never mutates. Every view it produces is derived from the other three
 contexts, which keeps the numbers honest by construction — there is no separate "forecast data" that can drift
 from reality.
@@ -213,6 +216,30 @@ Account
 
 Their sum is the app's starting cash and the sidebar total (UC-1.2).
 
+### `User` — aggregate root · not a bounded context
+
+Authentication **guards** the app; it is not part of the money model. There is no `Auth` context, no user
+reference on any other aggregate, and nothing in Budgeting, Cards, Allocation or Projection knows a user
+exists. There is one account and everything in the database belongs to it.
+
+```
+User
+  id
+  username     : Username        // unique, compared case-insensitively
+  name         : string          // display only
+  passwordHash : PasswordHash
+```
+
+**Invariants**
+- `PasswordHash` can only be constructed from an already-hashed value. The type makes storing a plaintext
+  password a compile error rather than something review has to catch.
+- `Username` is non-empty and trimmed.
+- The aggregate never hashes or verifies anything itself — it takes the `PasswordHasher` port. The domain
+  does not import a crypto library, and does not know what Argon2 or a JWT is.
+
+**No registration.** The single user is seeded (UC-0.1). There is no create-user use case, so an orphan
+interactor in `application/auth/` would be a bug.
+
 ---
 
 ## 4. Value objects
@@ -265,9 +292,11 @@ Declared in the domain, implemented in infrastructure. The domain never imports 
 
 | Port | Implementation |
 |---|---|
-| `CycleRepository`, `RecurringTemplateRepository`, `CardRepository`, `BucketRepository`, `AccountRepository` | Prisma |
+| `CycleRepository`, `RecurringTemplateRepository`, `CardRepository`, `BucketRepository`, `AccountRepository`, `UserRepository` | Prisma |
 | `Clock` | Real clock in production, fixed clock in tests. Nothing in the domain calls `new Date()` |
 | `HolidayCalendar` | Brazilian public holidays, for the payday resolution rule |
+| `PasswordHasher` | Argon2id. `hash(plain)` and `verify(plain, hash)` — the algorithm is an infrastructure choice and swapping it must not touch a line of domain code |
+| `TokenIssuer` | JWT, signed with `JWT_SECRET` and delivered to the browser in an httpOnly cookie. The domain issues *claims*; it does not know the token format |
 
 ---
 
@@ -278,13 +307,16 @@ Declared in the domain, implemented in infrastructure. The domain never imports 
 ```
 src/
   domain/
+    auth/             user.ts, username.ts, password-hash.ts
     budgeting/        cycle.ts, ledger-entry.ts, recurring-template.ts, cycle-ref.ts, account.ts
     cards/            card.ts, invoice.ts, installment-plan.ts
     goals/            bucket.ts, bucket-event.ts, allocation-rule.ts
     shared/           money.ts, percentage.ts, planned-actual.ts, date-range.ts
-    ports/            clock.ts, holiday-calendar.ts, repositories.ts
+    ports/            clock.ts, holiday-calendar.ts, repositories.ts,
+                      password-hasher.ts, token-issuer.ts
 
   application/        one interactor per use case, named for its id
+    auth/             uc-0-1-log-in.ts, uc-0-3-log-out.ts
     budgeting/        uc-3-5-settle-entry.ts, uc-3-8-close-cycle.ts, …
     cards/            uc-5-1-register-purchase.ts, uc-5-2-split-installments.ts, …
     goals/            uc-6-5-override-contribution.ts, uc-6-7-correct-balance.ts, …
@@ -293,6 +325,8 @@ src/
 
   infrastructure/
     prisma/           schema.prisma, migrations/, repositories/, mappers/
+    crypto/           argon2-password-hasher.ts
+    auth/             jwt-token-issuer.ts
     clock/  holidays/
 
   interface/
@@ -310,9 +344,9 @@ are enforced by `eslint-plugin-boundaries` — see `.claude/architecture.md`.
 ```
 src/
   app/         providers, router, global styles, the persistent shell
-  pages/       dashboard/ ledger/ cards/ buckets/ wealth/ templates/ settings/
+  pages/       login/ dashboard/ ledger/ cards/ buckets/ wealth/ templates/ settings/
   widgets/     chain-strip/ upcoming-list/ alert-list/ bucket-event-log/ wealth-bars/
-  features/    settle-entry/ register-purchase/ override-contribution/
+  features/    auth/ settle-entry/ register-purchase/ override-contribution/
                adjust-allocation-rule/ toggle-estimates/ navigate-cycle/
   entities/    cycle/ ledger-entry/ card/ invoice/ bucket/ template/ account/
   shared/      ui/ api/ lib/ config/
