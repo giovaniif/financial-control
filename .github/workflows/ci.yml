@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Unset in a fork or before remote caching is configured; Turborepo falls
+  # back to the local cache without failing.
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+jobs:
+  changes:
+    name: Detect changed packages
+    runs-on: ubuntu-latest
+    outputs:
+      filter: ${{ steps.scope.outputs.filter }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dorny/paths-filter@v3
+        id: paths
+        with:
+          filters: |
+            shared: &shared
+              - '.github/**'
+              - '.nvmrc'
+              - '.prettierrc'
+              - '.prettierignore'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'turbo.json'
+              - 'vitest.shared.ts'
+              - 'packages/**'
+            api:
+              - *shared
+              - 'apps/api/**'
+            web:
+              - *shared
+              - 'apps/web/**'
+
+      # A backend-only PR must not run the frontend suite. Anything shared, and
+      # anything that matches neither app, falls back to the whole workspace.
+      - id: scope
+        run: |
+          if [[ '${{ steps.paths.outputs.shared }}' == 'true' ]]; then
+            echo 'filter=' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Plain `if`, not `[[ … ]] && …`: steps run under `bash -e`, where a
+          # trailing false test on the last line would abort the step.
+          filter=''
+          if [[ '${{ steps.paths.outputs.api }}' == 'true' ]]; then
+            filter="$filter --filter=@fin/api"
+          fi
+          if [[ '${{ steps.paths.outputs.web }}' == 'true' ]]; then
+            filter="$filter --filter=@fin/web"
+          fi
+          echo "filter=$filter" >> "$GITHUB_OUTPUT"
+
+  lint:
+    name: Lint
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm turbo run lint ${{ needs.changes.outputs.filter }}
+      - run: pnpm turbo run format:check
+
+  typecheck:
+    name: Typecheck
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm turbo run typecheck ${{ needs.changes.outputs.filter }}
+
+  test:
+    name: Test
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm turbo run test ${{ needs.changes.outputs.filter }} -- --coverage
+
+  build:
+    name: Build
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm turbo run build ${{ needs.changes.outputs.filter }}
