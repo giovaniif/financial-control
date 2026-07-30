@@ -4,3 +4,5 @@ packages:
 allowBuilds:
   # Native binary for eslint-import-resolver-typescript's resolver.
   unrs-resolver: true
+  # Native binary behind tsx, used for `pnpm --filter @fin/api dev`.
+  esbuild: true
