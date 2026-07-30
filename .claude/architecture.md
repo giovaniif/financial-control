@@ -147,13 +147,14 @@ Within a layer, code is organised into **slices** (`features/settle-entry/`,
 | `features` | One user action, end to end, including its mutation | `features/settle-entry` |
 | `widgets` | Composite blocks combining entities and features | `widgets/chain-strip` |
 | `pages` | Route compositions, layout, data orchestration | `pages/ledger` |
-| `app` | Providers, router, theme | `app/providers/QueryProvider` |
+| `app` | Providers, router, theme | `app/providers/query-provider` |
 
 ### Conventions
 
-- Function components, named exports, one component per file, PascalCase filename.
+- Function components, named exports, one component per file, `kebab-case`
+  filename. The component identifier stays `PascalCase`; the file never is.
 - **Server state is TanStack Query only.** Never `useState` + `useEffect` for fetching.
-  Query keys come from a single factory in `shared/api/queryKeys.ts`; no inline arrays.
+  Query keys come from a single factory in `shared/api/query-keys.ts`; no inline arrays.
 - Fetching lives in a slice's `api/` segment and goes through the shared `api<T>()` helper.
   Never call `fetch` from a component.
 - Request/response types come from `@fin/contracts`. Do not redeclare them, do not remap

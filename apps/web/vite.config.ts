@@ -15,5 +15,15 @@ export default defineConfig({
     // Vite rejecting the Tailscale MagicDNS Host header.
     host: true,
     allowedHosts: ['.ts.net'],
+    // The browser runs on another machine, so it cannot reach the API on
+    // `localhost` — it must call the origin that served the app. Vite forwards
+    // `/api` to the API on this host, which also sidesteps CORS entirely.
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3333',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
 });
