@@ -23,6 +23,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.10)
+      eslint:
+        specifier: ^9.39.5
+        version: 9.39.5
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1
@@ -38,6 +41,15 @@ importers:
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1)(vite@8.1.5)
+
+  packages/contracts:
+    devDependencies:
+      '@fin/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@fin/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
 
   packages/eslint-config:
     dependencies:
