@@ -1,0 +1,47 @@
+# Render blueprint for the API. Two services, one per environment, matching the
+# two Supabase projects.
+#
+# Both build from the repo root: this is a pnpm workspace, and installing only
+# `apps/api` would miss @fin/contracts, which the API imports.
+#
+# `autoDeploy: false` is deliberate and must also stay off in the dashboard.
+# Deploys are triggered by the deploy hook in .github/workflows/deploy.yml —
+# leaving Render's own GitHub integration on makes every merge deploy twice.
+
+services:
+  - type: web
+    name: fin-api-dev
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: .
+    autoDeploy: false
+    healthCheckPath: /health
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm turbo run build --filter=@fin/api
+    startCommand: pnpm --filter @fin/api start
+    # Node version comes from .nvmrc, which Render reads at the repo root.
+    envVars:
+      # Set in the Render dashboard, pointing at the dev Supabase project.
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+
+  - type: web
+    name: fin-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: .
+    autoDeploy: false
+    healthCheckPath: /health
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm turbo run build --filter=@fin/api
+    startCommand: pnpm --filter @fin/api start
+    # Node version comes from .nvmrc, which Render reads at the repo root.
+    envVars:
+      # Set in the Render dashboard, pointing at the production Supabase
+      # project — a separate project, never a schema in the dev one.
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false

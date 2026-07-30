@@ -1,0 +1,90 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Migrations run here, in the pipeline, and never by hand against a live
+  # database. They go through DIRECT_URL because `prisma migrate` cannot hold
+  # its advisory locks over the pooler.
+  migrate:
+    name: Migrate database
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_type == 'tag' && 'production' || 'dev' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+
+      - name: Apply migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          if [[ -d apps/api/src/infrastructure/prisma/migrations ]]; then
+            pnpm --filter @fin/api db:deploy
+          else
+            echo 'No migrations yet — nothing to apply.'
+          fi
+
+  # The API starts only after the schema it expects is in place.
+  api:
+    name: Deploy API
+    needs: migrate
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_type == 'tag' && 'production' || 'dev' }}
+    steps:
+      - name: Trigger the Render deploy
+        env:
+          HOOK: ${{ github.ref_type == 'tag' && secrets.RENDER_DEPLOY_HOOK_PROD || secrets.RENDER_DEPLOY_HOOK_DEV }}
+        run: curl -fsS -X POST "$HOOK"
+
+  web:
+    name: Deploy web
+    needs: migrate
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_type == 'tag' && 'production' || 'dev' }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # Every Vercel step runs from the repo root. The Vercel project's Root
+      # Directory is already `apps/web`, so `cd apps/web` first would make the
+      # CLI look for `apps/web/apps/web` and fail with `spawn sh ENOENT`.
+      - name: Pull the Vercel environment
+        run: |
+          npx vercel@latest pull --yes \
+            --environment=${{ github.ref_type == 'tag' && 'production' || 'preview' }} \
+            --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: |
+          npx vercel@latest build ${{ github.ref_type == 'tag' && '--prod' || '' }} \
+            --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy
+        id: deploy
+        run: |
+          url=$(npx vercel@latest deploy --prebuilt \
+            ${{ github.ref_type == 'tag' && '--prod' || '' }} \
+            --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed to $url"
+
+      # `vercel deploy` mints a fresh URL every run. Without this the stable dev
+      # alias silently keeps serving whichever build was deployed first.
+      - name: Point the dev alias at this deployment
+        if: github.ref_type != 'tag'
+        run: |
+          npx vercel@latest alias set \
+            '${{ steps.deploy.outputs.url }}' \
+            '${{ vars.VERCEL_DEV_ALIAS }}' \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            --scope=${{ secrets.VERCEL_ORG_ID }}
