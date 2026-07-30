@@ -1,0 +1,26 @@
+name: Setup
+description: pnpm, Node and a frozen workspace install, in the order that works.
+
+runs:
+  using: composite
+  steps:
+    # pnpm/action-setup must run BEFORE actions/setup-node. setup-node's
+    # `cache: pnpm` asks pnpm for its store path, so pnpm has to exist already.
+    - uses: pnpm/action-setup@v4
+
+    - uses: actions/setup-node@v6
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+
+    - run: pnpm install --frozen-lockfile
+      shell: bash
+
+    # A warm task cache is what keeps a six-PR stack from taking an hour.
+    - uses: actions/cache@v4
+      with:
+        path: .turbo
+        key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+        restore-keys: |
+          turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+          turbo-${{ runner.os }}-
