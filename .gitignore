@@ -1,0 +1,36 @@
+# Personal financial data — never commit. This repository is public.
+*.xlsx
+*.xls
+*.csv
+*.ofx
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# Turborepo
+.turbo/
+
+# Test output
+coverage/
+
+# Environment — .env.example is committed, nothing else
+.env
+.env.*
+!.env.example
+
+# Platform
+.vercel/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
