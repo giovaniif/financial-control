@@ -6,3 +6,7 @@ allowBuilds:
   unrs-resolver: true
   # Native binary behind tsx, used for `pnpm --filter @fin/api dev`.
   esbuild: true
+  # Prisma downloads its query engine binaries in a postinstall step.
+  prisma: true
+  '@prisma/client': true
+  '@prisma/engines': true

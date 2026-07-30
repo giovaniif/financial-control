@@ -1,0 +1,27 @@
+# The database, and the only piece of infrastructure this project runs.
+#
+# Port 5434 because 5432 and 5433 are already taken on this machine by another
+# project's containers — a fresh clone elsewhere can use whatever it likes, but
+# the value has to match DATABASE_URL either way.
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: fin-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fin
+      POSTGRES_PASSWORD: fin
+      POSTGRES_DB: fin
+    ports:
+      - '5434:5432'
+    volumes:
+      - fin-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U fin -d fin']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  fin-postgres-data:
