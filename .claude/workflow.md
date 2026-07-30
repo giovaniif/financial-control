@@ -103,7 +103,8 @@ stack boundary**, and so is the seam between the domain and everything that depe
 - Keep PRs small. If a PR's diff needs scrolling to understand, it should have been two.
 - Each PR carries **its own tests**. A stack whose tests all sit in the top PR defeats the
   point and cannot be reviewed incrementally.
-- Each PR must be green on its own — CI runs per PR, not per stack.
+- Each PR must be green on its own. Nothing checks that for you, so `pnpm check`
+  before every `gt submit`.
 - Never hand-rebase or force-push; use `gt restack`.
 - Merge bottom-up, `gt sync` after each merge.
 - If a branch stops being related to the stack, take it out. Stacks are one context.
@@ -117,10 +118,9 @@ feat: assign invoices to the cycle containing their due date
 fix: resolve the payday anchor to the preceding business day
 test: cover the short-month case in CycleRef
 chore: raise the domain coverage threshold to 95%
-ci: run turbo test with coverage on pull requests
 ```
 
-Prefixes: `feat`, `fix`, `chore`, `ci`, `docs`, `refactor`, `test`.
+Prefixes: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`.
 
 Subject lines say **why** when it is not obvious. PRs squash-merge into `main` with the PR
 number appended, so the **PR title** is what survives in the log — make it count.

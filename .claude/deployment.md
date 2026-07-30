@@ -1,95 +1,73 @@
-# Deployment — Render, Vercel, Supabase
+# Running it — local only
 
-**Rule: deployment is GitHub Actions only.** Never deploy from a laptop — a manual deploy
-is a state nobody can reproduce.
+**Rule: this application is not deployed.** It runs on one machine, for one
+person, and there is no hosted environment of any kind.
 
-| Piece | Platform |
+That is a decision, not a gap. A single-user finance app that never leaves the
+machine it runs on needs no platform accounts, no secret store, no deploy
+pipeline, and no authentication — which is why `docs/USE_CASES.md` §7 keeps
+authentication out of scope.
+
+| Piece | Where it runs |
 |---|---|
-| API (`apps/api`) | **Render** — web service, deployed via deploy hook |
-| Web (`apps/web`) | **Vercel** — built and deployed via the Vercel CLI in CI |
-| Database | **Supabase** — managed PostgreSQL, reached by Prisma |
+| API (`apps/api`) | Node, started by `pnpm dev` or `pnpm --filter @fin/api start` |
+| Web (`apps/web`) | Vite, started by `pnpm dev` |
+| Database | PostgreSQL in Docker, from `docker-compose.yml` at the repo root |
 
-## Environments
+## The database
 
-| Trigger | Environment |
-|---|---|
-| Merge to `main` | **dev / staging** — Render `fin-api-dev`, Vercel dev alias, Supabase dev project |
-| Tag `v*` | **production** — Render `fin-api`, Vercel production, Supabase prod project |
-
-**`main` is a live environment.** Merging a stack halfway leaves the API expecting a UI
-that has not shipped. Order stack merges so that **every intermediate state of `main` is
-coherent** — backend first, additive, then the frontend that consumes it. If that is not
-possible, put the change behind a flag.
-
-## Workflows
-
-```
-.github/workflows/
-  ci.yml        # lint, typecheck, test+coverage, build — on PR and on main
-  deploy.yml    # main → dev, v* tag → production
+```bash
+pnpm db:up      # start PostgreSQL
+pnpm db:down    # stop it, keeping the data
+pnpm db:reset   # delete the volume and start clean
 ```
 
-`ci.yml` is path-filtered per app so a backend-only PR does not run the frontend suite.
-Each stacked PR is checked independently — that is what makes small stacked PRs safe.
+Port **5434**, not 5432: this machine already runs other projects' databases on
+5432 and 5433. The credentials in `docker-compose.yml` are committed on purpose
+— they guard a container on `localhost` holding data that only exists on this
+machine, and pretending otherwise would just make the setup harder to run.
 
-Setup notes that matter in CI:
+`DATABASE_URL` is the only connection string. There is no pooler in front of the
+database, so migrations and the application share it and Prisma needs no
+separate `directUrl`.
 
-- `pnpm/action-setup` **before** `actions/setup-node`, and `cache: pnpm` on the latter.
-- Turborepo remote caching keyed on the lockfile; a warm cache is what keeps a 6-PR stack
-  from taking an hour.
-- Node version is pinned in `package.json` `engines` and matched in CI. Not "latest".
+## Migrations
 
-## Render — API
+```bash
+pnpm --filter @fin/api db:migrate   # create and apply, in development
+pnpm --filter @fin/api db:deploy    # apply committed migrations only
+```
 
-Configured by `render.yaml` at the repo root, committed.
+Migrations are committed, never edited after merge, and are their own PR at the
+bottom of a stack. Rolling one back is forward-only: a bad migration is fixed by
+a new migration.
 
-- Build runs from the repo root — it is a monorepo, and Render must install the workspace,
-  not just `apps/api`.
-- Deploy is triggered by `curl -fsS -X POST "$RENDER_DEPLOY_HOOK_DEV"` from `deploy.yml`,
-  not by Render's own GitHub integration. Auto-deploy stays **off** in the Render
-  dashboard, or every merge deploys twice.
-- Health check endpoint must exist and be wired in `render.yaml`.
+**Back up before anything destructive.** There is no managed database taking
+snapshots, so `pnpm db:reset` is exactly as final as it sounds. The app's own
+export (UC-1.6) is the backup.
 
-## Vercel — Web
+## Reaching it from another machine
 
-- The Vercel project's **Root Directory is `apps/web`**. Consequently the CLI steps in
-  `deploy.yml` run **from the repo root** — `cd`-ing into `apps/web` first makes the CLI
-  descend into `apps/web/apps/web` and fail with `spawn sh ENOENT`.
-- Flow: `vercel pull` → `vercel build` → `vercel deploy --prebuilt`.
-- `vercel deploy` mints a fresh preview URL every run, so the dev job must
-  `vercel alias set` the new deployment onto the stable dev alias afterwards. Without it
-  the alias silently keeps serving the first build forever.
-- `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` are job-level `env`; `VERCEL_TOKEN` is passed per
-  step.
+The API and Vite both bind every interface, so the app is reachable from any
+machine on the same private network — substitute this machine's hostname for
+`localhost`. Vite proxies `/api` to the API on the same host, so only the web
+port needs to be open.
 
-## Supabase — database
+**Nothing here is authenticated.** Anything that can reach port 5173 can read
+and change every number in the app, so it must stay on the tailnet — never
+port-forwarded, never exposed to the public internet. If that ever changes,
+authentication has to come first, not after.
 
-- Prisma connects through the **pooled** connection string (`DATABASE_URL`, pgBouncer,
-  port 6543) for the app, and the **direct** connection (`DIRECT_URL`, port 5432) for
-  migrations. Both go in the Prisma datasource — migrations fail against the pooler.
-- **Migrations run in the deploy pipeline** (`prisma migrate deploy`), before the API
-  starts, never by hand against production.
-- Dev and production are **separate Supabase projects**, not separate schemas in one.
-- Never point a local dev environment at the production database.
+## Checks
 
-## Secrets
+There is no CI either. Lint, typecheck, tests with coverage, build and the
+formatting check all run here, in one command:
 
-GitHub Environments `dev` and `production`, each with its own values:
+```bash
+pnpm check
+```
 
-| Secret | Used for |
-|---|---|
-| `RENDER_DEPLOY_HOOK_DEV` / `_PROD` | Triggering the Render deploy |
-| `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | Vercel CLI |
-| `DATABASE_URL`, `DIRECT_URL` | Prisma, pooled and direct |
-
-Secrets live in GitHub Environments and the platform dashboards — never in the repo, never
-in `turbo.json`, never in a workflow file as a literal. `.env.example` is committed with
-empty values and documents every variable the app reads.
-
-## Rollback
-
-- **Web**: promote the previous deployment in Vercel — instant, no rebuild.
-- **API**: redeploy the previous commit from the Render dashboard.
-- **Database**: forward-only. A bad migration is fixed by a new migration, never by
-  editing a merged one. This is why migrations are their own PR at the bottom of a stack:
-  they are the one thing that cannot be cleanly reverted.
+That is the same command in every situation — there is no hosted runner that
+might behave differently, and nothing that runs only on a pull request. The
+trade is that nothing *forces* it: `pnpm check` has to pass before a PR goes up,
+and the only thing enforcing that is you.

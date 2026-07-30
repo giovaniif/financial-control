@@ -1,7 +1,8 @@
 # Architecture
 
 Backend is **classical DDD**. Frontend is **Feature-Sliced Design**. Both layerings are
-enforced by `eslint-plugin-boundaries` — a violation fails CI, it is not a review comment.
+enforced by `eslint-plugin-boundaries` — a violation fails `pnpm check`, it is not a
+review comment.
 
 The domain content itself — aggregates, value objects, the calculation chain — lives in
 @docs/DOMAIN_MODEL.md. This file is about structure and dependency rules.
@@ -19,7 +20,6 @@ financial-control/
     tsconfig/            # shared tsconfig bases
   docs/                  # USE_CASES.md, DOMAIN_MODEL.md
   .claude/               # these rules
-  .github/workflows/
   pnpm-workspace.yaml
   turbo.json
 ```
@@ -172,5 +172,6 @@ from macOS over Tailscale:
 server: { host: true, allowedHosts: ['.ts.net'] }
 ```
 
-Both settings are required; they fix different layers. Hand over the
-`http://host.tail914724.ts.net:<port>/` URL, never `localhost`.
+Both settings are required; they fix different layers. Hand over a URL using this
+machine's hostname, never `localhost` — `localhost` on the testing machine is the
+testing machine.

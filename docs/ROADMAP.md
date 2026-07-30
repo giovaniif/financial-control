@@ -13,7 +13,8 @@ they should be created as Graphite branches, each PR green on its own.
 
 ## Phase 0 — Foundation
 
-No product behaviour. Everything here exists so that phase 1 can be written test-first with CI enforcing it.
+No product behaviour. Everything here exists so that phase 1 can be written test-first with
+the tooling enforcing it.
 
 | # | Issue | Est | UC |
 |---|---|---|---|
@@ -24,11 +25,10 @@ No product behaviour. Everything here exists so that phase 1 can be written test
 | 0.5 | `packages/contracts` scaffold | 1 | — |
 | 0.6 | `apps/api` skeleton: DDD folders, HTTP server, health check | 2 | — |
 | 0.7 | `apps/web` skeleton: Vite, FSD folders, Tailwind, host binding for Tailscale | 3 | — |
-| 0.8 | Prisma + Supabase: datasource with pooled `DATABASE_URL` and direct `DIRECT_URL` | 2 | — |
-| 0.9 | `ci.yml`: path-filtered lint / typecheck / test+coverage / build | 3 | — |
-| 0.10 | `deploy.yml` + `render.yaml`: main → dev, `v*` → prod, migrations before start | 3 | — |
+| 0.8 | Prisma + a local PostgreSQL in Docker | 2 | — |
+| 0.9 | Local run tooling and `pnpm check`: no CI, no deployment | 2 | — |
 
-**Subtotal 25.** 0.3 is the one worth care — if the boundary rules are wrong, every later phase drifts.
+**Subtotal 21.** 0.3 is the one worth care — if the boundary rules are wrong, every later phase drifts.
 
 ---
 
@@ -190,7 +190,7 @@ Each page is its own issue and its own PR, stacked on the shared layers below it
 
 | Phase | Issues | Points |
 |---|---|---|
-| 0 — Foundation | 10 | 25 |
+| 0 — Foundation | 9 | 21 |
 | 1 — Cycle spine | 10 | 22 |
 | 2 — Persistence & first API | 6 | 16 |
 | 3 — Recurring templates | 7 | 18 |
@@ -199,7 +199,7 @@ Each page is its own issue and its own PR, stacked on the shared layers below it
 | 6 — Buckets & allocation | 11 | 26 |
 | 7 — Projection read models | 7 | 17 |
 | 8 — Frontend | 19 | 49 |
-| **Total** | **85** | **209** |
+| **Total** | **84** | **205** |
 
 ## Sequencing notes
 
