@@ -89,3 +89,20 @@ describe('Percentage arithmetic and comparison', () => {
     expect(Percentage.ofPercent(12.5).toString()).toBe('12,5 %');
   });
 });
+
+describe('Percentage combination', () => {
+  it('adds two rates', () => {
+    const combined = Percentage.ofPercent(20).plus(Percentage.ofPercent(12.5));
+
+    expect(combined.percent).toBe(32.5);
+  });
+
+  it('compares by value', () => {
+    expect(Percentage.ofPercent(20).equals(Percentage.ofPercent(20))).toBe(
+      true,
+    );
+    expect(Percentage.ofPercent(20).equals(Percentage.ofPercent(21))).toBe(
+      false,
+    );
+  });
+});
