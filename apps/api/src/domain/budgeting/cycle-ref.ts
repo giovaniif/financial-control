@@ -1,0 +1,163 @@
+import type { HolidayCalendar } from '../ports/holiday-calendar.js';
+import { DateRange } from '../shared/date-range.js';
+import { DomainError } from '../shared/domain-error.js';
+import { LocalDate } from '../shared/local-date.js';
+
+export class InvalidAnchor extends DomainError {}
+
+const MONTH = /^(?<year>\d{4})-(?<month>\d{2})$/;
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const;
+
+/** Which way pay moves when the anchor lands on a non-business day. */
+export const ShiftPolicy = {
+  Preceding: 'PRECEDING',
+  Following: 'FOLLOWING',
+} as const;
+
+export type ShiftPolicy = (typeof ShiftPolicy)[keyof typeof ShiftPolicy];
+
+/** The configured payday: a day of the month, and how it dodges a closed bank. */
+export class PaydayAnchor {
+  private constructor(
+    readonly dayOfMonth: number,
+    readonly shiftPolicy: ShiftPolicy,
+  ) {}
+
+  static of(dayOfMonth: number, shiftPolicy: ShiftPolicy): PaydayAnchor {
+    if (
+      !Number.isSafeInteger(dayOfMonth) ||
+      dayOfMonth < 1 ||
+      dayOfMonth > 31
+    ) {
+      throw new InvalidAnchor(
+        `A payday anchor is a day of the month; received ${String(dayOfMonth)}.`,
+      );
+    }
+    return new PaydayAnchor(dayOfMonth, shiftPolicy);
+  }
+
+  equals(other: PaydayAnchor): boolean {
+    return (
+      this.dayOfMonth === other.dayOfMonth &&
+      this.shiftPolicy === other.shiftPolicy
+    );
+  }
+}
+
+/**
+ * One payday cycle: salary date through the day before the next salary date.
+ *
+ * **The app does not think in calendar months.** The August 2026 cycle runs
+ * 5 Aug → 4 Sep, because that is how the money is actually experienced: an
+ * amount arrives and must cover everything until the next amount arrives.
+ *
+ * The resolution rules live here and nowhere else, and so does
+ * {@link CycleRef.contains} — the single implementation of the rule that
+ * decides which cycle an entry belongs to.
+ */
+export class CycleRef {
+  private constructor(
+    /** The month the cycle is named for, as `YYYY-MM`. */
+    readonly month: string,
+    readonly start: LocalDate,
+    readonly end: LocalDate,
+    readonly anchor: PaydayAnchor,
+  ) {}
+
+  static forMonth(
+    month: string,
+    anchor: PaydayAnchor,
+    holidays: HolidayCalendar,
+  ): CycleRef {
+    const { year, monthNumber } = parseMonth(month);
+    const start = resolveStart(year, monthNumber, anchor, holidays);
+    const nextStart = resolveStart(
+      monthNumber === 12 ? year + 1 : year,
+      monthNumber === 12 ? 1 : monthNumber + 1,
+      anchor,
+      holidays,
+    );
+
+    return new CycleRef(month, start, nextStart.minusDays(1), anchor);
+  }
+
+  /**
+   * **An entry belongs to the cycle whose range contains its due date.** For a
+   * credit-card invoice the due date decides — never the dates of the
+   * purchases on it. See UC-5.4.
+   */
+  contains(date: LocalDate): boolean {
+    return this.range.contains(date);
+  }
+
+  get range(): DateRange {
+    return DateRange.of(this.start, this.end);
+  }
+
+  /** Named for the month its payday falls in — never `August–September`. */
+  get label(): string {
+    const { year, monthNumber } = parseMonth(this.month);
+
+    return `${MONTH_NAMES[monthNumber - 1] ?? ''} ${String(year)}`;
+  }
+
+  equals(other: CycleRef): boolean {
+    return (
+      this.month === other.month &&
+      this.start.equals(other.start) &&
+      this.end.equals(other.end)
+    );
+  }
+
+  toString(): string {
+    return `${this.label} (${this.range.toString()})`;
+  }
+}
+
+function parseMonth(month: string): { year: number; monthNumber: number } {
+  const groups = MONTH.exec(month)?.groups;
+  const monthNumber = Number(groups?.['month'] ?? 0);
+  if (groups === undefined || monthNumber < 1 || monthNumber > 12) {
+    throw new InvalidAnchor(`Not a YYYY-MM month: "${month}".`);
+  }
+  return { year: Number(groups['year']), monthNumber };
+}
+
+/**
+ * The nominal anchor day, clamped onto the last day of a short month, then
+ * shifted off any weekend or holiday by the configured policy. Consecutive
+ * closed days are skipped, so a holiday abutting a weekend still lands on a
+ * business day.
+ */
+function resolveStart(
+  year: number,
+  month: number,
+  anchor: PaydayAnchor,
+  holidays: HolidayCalendar,
+): LocalDate {
+  const clamped = Math.min(
+    anchor.dayOfMonth,
+    LocalDate.lastDayOfMonth(year, month),
+  );
+  const step = anchor.shiftPolicy === ShiftPolicy.Preceding ? -1 : 1;
+
+  let resolved = LocalDate.of(year, month, clamped);
+  while (resolved.isWeekend || holidays.isHoliday(resolved)) {
+    resolved = resolved.plusDays(step);
+  }
+  return resolved;
+}
