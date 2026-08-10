@@ -76,6 +76,8 @@ export class CycleRef {
     readonly start: LocalDate,
     readonly end: LocalDate,
     readonly anchor: PaydayAnchor,
+    /** Kept so a neighbouring cycle resolves under the same rules. */
+    private readonly holidays: HolidayCalendar,
   ) {}
 
   static forMonth(
@@ -92,7 +94,45 @@ export class CycleRef {
       holidays,
     );
 
-    return new CycleRef(month, start, nextStart.minusDays(1), anchor);
+    return new CycleRef(month, start, nextStart.minusDays(1), anchor, holidays);
+  }
+
+  /** The `count` cycles starting at `month` — the rolling window the app holds. */
+  static rolling(
+    month: string,
+    count: number,
+    anchor: PaydayAnchor,
+    holidays: HolidayCalendar,
+  ): CycleRef[] {
+    if (!Number.isSafeInteger(count) || count < 1) {
+      throw new InvalidAnchor(
+        `A window holds at least one cycle; received ${String(count)}.`,
+      );
+    }
+
+    let cycle = CycleRef.forMonth(month, anchor, holidays);
+    const window = [cycle];
+    while (window.length < count) {
+      cycle = cycle.next();
+      window.push(cycle);
+    }
+    return window;
+  }
+
+  next(): CycleRef {
+    return this.shifted(1);
+  }
+
+  previous(): CycleRef {
+    return this.shifted(-1);
+  }
+
+  private shifted(months: number): CycleRef {
+    const { year, monthNumber } = parseMonth(this.month);
+    const moved = LocalDate.of(year, monthNumber, 1).plusMonths(months);
+    const label = `${String(moved.year)}-${String(moved.month).padStart(2, '0')}`;
+
+    return CycleRef.forMonth(label, this.anchor, this.holidays);
   }
 
   /**
