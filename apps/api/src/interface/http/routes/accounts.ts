@@ -8,11 +8,11 @@ import type {
 } from '@fin/contracts';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 
-import type { AccountView ,
-  ManageAccounts} from '../../../application/budgeting/uc-1-2-manage-accounts.js';
-import {
-  AccountNotFound
+import type {
+  AccountView,
+  ManageAccounts,
 } from '../../../application/budgeting/uc-1-2-manage-accounts.js';
+import { AccountNotFound } from '../../../application/budgeting/uc-1-2-manage-accounts.js';
 import { InvalidAccount } from '../../../domain/budgeting/account.js';
 import { InvalidAmount } from '../../../domain/shared/money.js';
 
