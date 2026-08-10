@@ -1,4 +1,4 @@
-import type { CycleResponse } from '@fin/contracts';
+import type { CycleResponse, CycleWindowResponse } from '@fin/contracts';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 
 import type {
@@ -6,10 +6,12 @@ import type {
   ReadCycle,
 } from '../../../application/budgeting/uc-3-1-read-cycle.js';
 import { UnknownMonth } from '../../../application/budgeting/uc-3-1-read-cycle.js';
+import type { ListCycles } from '../../../application/budgeting/uc-3-3-list-cycles.js';
 import { Estimates } from '../../../domain/budgeting/cycle.js';
 
 interface Dependencies {
   readCycle: ReadCycle;
+  listCycles: ListCycles;
 }
 
 /**
@@ -74,8 +76,37 @@ export function toResponse(view: CycleView): CycleResponse {
 /** UC-3.1, UC-3.2 — one cycle in full. */
 export function registerCycleRoutes(
   app: FastifyInstance,
-  { readCycle }: Dependencies,
+  { readCycle, listCycles }: Dependencies,
 ): void {
+  // Registered before /cycles/:month so it is not swallowed by the parameter.
+  app.get<{ Querystring: { estimates?: string } }>(
+    '/cycles',
+    async (request, reply) => {
+      const estimates = readEstimates(request.query.estimates);
+      if (estimates === undefined) {
+        return badRequest(reply, "estimates must be 'included' or 'excluded'.");
+      }
+
+      const window = await listCycles.rollingWindow(estimates);
+      const body: CycleWindowResponse = {
+        estimates: estimates === Estimates.Included ? 'included' : 'excluded',
+        cycles: window.map((cycle) => ({
+          month: cycle.month,
+          label: cycle.label,
+          start: cycle.start,
+          end: cycle.end,
+          status: cycle.status,
+          position: cycle.position,
+          openingBalance: cycle.openingBalanceCents,
+          closingBalance: cycle.closingBalanceCents,
+          netSurplus: cycle.netSurplusCents,
+          isMaterialised: cycle.isMaterialised,
+        })),
+      };
+      return body;
+    },
+  );
+
   app.get<{ Params: { month: string }; Querystring: { estimates?: string } }>(
     '/cycles/:month',
     async (request, reply) => {

@@ -22,5 +22,8 @@ export type {
   EstimateMode,
   LedgerEntryResponse,
   LowWaterMarkResponse,
+  CyclePosition,
+  CycleSummaryResponse,
+  CycleWindowResponse,
   SettlementStatus,
 } from './cycles.js';
