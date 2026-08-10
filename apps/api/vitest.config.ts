@@ -9,6 +9,7 @@ import {
 export default defineConfig({
   test: {
     environment: 'node',
+    setupFiles: ['./vitest.setup.ts'],
     // Only the sources. Without this Vitest also finds the compiled copies in
     // dist/ after a build and runs the whole suite twice.
     include: ['src/**/*.test.ts'],
