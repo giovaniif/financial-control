@@ -67,3 +67,16 @@ export type {
   CreateOngoingRequest,
   FundingResponse,
 } from './buckets.js';
+export type {
+  AlertResponse,
+  AlertSeverity,
+  BucketProjectionResponse,
+  CycleProgressResponse,
+  DashboardResponse,
+  HeadlineResponse,
+  HorizonResponse,
+  KpiResponse,
+  RetirementResponse,
+  UpcomingEntryResponse,
+  WealthProjectionResponse,
+} from './projection.js';
