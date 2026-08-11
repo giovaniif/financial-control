@@ -17,6 +17,16 @@ export class PrismaCycleRepository implements CycleRepository {
     return row === null ? undefined : toCycle(row, ref);
   }
 
+  async monthsBefore(month: string): Promise<readonly string[]> {
+    const rows = await this.prisma.cycle.findMany({
+      where: { month: { lt: month } },
+      orderBy: { month: 'asc' },
+      select: { month: true },
+    });
+
+    return rows.map((row) => row.month);
+  }
+
   /**
    * Saves the aggregate as a unit. Entries are replaced wholesale rather than
    * diffed: a cycle holds a few dozen rows at most, and a partial write would

@@ -193,4 +193,72 @@ describe('ListCycles balance chaining', () => {
     expect(including[1]?.openingBalanceCents).toBe(-150_000);
     expect(confirmed[1]?.openingBalanceCents).toBe(0);
   });
+
+  // UC-3.8 and UC-3.9 both act on a cycle whose end has passed, so the window
+  // has to reach behind today or neither is ever offered.
+  it('reaches back to a cycle that already exists', async () => {
+    const cycles = await listing({
+      cycles: [cycleWith('2026-06', 5_000), cycleWith('2026-07', 5_000)],
+    }).rollingWindow();
+
+    expect(cycles.slice(0, 3).map((cycle) => cycle.month)).toEqual([
+      '2026-06',
+      '2026-07',
+      '2026-08',
+    ]);
+    expect(cycles.slice(0, 2).map((cycle) => cycle.position)).toEqual([
+      'past',
+      'past',
+    ]);
+  });
+
+  // A month nobody ever touched is not history — the window must not invent it.
+  it('does not invent a past month that was never materialised', async () => {
+    const window = await listing({
+      cycles: [cycleWith('2026-06', 5_000)],
+    }).rollingWindow();
+
+    expect(window.map((cycle) => cycle.month)).not.toContain('2026-07');
+    expect(window[0]?.month).toBe('2026-06');
+  });
+
+  it('still projects exactly twelve cycles forward from the current one', async () => {
+    const window = await listing({
+      cycles: [cycleWith('2026-06', 5_000)],
+    }).rollingWindow();
+
+    const ahead = window.filter((cycle) => cycle.position !== 'past');
+
+    expect(ahead).toHaveLength(12);
+    expect(ahead[0]?.month).toBe('2026-08');
+  });
+
+  it('names exactly one cycle current, whatever came before', async () => {
+    const window = await listing({
+      cycles: [cycleWith('2026-06', 5_000), cycleWith('2026-07', 5_000)],
+    }).rollingWindow();
+
+    expect(window.filter((cycle) => cycle.position === 'current')).toHaveLength(
+      1,
+    );
+  });
+
+  // The chain has to start at the front of the window, or a past cycle's
+  // opening balance would come from nowhere.
+  it('chains the opening balance from the oldest cycle in the window', async () => {
+    const window = await listing({
+      cycles: [cycleWith('2026-06', 5_000)],
+      accounts: [
+        Account.open({
+          id: 'a',
+          name: 'Inter',
+          type: AccountType.Checking,
+          balance: Money.fromCents(100_000),
+        }),
+      ],
+    }).rollingWindow();
+
+    expect(window[0]?.openingBalanceCents).toBe(100_000);
+    expect(window[1]?.openingBalanceCents).toBe(100_000 + 500_000);
+  });
 });

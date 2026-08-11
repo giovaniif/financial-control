@@ -62,6 +62,12 @@ export class InMemoryCycleRepository implements CycleRepository {
     return Promise.resolve(this.rows.get(ref.month));
   }
 
+  monthsBefore(month: string): Promise<readonly string[]> {
+    return Promise.resolve(
+      [...this.rows.keys()].filter((stored) => stored < month).sort(),
+    );
+  }
+
   save(cycle: Cycle): Promise<void> {
     this.rows.set(cycle.ref.month, cycle);
     return Promise.resolve();
