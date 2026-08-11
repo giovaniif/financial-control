@@ -4,9 +4,11 @@ import { PaydayAnchor, ShiftPolicy } from '../../domain/budgeting/cycle-ref.js';
 import type { Cycle } from '../../domain/budgeting/cycle.js';
 import type { RecurringTemplate } from '../../domain/budgeting/recurring-template.js';
 import type { Card } from '../../domain/cards/card.js';
+import type { Bucket } from '../../domain/goals/bucket.js';
 import type {
   AccountRepository,
   CycleRepository,
+  BucketRepository,
   CardRepository,
   RecurringTemplateRepository,
   SettingsRepository,
@@ -130,6 +132,34 @@ export class InMemoryCardRepository implements CardRepository {
 
   save(card: Card): Promise<void> {
     this.rows.set(card.id, card);
+    return Promise.resolve();
+  }
+
+  delete(id: string): Promise<void> {
+    this.rows.delete(id);
+    return Promise.resolve();
+  }
+}
+
+export class InMemoryBucketRepository implements BucketRepository {
+  private readonly rows = new Map<string, Bucket>();
+
+  constructor(seed: readonly Bucket[] = []) {
+    for (const bucket of seed) {
+      this.rows.set(bucket.id, bucket);
+    }
+  }
+
+  findAll(): Promise<Bucket[]> {
+    return Promise.resolve([...this.rows.values()]);
+  }
+
+  findById(id: string): Promise<Bucket | undefined> {
+    return Promise.resolve(this.rows.get(id));
+  }
+
+  save(bucket: Bucket): Promise<void> {
+    this.rows.set(bucket.id, bucket);
     return Promise.resolve();
   }
 

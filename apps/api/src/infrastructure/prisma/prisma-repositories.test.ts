@@ -24,7 +24,10 @@ import {
 } from '../../domain/budgeting/recurring-template.js';
 import { Card } from '../../domain/cards/card.js';
 import { InvoiceStatus } from '../../domain/cards/invoice.js';
+import { Allocation, Bucket } from '../../domain/goals/bucket.js';
+import { Percentage } from '../../domain/shared/percentage.js';
 import { PrismaAccountRepository } from './prisma-account-repository.js';
+import { PrismaBucketRepository } from './prisma-bucket-repository.js';
 import { PrismaCardRepository } from './prisma-card-repository.js';
 import { PrismaCycleRepository } from './prisma-cycle-repository.js';
 import { PrismaSettingsRepository } from './prisma-settings-repository.js';
@@ -43,11 +46,14 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
     const settings = new PrismaSettingsRepository(prisma);
     const templates = new PrismaTemplateRepository(prisma);
     const cards = new PrismaCardRepository(prisma);
+    const buckets = new PrismaBucketRepository(prisma);
 
     const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
     const august = CycleRef.forMonth('2026-08', anchor, noHolidays);
 
     beforeEach(async () => {
+      await prisma.bucketEvent.deleteMany();
+      await prisma.bucket.deleteMany();
       await prisma.invoiceItem.deleteMany();
       await prisma.installmentPlan.deleteMany();
       await prisma.invoice.deleteMany();
@@ -634,6 +640,184 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
         expect(await prisma.invoice.count()).toBe(0);
         expect(await prisma.invoiceItem.count()).toBe(0);
         expect(await prisma.installmentPlan.count()).toBe(0);
+      });
+    });
+
+    describe('buckets', () => {
+      const reserve = () =>
+        Bucket.goal({
+          id: 'reserve',
+          name: 'Reserve',
+          purpose: 'Six months of fixed costs.',
+          target: {
+            amount: Money.fromCents(6_000_000),
+            date: LocalDate.parse('2027-12-31'),
+          },
+          rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(20)),
+          priority: 1,
+          expectedYield: Percentage.ofPercent(10),
+        });
+
+      it('round-trips a goal with its target and rule', async () => {
+        await buckets.save(reserve());
+
+        const loaded = await buckets.findById('reserve');
+
+        expect(loaded?.mode).toBe('GOAL');
+        expect(loaded?.target?.amount.cents).toBe(6_000_000);
+        expect(loaded?.target?.date.toISO()).toBe('2027-12-31');
+        expect(loaded?.rule).toEqual({
+          kind: 'PERCENT',
+          percentage: Percentage.ofPercent(20),
+        });
+        expect(loaded?.expectedYield?.percent).toBe(10);
+      });
+
+      it('round-trips an ongoing bucket with a fixed rule and no target', async () => {
+        await buckets.save(
+          Bucket.ongoing({
+            id: 'apartment',
+            name: 'Apartment',
+            rule: Allocation.fixed(Money.fromCents(345_767)),
+            priority: 2,
+          }),
+        );
+
+        const loaded = await buckets.findById('apartment');
+
+        expect(loaded?.mode).toBe('ONGOING');
+        expect(loaded?.target).toBeUndefined();
+        expect(loaded?.rule).toEqual({
+          kind: 'FIXED',
+          amount: Money.fromCents(345_767),
+        });
+      });
+
+      // The balance is the fold, so the order the events come back in is the
+      // difference between a correct balance and a wrong one.
+      it('replays the event log in order and rebuilds the same balance', async () => {
+        const original = reserve()
+          .contribute('e1', '2026-08', Money.fromCents(200_000))
+          .recordYield(
+            'e2',
+            LocalDate.parse('2026-08-31'),
+            Money.fromCents(1_350),
+          )
+          .correctBalance(
+            'e3',
+            LocalDate.parse('2026-09-01'),
+            Money.fromCents(190_000),
+            'statement differed',
+          )
+          .contribute('e4', '2026-09', Money.fromCents(200_000));
+        await buckets.save(original);
+
+        const loaded = await buckets.findById('reserve');
+
+        expect(loaded?.events.map((e) => e.kind)).toEqual([
+          'CONTRIBUTION',
+          'YIELD',
+          'CORRECTION',
+          'CONTRIBUTION',
+        ]);
+        expect(loaded?.balance.cents).toBe(original.balance.cents);
+        expect(loaded?.balance.cents).toBe(390_000);
+      });
+
+      it('keeps yield apart from saving after a round trip', async () => {
+        await buckets.save(
+          reserve()
+            .contribute('e1', '2026-08', Money.fromCents(100_000))
+            .recordYield(
+              'e2',
+              LocalDate.parse('2026-08-31'),
+              Money.fromCents(1_350),
+            ),
+        );
+
+        const loaded = await buckets.findById('reserve');
+
+        expect(loaded?.contributed.cents).toBe(100_000);
+        expect(loaded?.yielded.cents).toBe(1_350);
+      });
+
+      it('preserves the reason on a correction and a withdrawal', async () => {
+        await buckets.save(
+          reserve()
+            .contribute('e1', '2026-08', Money.fromCents(100_000))
+            .withdraw(
+              'e2',
+              LocalDate.parse('2026-09-01'),
+              Money.fromCents(40_000),
+              'emergency fund was short',
+            ),
+        );
+
+        const [, withdrawal] =
+          (await buckets.findById('reserve'))?.events ?? [];
+
+        expect(withdrawal?.kind === 'WITHDRAWAL' && withdrawal.reason).toBe(
+          'emergency fund was short',
+        );
+      });
+
+      it('preserves what the rule would have been on an override', async () => {
+        await buckets.save(
+          reserve().overrideContribution(
+            'e1',
+            '2026-08',
+            Money.fromCents(700_000),
+            Money.fromCents(200_000),
+          ),
+        );
+
+        const [event] = (await buckets.findById('reserve'))?.events ?? [];
+
+        expect(
+          event?.kind === 'OVERRIDE' && event.ruleWouldHaveBeen.cents,
+        ).toBe(200_000);
+      });
+
+      it('orders the list by funding priority', async () => {
+        await buckets.save(reserve());
+        await buckets.save(
+          Bucket.ongoing({
+            id: 'investments',
+            name: 'Investments',
+            rule: Allocation.fixed(Money.fromCents(1)),
+            priority: 3,
+          }),
+        );
+
+        expect((await buckets.findAll()).map((b) => b.name)).toEqual([
+          'Reserve',
+          'Investments',
+        ]);
+      });
+
+      it('preserves an archived status with its history', async () => {
+        await buckets.save(
+          reserve().contribute('e1', '2026-08', Money.fromCents(100)).archive(),
+        );
+
+        const loaded = await buckets.findById('reserve');
+
+        expect(loaded?.isArchived).toBe(true);
+        expect(loaded?.events).toHaveLength(1);
+      });
+
+      it('deletes a bucket and its log with it', async () => {
+        await buckets.save(
+          reserve().contribute('e1', '2026-08', Money.fromCents(100)),
+        );
+        await buckets.delete('reserve');
+
+        expect(await buckets.findAll()).toHaveLength(0);
+        expect(await prisma.bucketEvent.count()).toBe(0);
+      });
+
+      it('reports nothing for a bucket that is not there', async () => {
+        expect(await buckets.findById('missing')).toBeUndefined();
       });
     });
   },
