@@ -1,10 +1,13 @@
 import type { AnchorSettingsResponse } from '@fin/contracts';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router';
 
 import { useAccounts } from '@/entities/account';
 import { useBuckets } from '@/entities/bucket';
 import { useCards } from '@/entities/card';
 import { useTemplates } from '@/entities/template';
+import { ChangeAnchor } from '@/features/configure-anchor';
+import { ManageAccounts } from '@/features/manage-accounts';
 import { api, queryKeys } from '@/shared/api';
 import { Amount, Badge, Card, CardTitle, Skeleton } from '@/shared/ui';
 import { AppShell } from '@/widgets/app-shell';
@@ -50,6 +53,12 @@ function PaydayAnchor() {
             Changing the anchor re-slices every open cycle. Closed cycles are
             never touched, and the change is previewed before it applies.
           </p>
+          <div>
+            <ChangeAnchor
+              anchorDay={data.anchorDay}
+              shiftPolicy={data.shiftPolicy}
+            />
+          </div>
         </>
       )}
     </Card>
@@ -65,9 +74,12 @@ function Accounts() {
       {isPending || data === undefined ? (
         <Skeleton className="h-16 w-full" />
       ) : data.accounts.length === 0 ? (
-        <p className="text-sm text-zinc-500">
-          No accounts yet. Their total is the app&rsquo;s starting cash.
-        </p>
+        <>
+          <p className="text-sm text-zinc-500">
+            No accounts yet. Their total is the app&rsquo;s starting cash.
+          </p>
+          <ManageAccounts accounts={[]} />
+        </>
       ) : (
         <ul className="divide-y divide-zinc-100 text-sm">
           {data.accounts.map((account) => (
@@ -82,6 +94,9 @@ function Accounts() {
             <Amount cents={data.total} className="w-28 text-right" />
           </li>
         </ul>
+      )}
+      {data !== undefined && data.accounts.length > 0 && (
+        <ManageAccounts accounts={data.accounts} />
       )}
     </Card>
   );
@@ -98,26 +113,30 @@ function FirstRun() {
   const buckets = useBuckets();
 
   const steps = [
-    { label: 'Payday anchor', state: 'configured', done: true },
+    { label: 'Payday anchor', state: 'configured', done: true, to: null },
     {
       label: 'Accounts',
       state: `${String(accounts.data?.accounts.length ?? 0)} accounts`,
       done: (accounts.data?.accounts.length ?? 0) > 0,
+      to: null,
     },
     {
       label: 'Credit cards',
       state: `${String(cards.data?.length ?? 0)} cards`,
       done: (cards.data?.length ?? 0) > 0,
+      to: '/cards',
     },
     {
       label: 'Recurring templates',
       state: `${String(templates.data?.templates.length ?? 0)} templates`,
       done: (templates.data?.templates.length ?? 0) > 0,
+      to: '/templates',
     },
     {
       label: 'Buckets',
       state: `${String(buckets.data?.length ?? 0)} buckets`,
       done: (buckets.data?.length ?? 0) > 0,
+      to: '/buckets',
     },
   ];
 
@@ -136,7 +155,17 @@ function FirstRun() {
             >
               {index + 1}
             </span>
-            <span className="flex-1">{step.label}</span>
+            {/* Each step leads to where it is done, not just to its count. */}
+            {step.to === null ? (
+              <span className="flex-1">{step.label}</span>
+            ) : (
+              <Link
+                to={step.to}
+                className="flex-1 underline-offset-2 hover:underline"
+              >
+                {step.label}
+              </Link>
+            )}
             <span className="text-xs text-zinc-500">{step.state}</span>
           </li>
         ))}

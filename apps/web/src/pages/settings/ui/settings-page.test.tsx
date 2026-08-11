@@ -50,8 +50,11 @@ describe('SettingsPage', () => {
     });
     renderPage();
 
-    // The sidebar carries the same total, so this scopes to the settings card.
-    const row = (await screen.findByText('Inter')).closest('li');
+    // The sidebar carries the same total and the manage control repeats each
+    // name, so this scopes to the settings card's row.
+    const row = (await screen.findAllByText('Inter'))
+      .map((node) => node.closest('li'))
+      .find((node) => node !== null);
 
     expect(row).toHaveTextContent('checking');
     expect(row).toHaveTextContent('R$ 1.660,00');
@@ -75,5 +78,37 @@ describe('SettingsPage', () => {
     expect(await screen.findByText('R$ 1.234,56')).toBeInTheDocument();
     expect(screen.getByText('dd/MM/yyyy')).toBeInTheDocument();
     expect(screen.getByText('August 2026 (5 Aug – 3 Sep)')).toBeInTheDocument();
+  });
+
+  it('offers to change the anchor, behind its preview', async () => {
+    stubApi({ '/api/settings/anchor': anchor });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: 'Change the anchor' }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers to add an account when there are none', async () => {
+    stubApi({ '/api/settings/anchor': anchor });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: 'Add account' }),
+    ).toBeInTheDocument();
+  });
+
+  // UC-1.5 — a checklist that only counts is a report, not a checklist.
+  it('links each checklist step to where the step is done', async () => {
+    stubApi({ '/api/settings/anchor': anchor });
+    renderPage();
+
+    expect(
+      await screen.findByRole('link', { name: 'Credit cards' }),
+    ).toHaveAttribute('href', '/cards');
+    expect(screen.getByRole('link', { name: 'Buckets' })).toHaveAttribute(
+      'href',
+      '/buckets',
+    );
   });
 });
