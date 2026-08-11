@@ -142,3 +142,58 @@ model LedgerEntry {
   @@unique([cycleId, originKind, originRef])
   @@map("ledger_entries")
 }
+
+enum Direction {
+  IN
+  OUT
+}
+
+enum TemplateStatus {
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+/// A recurring income or outcome: the engine that fills future cycles.
+model RecurringTemplate {
+  id        String    @id @default(uuid())
+  name      String
+  direction Direction
+
+  /// A day of the month. Which of a cycle's two months it lands in is derived.
+  dueDayOfMonth Int
+
+  /// Integer cents. The amount before any value-schedule step applies.
+  baseAmountCents BigInt
+
+  /// `YYYY-MM`. The cycle the template starts generating from, and optionally
+  /// the last one it generates into.
+  startMonth String
+  endMonth   String?
+
+  status     TemplateStatus @default(ACTIVE)
+  isEstimate Boolean        @default(false)
+
+  valueSchedule ValueScheduleStep[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("recurring_templates")
+}
+
+/// An amount applying from one cycle onward, until the next step.
+model ValueScheduleStep {
+  id         String            @id @default(uuid())
+  templateId String
+  template   RecurringTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  /// `YYYY-MM`, the cycle this amount starts applying from.
+  fromMonth   String
+  amountCents BigInt
+
+  /// One amount per cycle per template: a second step for the same cycle is a
+  /// correction of the first, not an addition to it.
+  @@unique([templateId, fromMonth])
+  @@map("value_schedule_steps")
+}
