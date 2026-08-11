@@ -16,6 +16,7 @@ import { entryId } from './uc-3-1-read-cycle.js';
 
 /** Where a cycle sits relative to today. */
 export const CyclePosition = {
+  Past: 'past',
   Current: 'current',
   Next: 'next',
   Projected: 'projected',
@@ -37,15 +38,17 @@ export interface CycleSummaryView {
   readonly isMaterialised: boolean;
 }
 
-/** The rolling window the app holds: the current cycle and eleven ahead. */
+/** The rolling projection: the current cycle and eleven ahead. */
 export const WINDOW = 12;
 
 /**
- * UC-3.3 — the twelve cycles the header navigates.
+ * UC-3.3 — the cycles the header navigates.
  *
- * Closing balances chain across the whole window, so the twelfth reflects the
- * eleven before it. A month nobody has touched still appears, carrying the
- * balance it would open with.
+ * Twelve forward, projected from templates, plus every cycle that already
+ * exists behind today so UC-3.8 and UC-3.9 have something to act on. Closing
+ * balances chain across the whole window, so the last reflects all the ones
+ * before it. A future month nobody has touched still appears, carrying the
+ * balance it would open with; a past one only appears if it was persisted.
  */
 export class ListCycles {
   constructor(
@@ -62,12 +65,17 @@ export class ListCycles {
   ): Promise<readonly CycleSummaryView[]> {
     const today = LocalDate.fromInstant(this.clock.now());
     const anchor = await this.settings.load();
-    const refs = CycleRef.rolling(
-      monthOf(today, anchor, this.holidays),
-      WINDOW,
-      anchor,
-      this.holidays,
+    const currentMonth = monthOf(today, anchor, this.holidays);
+
+    // Closing and reopening both act on a cycle whose end has passed, so the
+    // window reaches behind today — but only over cycles that actually exist.
+    const past = (await this.cycles.monthsBefore(currentMonth)).map((month) =>
+      CycleRef.forMonth(month, anchor, this.holidays),
     );
+    const refs = [
+      ...past,
+      ...CycleRef.rolling(currentMonth, WINDOW, anchor, this.holidays),
+    ];
 
     // Before the first cycle closes there is no previous closing balance to
     // carry in, so the window opens on what is actually in the accounts.
@@ -110,10 +118,13 @@ export class ListCycles {
 
 /**
  * Exactly one cycle is current for any given instant: the one containing
- * today. Everything after it is projected, and the one immediately after is
- * the "next" the Dashboard speaks about.
+ * today. Everything before it has ended, everything after it is projected,
+ * and the one immediately after is the "next" the Dashboard speaks about.
  */
 function positionOf(ref: CycleRef, today: LocalDate): CyclePosition {
+  if (ref.end.isBefore(today)) {
+    return CyclePosition.Past;
+  }
   if (ref.contains(today)) {
     return CyclePosition.Current;
   }

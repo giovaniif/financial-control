@@ -66,7 +66,7 @@ export interface CycleResponse {
   firstNegativeDate: string | null;
 }
 
-export type CyclePosition = 'current' | 'next' | 'projected';
+export type CyclePosition = 'past' | 'current' | 'next' | 'projected';
 
 /** One cycle in the header's rolling window. */
 export interface CycleSummaryResponse {

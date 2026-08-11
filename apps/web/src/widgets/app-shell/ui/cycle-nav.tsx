@@ -3,6 +3,7 @@ import { formatRange } from '@/shared/lib';
 import { Badge, Skeleton } from '@/shared/ui';
 
 const tones = {
+  past: 'neutral',
   current: 'positive',
   next: 'info',
   projected: 'neutral',

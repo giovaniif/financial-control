@@ -23,6 +23,11 @@ export interface AccountRepository {
  */
 export interface CycleRepository {
   findByMonth(ref: CycleRef): Promise<Cycle | undefined>;
+  /**
+   * The months already persisted before `month`, oldest first. A month nobody
+   * has touched is not history, so it is not returned — see UC-3.9.
+   */
+  monthsBefore(month: string): Promise<readonly string[]>;
   save(cycle: Cycle): Promise<void>;
 }
 
