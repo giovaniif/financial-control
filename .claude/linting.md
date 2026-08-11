@@ -107,13 +107,14 @@ import { CycleLedger } from '@/features/ledger';
 //       ^ error  boundaries/element-types: 'entities' cannot import 'features'
 ```
 
-And `boundaries/no-private` forbids reaching into another slice's internals — imports go
+And `boundaries/entry-point` forbids reaching into another slice's internals — imports go
 through the slice's public `index.ts`:
 
 ```ts
 // src/features/settle-entry/ui/Row.tsx
-import { cardStore } from '@/features/register-purchase/model/store';
-//       ^ error  boundaries/no-private: import via the slice's public API
+import { cycleStore } from '@/entities/cycle/model/store';
+//       ^ error  boundaries/entry-point: 'entities/cycle' must be imported
+//                through its public index.ts
 ```
 
 Same-layer cross-slice imports are forbidden outright. If two slices need to share, the
