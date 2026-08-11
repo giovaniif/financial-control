@@ -1,8 +1,10 @@
 import type { LedgerEntryResponse } from '@fin/contracts';
 
-import { AddEntryButton } from '@/features/add-entry';
 import { useCycle } from '@/entities/cycle';
+import { AddEntryButton } from '@/features/add-entry';
+import { CloseCycle } from '@/features/close-cycle';
 import { useSelectedCycle } from '@/features/navigate-cycle';
+import { OverrideEntry } from '@/features/override-entry';
 import { SettleEntry } from '@/features/settle-entry';
 import { formatDate } from '@/shared/lib';
 import { Amount, Badge, CardTitle, EmptyState, Skeleton } from '@/shared/ui';
@@ -27,7 +29,7 @@ const statusTones = {
 
 /** UC-3 — one cycle in full, in due-date order, with a running balance. */
 export function LedgerPage() {
-  const { selectedMonth } = useSelectedCycle();
+  const { selectedMonth, selected } = useSelectedCycle();
   const { data, isPending } = useCycle(selectedMonth);
 
   return (
@@ -58,14 +60,24 @@ export function LedgerPage() {
               <CardTitle>
                 {data.label} · {data.entries.length} entries
               </CardTitle>
-              {/* A closed cycle is read-only, so it offers no action at all. */}
-              {data.status === 'OPEN' && (
-                <AddEntryButton
+              <div className="flex items-center gap-2">
+                {/* A closed cycle is read-only, so it offers no action but
+                    the one that reopens it. */}
+                {data.status === 'OPEN' && (
+                  <AddEntryButton
+                    month={data.month}
+                    start={data.start}
+                    end={data.end}
+                  />
+                )}
+                <CloseCycle
                   month={data.month}
-                  start={data.start}
-                  end={data.end}
+                  label={data.label}
+                  status={data.status}
+                  hasEnded={selected?.position === 'past'}
+                  unsettled={unsettledCount(data.entries)}
                 />
-              )}
+              </div>
             </div>
             {data.entries.length === 0 ? (
               <EmptyState
@@ -140,14 +152,22 @@ function Table({
               <td className="px-4 py-2">
                 <Badge tone={statusTones[entry.status]}>{entry.status}</Badge>
               </td>
-              <td className="px-4 py-2 text-right">
+              <td className="px-4 py-2">
                 {isOpen &&
                 (entry.status === 'PENDING' || entry.status === 'OVERDUE') ? (
-                  <SettleEntry
-                    month={month}
-                    entryId={entry.id}
-                    planned={entry.planned}
-                  />
+                  <span className="flex items-center justify-end gap-1">
+                    <OverrideEntry
+                      month={month}
+                      entryId={entry.id}
+                      planned={entry.planned}
+                      isOverridden={entry.isOverridden}
+                    />
+                    <SettleEntry
+                      month={month}
+                      entryId={entry.id}
+                      planned={entry.planned}
+                    />
+                  </span>
                 ) : null}
               </td>
             </tr>
@@ -156,4 +176,11 @@ function Table({
       </table>
     </div>
   );
+}
+
+/** A cycle cannot close while any entry is still waiting to become a fact. */
+function unsettledCount(entries: LedgerEntryResponse[]): number {
+  return entries.filter(
+    (entry) => entry.status === 'PENDING' || entry.status === 'OVERDUE',
+  ).length;
 }

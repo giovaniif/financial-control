@@ -228,4 +228,70 @@ describe('LedgerPage', () => {
       screen.getByRole('button', { name: 'Settle at a different amount' }),
     ).toBeInTheDocument();
   });
+
+  it('offers to override a projected value beside settling it', async () => {
+    stubApi({
+      '/api/cycles': window,
+      '/api/cycles/2026-08': cycle({ entries: [entry()] }),
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: 'Override' }),
+    ).toBeInTheDocument();
+  });
+
+  // UC-3.8 — closing is offered once the end date has passed, never before.
+  it('does not offer to close a cycle that is still running', async () => {
+    stubApi({ '/api/cycles': window, '/api/cycles/2026-08': cycle() });
+    renderPage();
+
+    await screen.findByText('Opening');
+
+    expect(
+      screen.queryByRole('button', { name: 'Close the cycle' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('offers to close a cycle whose end has passed', async () => {
+    stubApi({
+      '/api/cycles': {
+        estimates: 'included',
+        cycles: [
+          { ...window.cycles[0], month: '2026-06', position: 'past' },
+          window.cycles[0],
+        ],
+      },
+      '/api/cycles/2026-06': cycle({ month: '2026-06', label: 'June 2026' }),
+    });
+    renderWithProviders(
+      <RouterProvider
+        router={createMemoryRouter([{ path: '/', element: <LedgerPage /> }], {
+          initialEntries: ['/?cycle=2026-06'],
+        })}
+      />,
+    );
+
+    expect(
+      await screen.findByRole('button', { name: 'Close the cycle' }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers to reopen a closed cycle, and nothing else', async () => {
+    stubApi({
+      '/api/cycles': window,
+      '/api/cycles/2026-08': cycle({
+        status: 'CLOSED',
+        entries: [entry({ status: 'PAID', actual: -761_000 })],
+      }),
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: 'Reopen the cycle' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Override' }),
+    ).not.toBeInTheDocument();
+  });
 });

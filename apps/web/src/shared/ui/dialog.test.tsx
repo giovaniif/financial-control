@@ -27,7 +27,9 @@ describe('Dialog', () => {
     ).toBeInTheDocument();
   });
 
-  it('closes on the close button', async () => {
+  // Named "Dismiss" rather than "Close": closing is a domain verb in this app
+  // (UC-3.8), and a dialog control must not compete with it.
+  it('closes on the dismiss button', async () => {
     const onClose = vi.fn();
     render(
       <Dialog open title="Add an entry" onClose={onClose}>
@@ -35,7 +37,7 @@ describe('Dialog', () => {
       </Dialog>,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
 
     expect(onClose).toHaveBeenCalledOnce();
   });
