@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { ConfigurePaydayAnchor } from '../../application/budgeting/uc-1-1-configure-payday-anchor.js';
 import type { ManageAccounts } from '../../application/budgeting/uc-1-2-manage-accounts.js';
 import type { ReadCycle } from '../../application/budgeting/uc-3-1-read-cycle.js';
+import type { ListCycles } from '../../application/budgeting/uc-3-3-list-cycles.js';
 import type { Clock } from '../../domain/ports/clock.js';
 import { registerAccountRoutes } from './routes/accounts.js';
 import { registerCycleRoutes } from './routes/cycles.js';
@@ -14,6 +15,7 @@ interface Dependencies {
   configureAnchor: ConfigurePaydayAnchor;
   manageAccounts: ManageAccounts;
   readCycle: ReadCycle;
+  listCycles: ListCycles;
 }
 
 export function buildServer({
@@ -21,13 +23,14 @@ export function buildServer({
   configureAnchor,
   manageAccounts,
   readCycle,
+  listCycles,
 }: Dependencies): FastifyInstance {
   const app = Fastify({ logger: false });
 
   registerHealthRoute(app, { clock, startedAt: clock.now() });
   registerSettingsRoutes(app, { configureAnchor });
   registerAccountRoutes(app, { manageAccounts });
-  registerCycleRoutes(app, { readCycle });
+  registerCycleRoutes(app, { readCycle, listCycles });
 
   return app;
 }

@@ -4,6 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import { ConfigurePaydayAnchor } from './application/budgeting/uc-1-1-configure-payday-anchor.js';
 import { ManageAccounts } from './application/budgeting/uc-1-2-manage-accounts.js';
 import { ReadCycle } from './application/budgeting/uc-3-1-read-cycle.js';
+import { ListCycles } from './application/budgeting/uc-3-3-list-cycles.js';
 import { SystemClock } from './infrastructure/clock/system-clock.js';
 import { BrazilianHolidayCalendar } from './infrastructure/holidays/brazilian-holiday-calendar.js';
 import { PrismaAccountRepository } from './infrastructure/prisma/prisma-account-repository.js';
@@ -35,5 +36,6 @@ export function createApp(): FastifyInstance {
     ),
     manageAccounts: new ManageAccounts(accounts),
     readCycle: new ReadCycle(cycles, settings, holidays),
+    listCycles: new ListCycles(cycles, settings, accounts, holidays, clock),
   });
 }

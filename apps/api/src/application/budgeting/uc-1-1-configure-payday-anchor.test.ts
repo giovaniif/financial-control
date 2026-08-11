@@ -240,6 +240,21 @@ describe('ConfigurePaydayAnchor.change', () => {
     ).rejects.toThrow(AnchorChangeWouldOrphanEntries);
   });
 
+  it('counts the orphans in the plural when there is more than one', async () => {
+    const useCase = new ConfigurePaydayAnchor(
+      new InMemorySettingsRepository(anchorFive),
+      new InMemoryCycleRepository([
+        augustWith('2026-08-06', '2026-08-07', '2026-08-20'),
+      ]),
+      noHolidays,
+      clock,
+    );
+
+    await expect(
+      useCase.change({ anchorDay: 10, shiftPolicy: ShiftPolicy.Preceding }),
+    ).rejects.toThrow(/2 entries/);
+  });
+
   it('leaves everything untouched when it refuses', async () => {
     const settings = new InMemorySettingsRepository(anchorFive);
     const cycles = new InMemoryCycleRepository([

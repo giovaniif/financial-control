@@ -145,3 +145,30 @@ describe('ManageAccounts.close', () => {
     expect(view.totalCents).toBe(166_000);
   });
 });
+
+describe('ManageAccounts identity', () => {
+  // Production supplies no id generator; the default has to produce one.
+  it('generates an id when none is supplied', async () => {
+    const repository = seeded();
+    const opened = await new ManageAccounts(repository).open({
+      name: 'Wallet',
+      type: AccountType.Cash,
+      balanceCents: 0,
+    });
+
+    expect(opened.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+    expect(await repository.findById(opened.id)).toBeDefined();
+  });
+
+  it('gives each account its own id', async () => {
+    const useCase = new ManageAccounts(seeded());
+    const open = () =>
+      useCase.open({ name: 'X', type: AccountType.Cash, balanceCents: 0 });
+
+    const [first, second] = [await open(), await open()];
+
+    expect(first.id).not.toBe(second.id);
+  });
+});

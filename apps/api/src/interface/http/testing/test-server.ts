@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { ConfigurePaydayAnchor } from '../../../application/budgeting/uc-1-1-configure-payday-anchor.js';
 import { ManageAccounts } from '../../../application/budgeting/uc-1-2-manage-accounts.js';
 import { ReadCycle } from '../../../application/budgeting/uc-3-1-read-cycle.js';
+import { ListCycles } from '../../../application/budgeting/uc-3-3-list-cycles.js';
 import {
   InMemoryAccountRepository,
   InMemoryCycleRepository,
@@ -25,6 +26,7 @@ export function buildTestServer(
   const clock = FixedClock.at('2026-08-10T12:00:00Z');
   const settings = new InMemorySettingsRepository();
   const cycles = new InMemoryCycleRepository();
+  const accounts = new InMemoryAccountRepository();
 
   return buildServer({
     clock,
@@ -34,8 +36,9 @@ export function buildTestServer(
       noHolidays,
       clock,
     ),
-    manageAccounts: new ManageAccounts(new InMemoryAccountRepository()),
+    manageAccounts: new ManageAccounts(accounts),
     readCycle: new ReadCycle(cycles, settings, noHolidays),
+    listCycles: new ListCycles(cycles, settings, accounts, noHolidays, clock),
     ...overrides,
   });
 }

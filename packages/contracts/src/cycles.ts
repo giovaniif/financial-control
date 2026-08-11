@@ -65,3 +65,25 @@ export interface CycleResponse {
   /** The first date the balance crosses zero, if it ever does. */
   firstNegativeDate: string | null;
 }
+
+export type CyclePosition = 'current' | 'next' | 'projected';
+
+/** One cycle in the header's rolling window. */
+export interface CycleSummaryResponse {
+  month: string;
+  label: string;
+  start: string;
+  end: string;
+  status: 'OPEN' | 'CLOSED';
+  position: CyclePosition;
+  openingBalance: Cents;
+  closingBalance: Cents;
+  netSurplus: Cents;
+  /** False for a month nobody has touched: projected, not persisted. */
+  isMaterialised: boolean;
+}
+
+export interface CycleWindowResponse {
+  estimates: EstimateMode;
+  cycles: CycleSummaryResponse[];
+}

@@ -185,6 +185,15 @@ export class Cycle {
     return this.with({ status: CycleStatus.Open });
   }
 
+  /**
+   * The same cycle opening on a different balance. Reopening an earlier cycle
+   * changes every later opening balance (UC-3.9), and the rolling window
+   * chains them forward without persisting a projection.
+   */
+  withOpeningBalance(openingBalance: Money): Cycle {
+    return new Cycle({ ...this.state, openingBalance });
+  }
+
   /** The whole model at a glance, computed fresh from the entries. */
   chain(estimates: Estimates = Estimates.Included): CalculationChain {
     const counted = this.countedEntries(estimates);
