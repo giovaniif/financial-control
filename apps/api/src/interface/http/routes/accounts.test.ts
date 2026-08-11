@@ -1,30 +1,18 @@
 import type { AccountResponse, AccountsResponse } from '@fin/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { ConfigurePaydayAnchor } from '../../../application/budgeting/uc-1-1-configure-payday-anchor.js';
 import { ManageAccounts } from '../../../application/budgeting/uc-1-2-manage-accounts.js';
-import {
-  InMemoryAccountRepository,
-  InMemoryCycleRepository,
-  InMemorySettingsRepository,
-} from '../../../application/testing/fakes.js';
+import { InMemoryAccountRepository } from '../../../application/testing/fakes.js';
 import { FixedClock } from '../../../application/testing/fixed-clock.js';
 import { Account, AccountType } from '../../../domain/budgeting/account.js';
-import { noHolidays } from '../../../domain/ports/holiday-calendar.js';
 import { Money } from '../../../domain/shared/money.js';
-import { buildServer } from '../server.js';
+import { buildTestServer } from '../testing/test-server.js';
 
 const clock = FixedClock.at('2026-08-10T12:00:00Z');
 
 const serverWith = (...accounts: Account[]) =>
-  buildServer({
+  buildTestServer({
     clock,
-    configureAnchor: new ConfigurePaydayAnchor(
-      new InMemorySettingsRepository(),
-      new InMemoryCycleRepository(),
-      noHolidays,
-      clock,
-    ),
     manageAccounts: new ManageAccounts(
       new InMemoryAccountRepository(accounts),
       (() => {

@@ -15,3 +15,12 @@ export type {
   OpenAccountRequest,
   RenameAccountRequest,
 } from './accounts.js';
+export type {
+  CalculationChainResponse,
+  CycleResponse,
+  EntryKind,
+  EstimateMode,
+  LedgerEntryResponse,
+  LowWaterMarkResponse,
+  SettlementStatus,
+} from './cycles.js';
