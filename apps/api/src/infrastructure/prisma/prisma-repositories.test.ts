@@ -22,7 +22,10 @@ import {
   RecurringTemplate,
   TemplateStatus,
 } from '../../domain/budgeting/recurring-template.js';
+import { Card } from '../../domain/cards/card.js';
+import { InvoiceStatus } from '../../domain/cards/invoice.js';
 import { PrismaAccountRepository } from './prisma-account-repository.js';
+import { PrismaCardRepository } from './prisma-card-repository.js';
 import { PrismaCycleRepository } from './prisma-cycle-repository.js';
 import { PrismaSettingsRepository } from './prisma-settings-repository.js';
 import { PrismaTemplateRepository } from './prisma-template-repository.js';
@@ -39,11 +42,16 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
     const cycles = new PrismaCycleRepository(prisma);
     const settings = new PrismaSettingsRepository(prisma);
     const templates = new PrismaTemplateRepository(prisma);
+    const cards = new PrismaCardRepository(prisma);
 
     const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
     const august = CycleRef.forMonth('2026-08', anchor, noHolidays);
 
     beforeEach(async () => {
+      await prisma.invoiceItem.deleteMany();
+      await prisma.installmentPlan.deleteMany();
+      await prisma.invoice.deleteMany();
+      await prisma.card.deleteMany();
       await prisma.valueScheduleStep.deleteMany();
       await prisma.recurringTemplate.deleteMany();
       await prisma.ledgerEntry.deleteMany();
@@ -525,6 +533,107 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
 
         expect(await templates.findAll()).toHaveLength(0);
         expect(await prisma.valueScheduleStep.count()).toBe(0);
+      });
+    });
+
+    describe('cards', () => {
+      const inter = () =>
+        Card.open({
+          id: 'card-inter',
+          name: 'Inter',
+          limit: Money.fromCents(2_500_000),
+          closingDay: 28,
+          dueDay: 10,
+          paymentAccountId: 'acc-inter',
+        });
+
+      const withPurchase = (installments = 1) =>
+        inter().registerPurchase({
+          purchaseId: 'p1',
+          description: 'Airfare',
+          purchasedOn: LocalDate.parse('2026-08-20'),
+          amount: Money.fromCents(-120_000),
+          installments,
+          newInvoiceId: (dueDate) => `inv-${dueDate.toISO()}`,
+          newItemId: (id, position) => `${id}-${String(position)}`,
+        });
+
+      it('round-trips a card with no invoices', async () => {
+        await cards.save(inter());
+
+        const loaded = await cards.findById('card-inter');
+
+        expect(loaded?.name).toBe('Inter');
+        expect(loaded?.limit.cents).toBe(2_500_000);
+        expect(loaded?.closingDay).toBe(28);
+        expect(loaded?.dueDay).toBe(10);
+      });
+
+      it('round-trips an invoice and its items', async () => {
+        await cards.save(withPurchase());
+
+        const loaded = await cards.findById('card-inter');
+
+        expect(loaded?.invoices).toHaveLength(1);
+        expect(loaded?.invoices[0]?.items).toHaveLength(1);
+        expect(loaded?.invoices[0]?.total.cents).toBe(-120_000);
+      });
+
+      // A DATE column and a UTC read, so a due date cannot drift a day and
+      // land the invoice in the wrong cycle.
+      it('keeps the period and due dates on the same calendar days', async () => {
+        await cards.save(withPurchase());
+
+        const invoice = (await cards.findById('card-inter'))?.invoices[0];
+
+        expect(invoice?.periodStart.toISO()).toBe('2026-07-29');
+        expect(invoice?.periodEnd.toISO()).toBe('2026-08-28');
+        expect(invoice?.dueDate.toISO()).toBe('2026-09-10');
+      });
+
+      it('preserves instalment positions and the plan behind them', async () => {
+        await cards.save(withPurchase(3));
+
+        const loaded = await cards.findById('card-inter');
+
+        expect(
+          loaded?.invoices.map((i) => i.items[0]?.installment?.toString()),
+        ).toEqual(['1/3', '2/3', '3/3']);
+        expect(loaded?.plans[0]?.totalInstallments).toBe(3);
+      });
+
+      it('preserves a paid invoice with what was actually paid', async () => {
+        await cards.save(
+          withPurchase()
+            .closeInvoice('inv-2026-09-10')
+            .payInvoice('inv-2026-09-10', Money.fromCents(-119_000)),
+        );
+
+        const invoice = (await cards.findById('card-inter'))?.invoices[0];
+
+        expect(invoice?.status).toBe(InvoiceStatus.Paid);
+        expect(invoice?.paidAmount?.cents).toBe(-119_000);
+      });
+
+      it('replaces invoices wholesale rather than accumulating them', async () => {
+        await cards.save(withPurchase(3));
+        await cards.save(withPurchase(1));
+
+        expect((await cards.findById('card-inter'))?.invoices).toHaveLength(1);
+      });
+
+      it('reports nothing for a card that is not there', async () => {
+        expect(await cards.findById('missing')).toBeUndefined();
+      });
+
+      it('deletes a card and everything under it', async () => {
+        await cards.save(withPurchase(3));
+        await cards.delete('card-inter');
+
+        expect(await cards.findAll()).toHaveLength(0);
+        expect(await prisma.invoice.count()).toBe(0);
+        expect(await prisma.invoiceItem.count()).toBe(0);
+        expect(await prisma.installmentPlan.count()).toBe(0);
       });
     });
   },

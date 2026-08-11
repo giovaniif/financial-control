@@ -6,9 +6,11 @@ import { ManageTemplates } from '../../../application/budgeting/uc-2-manage-temp
 import { ReadCycle } from '../../../application/budgeting/uc-3-1-read-cycle.js';
 import { CloseCycle } from '../../../application/budgeting/uc-3-8-close-cycle.js';
 import { LedgerActions } from '../../../application/budgeting/uc-3-ledger-actions.js';
+import { ManageCards } from '../../../application/cards/uc-5-manage-cards.js';
 import { ListCycles } from '../../../application/budgeting/uc-3-3-list-cycles.js';
 import {
   InMemoryAccountRepository,
+  InMemoryCardRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
@@ -32,6 +34,7 @@ export function buildTestServer(
   const cycles = new InMemoryCycleRepository();
   const accounts = new InMemoryAccountRepository();
   const templates = new InMemoryTemplateRepository();
+  const cards = new InMemoryCardRepository();
 
   return buildServer({
     clock,
@@ -60,6 +63,7 @@ export function buildTestServer(
     ),
     ledgerActions: new LedgerActions(cycles, settings, noHolidays),
     closeCycle: new CloseCycle(cycles, settings, accounts, noHolidays, clock),
+    manageCards: new ManageCards(cards, cycles, settings, noHolidays),
     ...overrides,
   });
 }
