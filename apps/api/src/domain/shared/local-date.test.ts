@@ -136,3 +136,9 @@ describe('LocalDate comparison', () => {
     expect(sorted).toEqual(['2026-08-05', '2026-08-31', '2026-09-01']);
   });
 });
+
+describe('LocalDate rendering', () => {
+  it('renders as its ISO date', () => {
+    expect(date('2026-08-05').toString()).toBe('2026-08-05');
+  });
+});
