@@ -7,13 +7,17 @@
     "node": ">=24.11.1 <25"
   },
   "scripts": {
+    "dev": "turbo run dev",
+    "check": "turbo run lint typecheck build format:check && turbo run test -- --coverage",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "dev": "turbo run dev",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",

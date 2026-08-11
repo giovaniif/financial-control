@@ -25,8 +25,8 @@ What this means in practice:
 
 ## Coverage policy
 
-Enforced by Vitest `thresholds` in each package's config, so CI fails on a drop. This is
-a ratchet enforced by the tool, not by review.
+Enforced by Vitest `thresholds` in each package's config, so `pnpm check` fails on a
+drop. This is a ratchet enforced by the tool, not by review.
 
 | Scope | Floor |
 |---|---|
@@ -110,9 +110,9 @@ and readable; a stack of `vi.mock` calls is neither.
 
 ### `apps/api/src/infrastructure` — thin, DB-backed
 
-Prisma repository tests need a live PostgreSQL and are tagged so CI can skip them in the
-fast lane. Keep them to SQL that logic depends on — filters, ordering, joins — not
-re-testing Prisma itself.
+Prisma repository tests need a live PostgreSQL, so they are skipped unless `DATABASE_URL`
+is set and `pnpm db:up` is running. Keep them to SQL that logic depends on — filters,
+ordering, joins — not re-testing Prisma itself.
 
 ### `apps/api/src/interface` — the wiring
 

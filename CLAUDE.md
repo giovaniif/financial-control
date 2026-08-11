@@ -20,18 +20,19 @@ This file is about *how we work here*.
 3. **TDD: the test comes first.** Red, green, refactor. A change that alters behaviour
    without a test written *before* it is not done. → @.claude/testing.md
 4. **Coverage never drops below 80%**, and below 95% in the backend `domain/` and
-   `application/` layers. Enforced by Vitest thresholds in CI, not by review.
+   `application/` layers. Enforced by Vitest thresholds, not by review.
    → @.claude/testing.md
 5. **The architecture is enforced by the linter.** Backend layering is classical DDD;
-   frontend is Feature-Sliced Design. Import-boundary violations fail CI.
+   frontend is Feature-Sliced Design. Import-boundary violations fail the lint run.
    → @.claude/architecture.md · @.claude/linting.md
 6. **Everything is written in English** — identifiers, comments, tests, commits, Linear
    issues, PR titles and descriptions, all docs, and the entire UI. No exceptions; only
    currency and date *formatting* are Brazilian. → @.claude/code-style.md
 7. **Do not write comments** unless they explain something genuinely un-inferable from the
    code. → @.claude/code-style.md
-8. **`main` is a live environment.** Merging deploys to dev. Order stack merges so every
-   state of `main` is coherent. → @.claude/deployment.md
+8. **Everything runs locally.** No Render, no Vercel, no Supabase, no deployment of
+   any kind — one machine, one user. Order stack merges so every state of `main` is
+   still coherent. → @.claude/deployment.md
 
 ## Package manager
 
@@ -48,9 +49,9 @@ Turborepo drives the task graph: `pnpm turbo run <task>` from the root.
 ## Before you say a change is done
 
 ```bash
-pnpm turbo run lint typecheck test build   # everything, cached
-pnpm turbo run test -- --coverage          # coverage floors must hold
+pnpm check   # lint, typecheck, build, format:check, then tests with coverage
 ```
 
-Report what actually ran, with its output. A failing test described as passing is worse
+There is no CI. That command is the only thing standing between a mistake and `main`,
+so run it and read it. Report what actually ran, with its output. A failing test described as passing is worse
 than no test at all. If you skipped a check, say which and why.

@@ -74,7 +74,7 @@ const payload = row.metadata;
 ## Architecture boundaries are lint rules
 
 `eslint-plugin-boundaries` encodes the layering from `.claude/architecture.md`. **An
-architecture violation fails CI**; it is not something to catch in review.
+architecture violation fails `pnpm check`**; it is not something to catch in review.
 
 ### Backend — `apps/api`
 
@@ -120,24 +120,18 @@ import { cycleStore } from '@/entities/cycle/model/store';
 Same-layer cross-slice imports are forbidden outright. If two slices need to share, the
 shared part belongs one layer down.
 
-## CI
+## There is no CI
 
-Path-filtered per app, so a backend-only PR does not run the frontend suite. Every job
-must be green before merge.
+Every check runs on this machine. There is no hosted runner, no workflow file, and
+therefore no such thing as "green on CI but broken locally" — or the reverse.
 
-| Workflow | Jobs |
-|---|---|
-| `.github/workflows/ci.yml` | `lint` (eslint + prettier --check + boundaries), `typecheck`, `test` (vitest with coverage thresholds), `build` |
-
-CI runs the same commands you run locally. There is no CI-only check and no local-only
-check — if it passes here it passes there.
+The cost is that nothing stops an unchecked PR going up. `pnpm check` before `gt submit`
+is the whole of the enforcement, and it is on you.
 
 ## Pre-PR checklist
 
 ```bash
-pnpm turbo run lint typecheck build
-pnpm turbo run test -- --coverage
-pnpm turbo run format:check
+pnpm check      # lint, typecheck, build, format:check, then tests with coverage
 ```
 
 All green, or the PR does not go up.
