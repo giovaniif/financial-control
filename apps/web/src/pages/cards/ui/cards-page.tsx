@@ -1,7 +1,11 @@
 import type { CardResponse } from '@fin/contracts';
 import { useState } from 'react';
 
+import { useAccounts } from '@/entities/account';
 import { useCards } from '@/entities/card';
+import { AddCardButton } from '@/features/configure-card';
+import { PayInvoice, PayOffEarly } from '@/features/pay-invoice';
+import { RegisterPurchaseButton } from '@/features/register-purchase';
 import { formatDate, formatRange } from '@/shared/lib';
 import {
   Amount,
@@ -22,6 +26,7 @@ const statusTones = {
 /** UC-5 — cards, their invoices, and the cycles that pay them. */
 export function CardsPage() {
   const { data, isPending } = useCards();
+  const { data: accounts } = useAccounts();
   const [selectedId, setSelectedId] = useState<string>();
   const cards = data ?? [];
   const selected = cards.find((card) => card.id === selectedId) ?? cards[0];
@@ -34,10 +39,13 @@ export function CardsPage() {
       {isPending ? (
         <Skeleton className="h-64 w-full" />
       ) : cards.length === 0 ? (
-        <EmptyState
-          title="No cards yet"
-          body="A card needs a limit, a closing day and a due day. Those two days decide which cycle a purchase is paid from."
-        />
+        <div className="flex flex-col items-center gap-3">
+          <EmptyState
+            title="No cards yet"
+            body="A card needs a limit, a closing day and a due day. Those two days decide which cycle a purchase is paid from."
+          />
+          <AddCardButton accounts={accounts?.accounts ?? []} />
+        </div>
       ) : (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -59,7 +67,18 @@ export function CardsPage() {
             ))}
           </div>
 
-          {selected !== undefined && <Invoices card={selected} />}
+          {selected !== undefined && (
+            <>
+              <div className="flex justify-end gap-2">
+                <AddCardButton accounts={accounts?.accounts ?? []} />
+                <RegisterPurchaseButton
+                  cardId={selected.id}
+                  cardName={selected.name}
+                />
+              </div>
+              <Invoices card={selected} />
+            </>
+          )}
         </div>
       )}
     </AppShell>
@@ -130,6 +149,7 @@ function Invoices({ card }: { card: CardResponse }) {
               signed
               className="ml-auto text-sm font-semibold"
             />
+            <PayInvoice cardId={card.id} invoice={invoice} />
           </div>
 
           <ul className="divide-y divide-zinc-100 text-sm">
@@ -150,6 +170,14 @@ function Invoices({ card }: { card: CardResponse }) {
                   signed
                   className="w-28 text-right"
                 />
+                {/* Only a plan has anything left to anticipate. */}
+                {item.installment !== null && invoice.status === 'OPEN' && (
+                  <PayOffEarly
+                    cardId={card.id}
+                    purchaseId={item.purchaseId}
+                    description={`${item.description} ${item.installment}`}
+                  />
+                )}
               </li>
             ))}
           </ul>

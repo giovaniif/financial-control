@@ -151,4 +151,30 @@ describe('CardsPage', () => {
 
     expect(await screen.findByText('refund')).toBeInTheDocument();
   });
+
+  it('offers to register a purchase on the selected card', async () => {
+    stubApi({ '/api/cards': [inter()] });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: 'Register a purchase' }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers to add a card even before there is one', async () => {
+    stubApi({
+      '/api/cards': [],
+      '/api/accounts': {
+        accounts: [
+          { id: 'a', name: 'Inter Checking', type: 'CHECKING', balance: 1 },
+        ],
+        total: 1,
+      },
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: 'Add a card' }),
+    ).toBeInTheDocument();
+  });
 });
