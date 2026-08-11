@@ -192,6 +192,34 @@ describe('POST /cards/:id/purchases', () => {
     ).toBe('1/3');
   });
 
+  // UC-5.6 acts on the purchase, not on one of its items: paying off early
+  // retires every remaining instalment of the same purchase at once.
+  it('names the purchase behind every instalment of a plan', async () => {
+    const response = await serverWith(inter()).inject({
+      method: 'POST',
+      url: '/cards/card-inter/purchases',
+      payload: {
+        description: 'Airfare',
+        purchasedOn: '2026-08-20',
+        amount: -120_000,
+        installments: 3,
+      },
+    });
+
+    const items = response
+      .json<CardResponse>()
+      .invoices.flatMap((invoice) => invoice.items);
+    const [first] = items;
+
+    expect(items).toHaveLength(3);
+    expect(first?.purchaseId).toEqual(expect.any(String));
+    // One purchase, three items: the ids differ, the purchase does not.
+    expect(items.every((item) => item.purchaseId === first?.purchaseId)).toBe(
+      true,
+    );
+    expect(new Set(items.map((item) => item.id)).size).toBe(3);
+  });
+
   it('answers 400 to a malformed body', async () => {
     const response = await serverWith(inter()).inject({
       method: 'POST',

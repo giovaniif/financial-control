@@ -85,6 +85,7 @@ export function toResponse(view: CardView): CardResponse {
       paidInCycle: invoice.paidInCycle,
       items: invoice.items.map((item) => ({
         id: item.id,
+        purchaseId: item.purchaseId,
         description: item.description,
         purchasedOn: item.purchasedOn,
         amount: item.amountCents,

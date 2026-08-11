@@ -25,6 +25,7 @@ export class CardNotFound extends DomainError {}
 
 export interface InvoiceItemView {
   readonly id: string;
+  readonly purchaseId: string;
   readonly description: string;
   readonly purchasedOn: string;
   readonly amountCents: number;
@@ -322,6 +323,7 @@ export class ManageCards {
           paidInCycle: paying.month,
           items: invoice.items.map((item) => ({
             id: item.id,
+            purchaseId: item.purchaseId,
             description: item.description,
             purchasedOn: item.purchasedOn.toISO(),
             amountCents: item.amount.cents,
