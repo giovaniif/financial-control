@@ -1,6 +1,11 @@
+import { PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 
+import { ConfigurePaydayAnchor } from './application/budgeting/uc-1-1-configure-payday-anchor.js';
 import { SystemClock } from './infrastructure/clock/system-clock.js';
+import { BrazilianHolidayCalendar } from './infrastructure/holidays/brazilian-holiday-calendar.js';
+import { PrismaCycleRepository } from './infrastructure/prisma/prisma-cycle-repository.js';
+import { PrismaSettingsRepository } from './infrastructure/prisma/prisma-settings-repository.js';
 import { buildServer } from './interface/http/server.js';
 
 /**
@@ -9,5 +14,20 @@ import { buildServer } from './interface/http/server.js';
  * what lets the layers be tested without a database, a network or a real clock.
  */
 export function createApp(): FastifyInstance {
-  return buildServer({ clock: new SystemClock() });
+  const prisma = new PrismaClient();
+  const clock = new SystemClock();
+  const holidays = new BrazilianHolidayCalendar();
+
+  const settings = new PrismaSettingsRepository(prisma);
+  const cycles = new PrismaCycleRepository(prisma);
+
+  return buildServer({
+    clock,
+    configureAnchor: new ConfigurePaydayAnchor(
+      settings,
+      cycles,
+      holidays,
+      clock,
+    ),
+  });
 }
