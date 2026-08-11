@@ -3,6 +3,7 @@ import type { CycleRef, PaydayAnchor } from '../budgeting/cycle-ref.js';
 import type { Cycle } from '../budgeting/cycle.js';
 import type { RecurringTemplate } from '../budgeting/recurring-template.js';
 import type { Card } from '../cards/card.js';
+import type { Bucket } from '../goals/bucket.js';
 
 /**
  * Repositories take and return domain objects, never persistence models. The
@@ -42,5 +43,12 @@ export interface CardRepository {
   findAll(): Promise<Card[]>;
   findById(id: string): Promise<Card | undefined>;
   save(card: Card): Promise<void>;
+  delete(id: string): Promise<void>;
+}
+
+export interface BucketRepository {
+  findAll(): Promise<Bucket[]>;
+  findById(id: string): Promise<Bucket | undefined>;
+  save(bucket: Bucket): Promise<void>;
   delete(id: string): Promise<void>;
 }

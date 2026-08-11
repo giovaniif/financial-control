@@ -56,6 +56,35 @@ describe('Bucket mode is an invariant, not a display flag', () => {
     expect(investments().percentComplete).toBeUndefined();
   });
 
+  it('rejects a goal with no target at all', () => {
+    expect(() =>
+      Bucket.goal({
+        id: 'x',
+        name: 'Nameless goal',
+        rule: Allocation.fixed(reais(1)),
+        priority: 1,
+      } as unknown as Parameters<typeof Bucket.goal>[0]),
+    ).toThrow(InvalidBucket);
+  });
+
+  // An ongoing bucket has nothing to complete, so a target is a contradiction.
+  it('rejects an ongoing bucket carrying a target', () => {
+    expect(() =>
+      Bucket.ongoing({
+        id: 'x',
+        name: 'Contradiction',
+        target: { amount: reais(100), date: date('2027-01-01') },
+        rule: Allocation.fixed(reais(1)),
+        priority: 1,
+      } as unknown as Parameters<typeof Bucket.ongoing>[0]),
+    ).toThrow(InvalidBucket);
+  });
+
+  it('knows which kind it is', () => {
+    expect(reserve().isGoal).toBe(true);
+    expect(investments().isGoal).toBe(false);
+  });
+
   it('rejects a blank name', () => {
     expect(() => reserve({ name: '  ' })).toThrow(InvalidBucket);
   });

@@ -280,3 +280,92 @@ model InstallmentPlan {
 
   @@map("installment_plans")
 }
+
+enum BucketMode {
+  GOAL
+  ONGOING
+}
+
+enum BucketStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum AllocationRuleKind {
+  PERCENT
+  FIXED
+}
+
+enum BucketEventKind {
+  CONTRIBUTION
+  OVERRIDE
+  YIELD
+  CORRECTION
+  WITHDRAWAL
+}
+
+/// A pot of savings fed by a rule each cycle.
+model Bucket {
+  id      String @id @default(uuid())
+  name    String
+  purpose String @default("")
+
+  /// A real invariant: GOAL carries a target and date, ONGOING carries neither.
+  mode             BucketMode
+  targetCents      BigInt?
+  targetDate       DateTime?  @db.Date
+
+  ruleKind            AllocationRuleKind
+  /// Basis points when the rule is a percentage, so 33,33 % stays exact.
+  ruleBasisPoints     Int?
+  ruleFixedCents      BigInt?
+
+  /// Funding order when the surplus is short. Lower is funded first.
+  priority Int
+
+  /// An assumption, used only in the long-range projection.
+  expectedYieldBasisPoints Int?
+
+  status BucketStatus @default(ACTIVE)
+
+  events BucketEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("buckets")
+}
+
+/// Append-only. The balance is the fold over this, never a stored figure.
+model BucketEvent {
+  id       String @id @default(uuid())
+  bucketId String
+  bucket   Bucket @relation(fields: [bucketId], references: [id], onDelete: Cascade)
+
+  kind BucketEventKind
+
+  /// Set on CONTRIBUTION and OVERRIDE: the cycle the rule ran for.
+  cycleMonth String?
+
+  /// Set on YIELD, CORRECTION and WITHDRAWAL.
+  occurredOn DateTime? @db.Date
+
+  amountCents BigInt?
+
+  /// CORRECTION sets the balance outright rather than adjusting it.
+  newBalanceCents BigInt?
+
+  /// What the rule would have contributed, kept on an OVERRIDE.
+  ruleWouldHaveBeenCents BigInt?
+
+  /// Required on CORRECTION and WITHDRAWAL — an unexplained balance is what
+  /// this log exists to prevent.
+  reason String?
+
+  /// Preserves the order events were appended in, which the fold depends on.
+  sequence Int
+
+  @@unique([bucketId, sequence])
+  @@index([bucketId])
+  @@map("bucket_events")
+}

@@ -56,3 +56,14 @@ export type {
   PayOffEarlyRequest,
   RegisterPurchaseRequest,
 } from './cards.js';
+export type {
+  AllocationPreviewResponse,
+  AllocationRuleRequest,
+  BucketEventResponse,
+  BucketMode,
+  BucketResponse,
+  BucketStatus,
+  CreateGoalRequest,
+  CreateOngoingRequest,
+  FundingResponse,
+} from './buckets.js';

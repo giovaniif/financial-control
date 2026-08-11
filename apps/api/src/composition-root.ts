@@ -8,10 +8,12 @@ import { ReadCycle } from './application/budgeting/uc-3-1-read-cycle.js';
 import { CloseCycle } from './application/budgeting/uc-3-8-close-cycle.js';
 import { LedgerActions } from './application/budgeting/uc-3-ledger-actions.js';
 import { ManageCards } from './application/cards/uc-5-manage-cards.js';
+import { ManageBuckets } from './application/goals/uc-6-manage-buckets.js';
 import { ListCycles } from './application/budgeting/uc-3-3-list-cycles.js';
 import { SystemClock } from './infrastructure/clock/system-clock.js';
 import { BrazilianHolidayCalendar } from './infrastructure/holidays/brazilian-holiday-calendar.js';
 import { PrismaAccountRepository } from './infrastructure/prisma/prisma-account-repository.js';
+import { PrismaBucketRepository } from './infrastructure/prisma/prisma-bucket-repository.js';
 import { PrismaCardRepository } from './infrastructure/prisma/prisma-card-repository.js';
 import { PrismaCycleRepository } from './infrastructure/prisma/prisma-cycle-repository.js';
 import { PrismaTemplateRepository } from './infrastructure/prisma/prisma-template-repository.js';
@@ -33,6 +35,7 @@ export function createApp(): FastifyInstance {
   const accounts = new PrismaAccountRepository(prisma);
   const templates = new PrismaTemplateRepository(prisma);
   const cards = new PrismaCardRepository(prisma);
+  const buckets = new PrismaBucketRepository(prisma);
 
   return buildServer({
     clock,
@@ -62,5 +65,6 @@ export function createApp(): FastifyInstance {
     ledgerActions: new LedgerActions(cycles, settings, holidays),
     closeCycle: new CloseCycle(cycles, settings, accounts, holidays, clock),
     manageCards: new ManageCards(cards, cycles, settings, holidays),
+    manageBuckets: new ManageBuckets(buckets, cycles, settings, holidays),
   });
 }

@@ -7,9 +7,11 @@ import type { ReadCycle } from '../../application/budgeting/uc-3-1-read-cycle.js
 import type { CloseCycle } from '../../application/budgeting/uc-3-8-close-cycle.js';
 import type { LedgerActions } from '../../application/budgeting/uc-3-ledger-actions.js';
 import type { ManageCards } from '../../application/cards/uc-5-manage-cards.js';
+import type { ManageBuckets } from '../../application/goals/uc-6-manage-buckets.js';
 import type { ListCycles } from '../../application/budgeting/uc-3-3-list-cycles.js';
 import type { Clock } from '../../domain/ports/clock.js';
 import { registerAccountRoutes } from './routes/accounts.js';
+import { registerBucketRoutes } from './routes/buckets.js';
 import { registerCardRoutes } from './routes/cards.js';
 import { registerCycleRoutes } from './routes/cycles.js';
 import { registerHealthRoute } from './routes/health.js';
@@ -27,6 +29,7 @@ interface Dependencies {
   ledgerActions: LedgerActions;
   closeCycle: CloseCycle;
   manageCards: ManageCards;
+  manageBuckets: ManageBuckets;
 }
 
 export function buildServer({
@@ -39,6 +42,7 @@ export function buildServer({
   ledgerActions,
   closeCycle,
   manageCards,
+  manageBuckets,
 }: Dependencies): FastifyInstance {
   const app = Fastify({ logger: false });
 
@@ -49,6 +53,7 @@ export function buildServer({
   registerTemplateRoutes(app, { manageTemplates });
   registerLedgerRoutes(app, { ledgerActions, closeCycle });
   registerCardRoutes(app, { manageCards });
+  registerBucketRoutes(app, { manageBuckets });
 
   return app;
 }
