@@ -1,1 +1,1 @@
-export { useDashboard } from './api/queries.js';
+export { useDashboard, useWealth } from './api/queries.js';
