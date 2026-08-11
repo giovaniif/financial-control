@@ -1,6 +1,11 @@
 import type { TemplateResponse } from '@fin/contracts';
 
 import { useTemplates } from '@/entities/template';
+import {
+  CreateTemplateButton,
+  EditTemplate,
+} from '@/features/manage-templates';
+import { useSelectedCycle } from '@/features/navigate-cycle';
 import { Amount, Badge, EmptyState, Skeleton, StatTile } from '@/shared/ui';
 import { AppShell } from '@/widgets/app-shell';
 
@@ -13,6 +18,8 @@ const statusTones = {
 /** UC-2 — the recurring commitments that fill every future cycle. */
 export function TemplatesPage() {
   const { data, isPending } = useTemplates();
+  // A change applies from the selected cycle onward, never behind it.
+  const { selectedMonth } = useSelectedCycle();
 
   return (
     <AppShell
@@ -53,13 +60,20 @@ export function TemplatesPage() {
             />
           </div>
 
+          <div className="flex items-center justify-end">
+            <CreateTemplateButton currentMonth={selectedMonth ?? ''} />
+          </div>
+
           {data.templates.length === 0 ? (
             <EmptyState
               title="No templates yet"
               body="A template generates one entry per cycle — salary, rent, a subscription. Every future cycle is built from these."
             />
           ) : (
-            <TemplateTable templates={data.templates} />
+            <TemplateTable
+              templates={data.templates}
+              currentMonth={selectedMonth ?? ''}
+            />
           )}
         </div>
       )}
@@ -67,7 +81,13 @@ export function TemplatesPage() {
   );
 }
 
-function TemplateTable({ templates }: { templates: TemplateResponse[] }) {
+function TemplateTable({
+  templates,
+  currentMonth,
+}: {
+  templates: TemplateResponse[];
+  currentMonth: string;
+}) {
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
       <table className="w-full text-sm">
@@ -78,11 +98,16 @@ function TemplateTable({ templates }: { templates: TemplateResponse[] }) {
             <th className="px-4 py-2 text-right font-semibold">Amount</th>
             <th className="px-4 py-2 font-semibold">Next</th>
             <th className="px-4 py-2 font-semibold">Status</th>
+            <th className="px-4 py-2" />
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100">
           {templates.map((template) => (
-            <TemplateRow key={template.id} template={template} />
+            <TemplateRow
+              key={template.id}
+              template={template}
+              currentMonth={currentMonth}
+            />
           ))}
         </tbody>
       </table>
@@ -90,7 +115,13 @@ function TemplateTable({ templates }: { templates: TemplateResponse[] }) {
   );
 }
 
-function TemplateRow({ template }: { template: TemplateResponse }) {
+function TemplateRow({
+  template,
+  currentMonth,
+}: {
+  template: TemplateResponse;
+  currentMonth: string;
+}) {
   const dimmed = template.status !== 'ACTIVE';
 
   return (
@@ -121,6 +152,9 @@ function TemplateRow({ template }: { template: TemplateResponse }) {
               : `ends ${template.endMonth}`}
           </Badge>
         </td>
+        <td className="px-4 py-2 text-right">
+          <EditTemplate template={template} currentMonth={currentMonth} />
+        </td>
       </tr>
       {/* UC-2.4 — the steps expand in place, so a climbing cost is legible. */}
       {template.valueSchedule.map((step) => (
@@ -131,7 +165,7 @@ function TemplateRow({ template }: { template: TemplateResponse }) {
           <td className="py-1.5 pr-4 text-right text-xs">
             <Amount cents={step.amount} signed />
           </td>
-          <td colSpan={2} />
+          <td colSpan={3} />
         </tr>
       ))}
     </>

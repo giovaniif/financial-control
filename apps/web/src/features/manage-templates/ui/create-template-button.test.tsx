@@ -1,0 +1,126 @@
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { renderWithProviders } from '@/shared/testing';
+
+import { CreateTemplateButton } from './create-template-button.js';
+
+function stubPost() {
+  const fetchMock = vi.fn(() =>
+    Promise.resolve(new Response(JSON.stringify({}), { status: 201 })),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+function bodyOf(fetchMock: ReturnType<typeof stubPost>) {
+  const call = fetchMock.mock.calls[0] as unknown as
+    [string, RequestInit] | undefined;
+
+  return JSON.parse((call?.[1].body ?? '{}') as string) as Record<
+    string,
+    unknown
+  >;
+}
+
+const open = () =>
+  userEvent.click(screen.getByRole('button', { name: 'New template' }));
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe('CreateTemplateButton', () => {
+  it('creates a recurring outcome from a name, amount and due day', async () => {
+    const fetchMock = stubPost();
+    renderWithProviders(<CreateTemplateButton currentMonth="2026-08" />);
+
+    await open();
+    await userEvent.type(screen.getByLabelText('Name'), 'Health Plan');
+    await userEvent.type(screen.getByLabelText('Amount'), '320');
+    await userEvent.clear(screen.getByLabelText('Due day of month'));
+    await userEvent.type(screen.getByLabelText('Due day of month'), '8');
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/templates',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+    expect(bodyOf(fetchMock)).toMatchObject({
+      name: 'Health Plan',
+      direction: 'OUT',
+      dueDayOfMonth: 8,
+      amount: 32_000,
+      startMonth: '2026-08',
+    });
+  });
+
+  it('creates a recurring income', async () => {
+    const fetchMock = stubPost();
+    renderWithProviders(<CreateTemplateButton currentMonth="2026-08" />);
+
+    await open();
+    await userEvent.type(screen.getByLabelText('Name'), 'Salary');
+    await userEvent.type(screen.getByLabelText('Amount'), '18.000');
+    await userEvent.selectOptions(
+      screen.getByLabelText('Direction'),
+      'Money in',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      expect(bodyOf(fetchMock)).toMatchObject({
+        direction: 'IN',
+        amount: 1_800_000,
+      });
+    });
+  });
+
+  // UC-2.6 — a placeholder the user knows is only roughly right.
+  it('can be flagged as an unconfirmed estimate at creation', async () => {
+    const fetchMock = stubPost();
+    renderWithProviders(<CreateTemplateButton currentMonth="2026-08" />);
+
+    await open();
+    await userEvent.type(screen.getByLabelText('Name'), 'Contractor Costs');
+    await userEvent.type(screen.getByLabelText('Amount'), '1.500');
+    await userEvent.click(screen.getByLabelText('Unconfirmed estimate'));
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      expect(bodyOf(fetchMock)).toMatchObject({ isEstimate: true });
+    });
+  });
+
+  it('refuses a due day outside a month', async () => {
+    const fetchMock = stubPost();
+    renderWithProviders(<CreateTemplateButton currentMonth="2026-08" />);
+
+    await open();
+    await userEvent.type(screen.getByLabelText('Name'), 'Rent');
+    await userEvent.type(screen.getByLabelText('Amount'), '100');
+    await userEvent.clear(screen.getByLabelText('Due day of month'));
+    await userEvent.type(screen.getByLabelText('Due day of month'), '45');
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'A day between 1 and 31',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('refuses an unnamed template', async () => {
+    const fetchMock = stubPost();
+    renderWithProviders(<CreateTemplateButton currentMonth="2026-08" />);
+
+    await open();
+    await userEvent.type(screen.getByLabelText('Amount'), '100');
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Name the template');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
