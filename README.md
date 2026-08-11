@@ -42,3 +42,9 @@ pnpm format                       # write, rather than check
 pnpm db:up / pnpm db:down         # start and stop PostgreSQL
 pnpm db:reset                     # throw the data away and start clean
 ```
+
+The container also creates **`fin_test`**, a separate database for the DB-backed
+tests: they truncate every table, and pointing them at `fin` would destroy real
+data on every `pnpm check`. `TEST_DATABASE_URL` selects it, and the test setup
+refuses to run against any database not named `fin_test`.
+
