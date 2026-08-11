@@ -47,4 +47,8 @@ export class PrismaBucketRepository implements BucketRepository {
   async delete(id: string): Promise<void> {
     await this.prisma.bucket.delete({ where: { id } });
   }
+
+  async deleteAll(): Promise<void> {
+    await this.prisma.bucket.deleteMany();
+  }
 }

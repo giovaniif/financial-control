@@ -47,6 +47,11 @@ export class InMemoryAccountRepository implements AccountRepository {
     this.rows.delete(id);
     return Promise.resolve();
   }
+
+  deleteAll(): Promise<void> {
+    this.rows.clear();
+    return Promise.resolve();
+  }
 }
 
 export class InMemoryCycleRepository implements CycleRepository {
@@ -68,8 +73,17 @@ export class InMemoryCycleRepository implements CycleRepository {
     );
   }
 
+  allMonths(): Promise<readonly string[]> {
+    return Promise.resolve([...this.rows.keys()].sort());
+  }
+
   save(cycle: Cycle): Promise<void> {
     this.rows.set(cycle.ref.month, cycle);
+    return Promise.resolve();
+  }
+
+  deleteAll(): Promise<void> {
+    this.rows.clear();
     return Promise.resolve();
   }
 
@@ -117,6 +131,11 @@ export class InMemoryTemplateRepository implements RecurringTemplateRepository {
     this.rows.delete(id);
     return Promise.resolve();
   }
+
+  deleteAll(): Promise<void> {
+    this.rows.clear();
+    return Promise.resolve();
+  }
 }
 
 export class InMemoryCardRepository implements CardRepository {
@@ -145,6 +164,11 @@ export class InMemoryCardRepository implements CardRepository {
     this.rows.delete(id);
     return Promise.resolve();
   }
+
+  deleteAll(): Promise<void> {
+    this.rows.clear();
+    return Promise.resolve();
+  }
 }
 
 export class InMemoryBucketRepository implements BucketRepository {
@@ -171,6 +195,11 @@ export class InMemoryBucketRepository implements BucketRepository {
 
   delete(id: string): Promise<void> {
     this.rows.delete(id);
+    return Promise.resolve();
+  }
+
+  deleteAll(): Promise<void> {
+    this.rows.clear();
     return Promise.resolve();
   }
 }

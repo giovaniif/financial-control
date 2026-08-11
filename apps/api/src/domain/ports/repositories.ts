@@ -14,6 +14,8 @@ export interface AccountRepository {
   findById(id: string): Promise<Account | undefined>;
   save(account: Account): Promise<void>;
   delete(id: string): Promise<void>;
+  /** A restore replaces rather than merges — see UC-1.6. */
+  deleteAll(): Promise<void>;
 }
 
 /**
@@ -28,7 +30,10 @@ export interface CycleRepository {
    * has touched is not history, so it is not returned — see UC-3.9.
    */
   monthsBefore(month: string): Promise<readonly string[]>;
+  /** Every persisted month, oldest first. What a backup has to walk. */
+  allMonths(): Promise<readonly string[]>;
   save(cycle: Cycle): Promise<void>;
+  deleteAll(): Promise<void>;
 }
 
 export interface SettingsRepository {
@@ -42,6 +47,7 @@ export interface RecurringTemplateRepository {
   findById(id: string): Promise<RecurringTemplate | undefined>;
   save(template: RecurringTemplate): Promise<void>;
   delete(id: string): Promise<void>;
+  deleteAll(): Promise<void>;
 }
 
 export interface CardRepository {
@@ -49,6 +55,7 @@ export interface CardRepository {
   findById(id: string): Promise<Card | undefined>;
   save(card: Card): Promise<void>;
   delete(id: string): Promise<void>;
+  deleteAll(): Promise<void>;
 }
 
 export interface BucketRepository {
@@ -56,4 +63,5 @@ export interface BucketRepository {
   findById(id: string): Promise<Bucket | undefined>;
   save(bucket: Bucket): Promise<void>;
   delete(id: string): Promise<void>;
+  deleteAll(): Promise<void>;
 }

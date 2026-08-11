@@ -61,4 +61,8 @@ export class PrismaCardRepository implements CardRepository {
   async delete(id: string): Promise<void> {
     await this.prisma.card.delete({ where: { id } });
   }
+
+  async deleteAll(): Promise<void> {
+    await this.prisma.card.deleteMany();
+  }
 }
