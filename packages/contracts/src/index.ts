@@ -27,3 +27,14 @@ export type {
   CycleWindowResponse,
   SettlementStatus,
 } from './cycles.js';
+export type {
+  ChangeTemplateAmountRequest,
+  CreateTemplateRequest,
+  Direction,
+  EditScope,
+  TemplateResponse,
+  TemplateStatus,
+  TemplateSummaryResponse,
+  TemplatesResponse,
+  ValueScheduleStepResponse,
+} from './templates.js';

@@ -7,6 +7,10 @@ import {
 } from '../../domain/budgeting/cycle-ref.js';
 import { Cycle, Estimates } from '../../domain/budgeting/cycle.js';
 import { EntryKind, LedgerEntry } from '../../domain/budgeting/ledger-entry.js';
+import {
+  Direction,
+  RecurringTemplate,
+} from '../../domain/budgeting/recurring-template.js';
 import { noHolidays } from '../../domain/ports/holiday-calendar.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
@@ -14,6 +18,7 @@ import { SettlementStatus } from '../../domain/shared/planned-actual.js';
 import {
   InMemoryCycleRepository,
   InMemorySettingsRepository,
+  InMemoryTemplateRepository,
 } from '../testing/fakes.js';
 import { ReadCycle, UnknownMonth } from './uc-3-1-read-cycle.js';
 
@@ -53,6 +58,7 @@ const reading = (...cycles: Cycle[]) =>
     new InMemoryCycleRepository(cycles),
     new InMemorySettingsRepository(anchor),
     noHolidays,
+    new InMemoryTemplateRepository(),
   );
 
 describe('ReadCycle.byMonth', () => {
@@ -166,5 +172,116 @@ describe('ReadCycle.refFor', () => {
     const ref = await reading().refFor('2026-08');
 
     expect(ref.start.toISO()).toBe('2026-08-05');
+  });
+});
+
+describe('ReadCycle materialises the cycle from templates', () => {
+  const readingWith = (
+    templates: RecurringTemplate[],
+    cycles: Cycle[] = [],
+  ) => {
+    const cycleRepo = new InMemoryCycleRepository(cycles);
+
+    return {
+      cycleRepo,
+      useCase: new ReadCycle(
+        cycleRepo,
+        new InMemorySettingsRepository(anchor),
+        noHolidays,
+        new InMemoryTemplateRepository(templates),
+      ),
+    };
+  };
+
+  const salary = RecurringTemplate.create({
+    id: 'tpl-salary',
+    name: 'Salary',
+    direction: Direction.In,
+    dueDayOfMonth: 5,
+    amount: Money.fromCents(1_800_000),
+    startMonth: '2026-08',
+  });
+  const health = RecurringTemplate.create({
+    id: 'tpl-health',
+    name: 'Health Plan',
+    direction: Direction.Out,
+    dueDayOfMonth: 8,
+    amount: Money.fromCents(-32_000),
+    startMonth: '2026-08',
+  });
+
+  // Until this worked, every cycle was permanently empty.
+  it('fills an untouched month from the templates that apply to it', async () => {
+    const { useCase } = readingWith([salary, health]);
+
+    const view = await useCase.byMonth('2026-08');
+
+    expect(view.entries.map((e) => e.description)).toEqual([
+      'Salary',
+      'Health Plan',
+    ]);
+    expect(view.chain.netSurplus.cents).toBe(1_768_000);
+  });
+
+  it('persists what it generated, so the entries have stable ids', async () => {
+    const { useCase, cycleRepo } = readingWith([salary]);
+
+    const first = await useCase.byMonth('2026-08');
+    const second = await useCase.byMonth('2026-08');
+
+    expect(cycleRepo.saved).toHaveLength(1);
+    expect(second.entries[0]?.id).toBe(first.entries[0]?.id);
+  });
+
+  it('does not write when there was nothing to generate', async () => {
+    const { useCase, cycleRepo } = readingWith([]);
+
+    await useCase.byMonth('2026-08');
+
+    expect(cycleRepo.saved).toHaveLength(0);
+  });
+
+  it('applies the value schedule for the cycle it is reading', async () => {
+    const stepped = RecurringTemplate.create({
+      id: 'tpl-salary',
+      name: 'Salary',
+      direction: Direction.In,
+      dueDayOfMonth: 5,
+      amount: Money.fromCents(1_000_000),
+      startMonth: '2026-08',
+      valueSchedule: [
+        { fromMonth: '2026-09', amount: Money.fromCents(1_800_000) },
+      ],
+    });
+    const { useCase } = readingWith([stepped]);
+
+    expect((await useCase.byMonth('2026-08')).chain.totalIncome.cents).toBe(
+      1_000_000,
+    );
+    expect((await useCase.byMonth('2026-09')).chain.totalIncome.cents).toBe(
+      1_800_000,
+    );
+  });
+
+  it('leaves a settled entry alone on the next read', async () => {
+    const { useCase, cycleRepo } = readingWith([health]);
+
+    const first = await useCase.byMonth('2026-08');
+    const stored = await cycleRepo.findByMonth(august);
+    if (stored === undefined) {
+      throw new Error('expected the read to have persisted the cycle');
+    }
+    await cycleRepo.save(
+      stored.settleEntry(
+        first.entries[0]?.id ?? '',
+        Money.fromCents(-33_000),
+        SettlementStatus.Paid,
+      ),
+    );
+
+    const again = await useCase.byMonth('2026-08');
+
+    expect(again.entries).toHaveLength(1);
+    expect(again.entries[0]?.actualCents).toBe(-33_000);
   });
 });
