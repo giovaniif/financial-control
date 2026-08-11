@@ -53,7 +53,7 @@ export function Dialog({ open, title, onClose, children }: Props) {
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label="Dismiss"
             className="cursor-pointer rounded-lg px-2 py-0.5 text-lg leading-none text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
           >
             ×
