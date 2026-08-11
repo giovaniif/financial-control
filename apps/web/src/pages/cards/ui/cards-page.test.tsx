@@ -99,6 +99,7 @@ describe('CardsPage', () => {
               items: [
                 {
                   id: 'i1',
+                  purchaseId: 'p-i1',
                   description: 'Airfare',
                   purchasedOn: '2026-08-20',
                   amount: -40_000,
@@ -133,6 +134,7 @@ describe('CardsPage', () => {
               items: [
                 {
                   id: 'i1',
+                  purchaseId: 'p-i1',
                   description: 'Returned chair',
                   purchasedOn: '2026-08-26',
                   amount: 42_000,

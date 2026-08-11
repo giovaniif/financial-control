@@ -4,6 +4,8 @@ export type InvoiceStatus = 'OPEN' | 'CLOSED' | 'PAID';
 
 export interface InvoiceItemResponse {
   id: string;
+  /** One purchase spans one item per invoice; paying off early acts on this. */
+  purchaseId: string;
   description: string;
   purchasedOn: string;
   amount: Cents;
