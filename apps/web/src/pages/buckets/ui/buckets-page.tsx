@@ -2,6 +2,12 @@ import type { BucketResponse } from '@fin/contracts';
 import { useState } from 'react';
 
 import { useBuckets } from '@/entities/bucket';
+import {
+  AdjustRule,
+  ArchiveBucket,
+  RecordEvent,
+} from '@/features/manage-buckets';
+import { useSelectedCycle } from '@/features/navigate-cycle';
 import { formatDate } from '@/shared/lib';
 import {
   Amount,
@@ -24,6 +30,7 @@ const eventTones = {
 /** UC-6 — a pot of savings fed by a rule each cycle. */
 export function BucketsPage() {
   const { data, isPending } = useBuckets();
+  const { selectedMonth } = useSelectedCycle();
   const [selectedId, setSelectedId] = useState<string>();
   const buckets = data ?? [];
   const selected = buckets.find((b) => b.id === selectedId) ?? buckets[0];
@@ -61,7 +68,20 @@ export function BucketsPage() {
             ))}
           </div>
 
-          {selected !== undefined && <EventLog bucket={selected} />}
+          {selected !== undefined && (
+            <>
+              <div className="flex justify-end gap-2">
+                <AdjustRule bucket={selected} month={selectedMonth ?? ''} />
+                <RecordEvent
+                  bucketId={selected.id}
+                  bucketName={selected.name}
+                  month={selectedMonth ?? ''}
+                />
+                <ArchiveBucket bucket={selected} />
+              </div>
+              <EventLog bucket={selected} />
+            </>
+          )}
         </div>
       )}
     </AppShell>
