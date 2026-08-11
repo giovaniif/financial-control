@@ -87,7 +87,11 @@ carry the meaning.
 - Exhaustive `switch` on unions with a `never` default — adding a variant should break the
   build everywhere it must be handled.
 - Named exports only. No default exports, anywhere.
-- File names: `kebab-case.ts`, except React components which are `PascalCase.tsx`.
+- **File names are `kebab-case` everywhere**, React components included:
+  `dashboard-page.tsx`, `query-provider.tsx`, `cycle-ref.ts`. The *identifiers*
+  keep their casing — `DashboardPage` is still `PascalCase` — but no filename
+  ever is. One convention across both apps means no thinking about which
+  applies where, and no case-only renames on a case-insensitive checkout.
 
 ## Domain code
 
