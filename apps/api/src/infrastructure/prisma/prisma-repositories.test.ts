@@ -17,9 +17,15 @@ import { noHolidays } from '../../domain/ports/holiday-calendar.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
 import { SettlementStatus } from '../../domain/shared/planned-actual.js';
+import {
+  Direction,
+  RecurringTemplate,
+  TemplateStatus,
+} from '../../domain/budgeting/recurring-template.js';
 import { PrismaAccountRepository } from './prisma-account-repository.js';
 import { PrismaCycleRepository } from './prisma-cycle-repository.js';
 import { PrismaSettingsRepository } from './prisma-settings-repository.js';
+import { PrismaTemplateRepository } from './prisma-template-repository.js';
 
 // These need a live PostgreSQL: `pnpm db:up`. Without DATABASE_URL they skip,
 // so the pure suite still runs anywhere.
@@ -32,11 +38,14 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
     const accounts = new PrismaAccountRepository(prisma);
     const cycles = new PrismaCycleRepository(prisma);
     const settings = new PrismaSettingsRepository(prisma);
+    const templates = new PrismaTemplateRepository(prisma);
 
     const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
     const august = CycleRef.forMonth('2026-08', anchor, noHolidays);
 
     beforeEach(async () => {
+      await prisma.valueScheduleStep.deleteMany();
+      await prisma.recurringTemplate.deleteMany();
       await prisma.ledgerEntry.deleteMany();
       await prisma.cycle.deleteMany();
       await prisma.account.deleteMany();
@@ -391,6 +400,131 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
 
         expect(await prisma.settings.count()).toBe(1);
         expect((await settings.load()).dayOfMonth).toBe(10);
+      });
+    });
+
+    describe('recurring templates', () => {
+      const salary = () =>
+        RecurringTemplate.create({
+          id: 'tpl-salary',
+          name: 'Salary',
+          direction: Direction.In,
+          dueDayOfMonth: 5,
+          amount: Money.fromCents(1_000_000),
+          startMonth: '2026-08',
+          valueSchedule: [
+            { fromMonth: '2026-09', amount: Money.fromCents(1_800_000) },
+          ],
+        });
+
+      it('round-trips a template and its schedule', async () => {
+        await templates.save(salary());
+
+        const loaded = await templates.findById('tpl-salary');
+
+        expect(loaded?.name).toBe('Salary');
+        expect(loaded?.direction).toBe(Direction.In);
+        expect(loaded?.dueDayOfMonth).toBe(5);
+        expect(loaded?.baseAmount.cents).toBe(1_000_000);
+        expect(loaded?.valueSchedule).toHaveLength(1);
+      });
+
+      it('resolves the same amounts after a round trip', async () => {
+        await templates.save(salary());
+
+        const loaded = await templates.findById('tpl-salary');
+
+        expect(loaded?.amountFor(august).cents).toBe(1_000_000);
+        expect(
+          loaded?.amountFor(CycleRef.forMonth('2026-09', anchor, noHolidays))
+            .cents,
+        ).toBe(1_800_000);
+      });
+
+      it('keeps the schedule in cycle order', async () => {
+        await templates.save(
+          RecurringTemplate.create({
+            id: 'tpl-reno',
+            name: 'Renovation Progress',
+            direction: Direction.Out,
+            dueDayOfMonth: 20,
+            amount: Money.fromCents(-120_000),
+            startMonth: '2026-08',
+            valueSchedule: [
+              { fromMonth: '2026-11', amount: Money.fromCents(-134_000) },
+              { fromMonth: '2026-09', amount: Money.fromCents(-125_000) },
+              { fromMonth: '2026-10', amount: Money.fromCents(-130_000) },
+            ],
+          }),
+        );
+
+        const loaded = await templates.findById('tpl-reno');
+
+        expect(loaded?.valueSchedule.map((s) => s.fromMonth)).toEqual([
+          '2026-09',
+          '2026-10',
+          '2026-11',
+        ]);
+      });
+
+      it('replaces the schedule wholesale rather than accumulating steps', async () => {
+        await templates.save(salary());
+        await templates.save(
+          salary().scheduleAmountFrom('2026-09', Money.fromCents(1_900_000)),
+        );
+
+        const loaded = await templates.findById('tpl-salary');
+
+        expect(loaded?.valueSchedule).toHaveLength(1);
+        expect(loaded?.valueSchedule[0]?.amount.cents).toBe(1_900_000);
+      });
+
+      it('preserves the lifecycle status and the estimate flag', async () => {
+        await templates.save(salary().pause().asEstimate(true));
+
+        const loaded = await templates.findById('tpl-salary');
+
+        expect(loaded?.status).toBe(TemplateStatus.Paused);
+        expect(loaded?.isEstimate).toBe(true);
+      });
+
+      it('preserves an end cycle', async () => {
+        await templates.save(salary().endOn('2026-12'));
+
+        expect((await templates.findById('tpl-salary'))?.endMonth).toBe(
+          '2026-12',
+        );
+      });
+
+      it('lists them by name', async () => {
+        await templates.save(salary());
+        await templates.save(
+          RecurringTemplate.create({
+            id: 'tpl-health',
+            name: 'Health Plan',
+            direction: Direction.Out,
+            dueDayOfMonth: 8,
+            amount: Money.fromCents(-32_000),
+            startMonth: '2026-08',
+          }),
+        );
+
+        expect((await templates.findAll()).map((t) => t.name)).toEqual([
+          'Health Plan',
+          'Salary',
+        ]);
+      });
+
+      it('reports nothing for a template that is not there', async () => {
+        expect(await templates.findById('missing')).toBeUndefined();
+      });
+
+      it('deletes a template and its schedule with it', async () => {
+        await templates.save(salary());
+        await templates.delete('tpl-salary');
+
+        expect(await templates.findAll()).toHaveLength(0);
+        expect(await prisma.valueScheduleStep.count()).toBe(0);
       });
     });
   },
