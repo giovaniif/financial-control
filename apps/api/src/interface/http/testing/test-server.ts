@@ -4,6 +4,8 @@ import { ConfigurePaydayAnchor } from '../../../application/budgeting/uc-1-1-con
 import { ManageAccounts } from '../../../application/budgeting/uc-1-2-manage-accounts.js';
 import { ManageTemplates } from '../../../application/budgeting/uc-2-manage-templates.js';
 import { ReadCycle } from '../../../application/budgeting/uc-3-1-read-cycle.js';
+import { CloseCycle } from '../../../application/budgeting/uc-3-8-close-cycle.js';
+import { LedgerActions } from '../../../application/budgeting/uc-3-ledger-actions.js';
 import { ListCycles } from '../../../application/budgeting/uc-3-3-list-cycles.js';
 import {
   InMemoryAccountRepository,
@@ -56,6 +58,8 @@ export function buildTestServer(
       noHolidays,
       clock,
     ),
+    ledgerActions: new LedgerActions(cycles, settings, noHolidays),
+    closeCycle: new CloseCycle(cycles, settings, accounts, noHolidays, clock),
     ...overrides,
   });
 }

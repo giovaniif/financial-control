@@ -87,3 +87,34 @@ export interface CycleWindowResponse {
   estimates: EstimateMode;
   cycles: CycleSummaryResponse[];
 }
+
+export interface SettleEntryRequest {
+  status: 'PAID' | 'RECEIVED' | 'SKIPPED';
+  /** Omit to settle at the planned amount — the one-click case. */
+  actual?: Cents;
+}
+
+export interface AddEntryRequest {
+  description: string;
+  kind: EntryKind;
+  /** `YYYY-MM-DD`. Must fall inside the cycle. */
+  dueDate: string;
+  amount: Cents;
+  isEstimate?: boolean;
+}
+
+export interface OverrideEntryRequest {
+  amount: Cents;
+}
+
+/** One later cycle whose opening balance a reopen would move. */
+export interface DownstreamShiftResponse {
+  month: string;
+  currentOpening: Cents;
+  recomputedOpening: Cents;
+}
+
+export interface ReopenPreviewResponse {
+  month: string;
+  shifts: DownstreamShiftResponse[];
+}
