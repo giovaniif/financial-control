@@ -38,3 +38,10 @@ export type {
   TemplatesResponse,
   ValueScheduleStepResponse,
 } from './templates.js';
+export type {
+  AddEntryRequest,
+  DownstreamShiftResponse,
+  OverrideEntryRequest,
+  ReopenPreviewResponse,
+  SettleEntryRequest,
+} from './cycles.js';
