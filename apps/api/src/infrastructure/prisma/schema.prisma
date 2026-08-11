@@ -1,0 +1,17 @@
+// Financial Control — persistence schema.
+//
+// Money columns are BigInt cents or Decimal(19,4), never Float. Models arrive
+// with the aggregates that need them, starting at roadmap issue 2.1.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+
+  // A local PostgreSQL, run by docker-compose.yml at the repo root. Nothing
+  // sits in front of it, so migrations and the application share one URL — the
+  // separate `directUrl` a hosted connection pooler would force is not needed.
+  url = env("DATABASE_URL")
+}
