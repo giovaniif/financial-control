@@ -1,11 +1,249 @@
+import type { DashboardResponse } from '@fin/contracts';
+
+import { useBuckets } from '@/entities/bucket';
+import { useDashboard } from '@/entities/dashboard';
+import { formatDate } from '@/shared/lib';
+import {
+  Amount,
+  Card,
+  CardTitle,
+  EmptyState,
+  Skeleton,
+  StatTile,
+} from '@/shared/ui';
+import { AlertList } from '@/widgets/alert-list';
+import { AppShell } from '@/widgets/app-shell';
+import { UpcomingList } from '@/widgets/upcoming-list';
+
+/**
+ * UC-4 — the screen that justifies the whole payday-cycle model.
+ *
+ * It opens on the current cycle and speaks about the next: the question is
+ * always asked from the middle of the cycle you are in.
+ */
 export function DashboardPage() {
+  const { data, isPending, isError } = useDashboard();
+
   return (
-    <section>
-      <h1>Dashboard</h1>
-      <p>
-        How much will be paid in the next cycle, and how much survives to the
-        next payday.
+    <AppShell
+      title="Dashboard"
+      subtitle="How much you will pay next cycle, and what survives to the next payday"
+    >
+      {isPending ? (
+        <Skeleton className="h-48 w-full" />
+      ) : isError ? (
+        <EmptyState
+          title="The dashboard could not be built"
+          body="Check that the API is running."
+        />
+      ) : (
+        <div className="flex flex-col gap-4">
+          <Headline data={data} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {data.kpis.map((kpi) => (
+              <StatTile
+                key={kpi.label}
+                label={kpi.label}
+                cents={kpi.amount}
+                note={kpi.note}
+              />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <div className="flex flex-col gap-4 xl:col-span-2">
+              <UpcomingList entries={data.upcoming} />
+              <AlertList alerts={data.alerts} />
+            </div>
+            <div className="flex flex-col gap-4">
+              <Progress data={data} />
+              <BucketChips />
+            </div>
+          </div>
+        </div>
+      )}
+    </AppShell>
+  );
+}
+
+/** UC-4.1 — the answer as one sentence, and the three numbers qualifying it. */
+function Headline({ data }: { data: DashboardResponse }) {
+  const { headline } = data;
+
+  return (
+    <section className="flex flex-col gap-4 rounded-xl bg-zinc-900 p-6 text-zinc-50">
+      <div className="flex items-center gap-2 text-[10px] font-semibold tracking-widest text-zinc-400 uppercase">
+        Next cycle
+        <span className="font-mono text-xs normal-case">{headline.range}</span>
+      </div>
+
+      <p className="max-w-4xl text-2xl leading-snug font-normal">
+        In the {headline.cycleLabel} cycle you&rsquo;ll receive{' '}
+        <strong className="font-mono font-semibold">
+          {formatSigned(headline.incoming)}
+        </strong>
+        , pay{' '}
+        <strong className="font-mono font-semibold text-red-300">
+          {formatSigned(headline.outgoing)}
+        </strong>
+        , and{' '}
+        <strong className="font-mono font-semibold text-green-300">
+          {formatSigned(headline.free)}
+        </strong>{' '}
+        stays free after allocations.
       </p>
+
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-zinc-800 pt-3 text-xs">
+        <Qualifier
+          label="Lowest point"
+          value={headline.lowestPoint}
+          note={
+            headline.lowestPointDate === null
+              ? 'nothing scheduled'
+              : `on ${formatDate(headline.lowestPointDate)}`
+          }
+        />
+        <Qualifier label="Closes at" value={headline.closing} />
+        {/* Never let a guess masquerade as a fact. */}
+        <Qualifier
+          label="Without the estimates"
+          value={headline.closingWithoutEstimates}
+          tone="text-amber-300"
+        />
+      </div>
     </section>
   );
+}
+
+function Qualifier({
+  label,
+  value,
+  note,
+  tone = 'text-zinc-50',
+}: {
+  label: string;
+  value: number | null;
+  note?: string;
+  tone?: string;
+}) {
+  return (
+    <span className="flex items-baseline gap-2">
+      <span className="text-zinc-400">{label}</span>
+      <span className={`font-mono text-sm font-medium ${tone}`}>
+        {value === null ? '—' : formatSigned(value)}
+      </span>
+      {note !== undefined && <span className="text-zinc-500">{note}</span>}
+    </span>
+  );
+}
+
+/** UC-4.3 — two progress readings; the gap between them is the signal. */
+function Progress({ data }: { data: DashboardResponse }) {
+  const { progress } = data;
+
+  return (
+    <Card className="flex flex-col gap-3">
+      <CardTitle>This cycle so far</CardTitle>
+      <Bar
+        label={`Day ${String(progress.dayOfCycle)} of ${String(progress.cycleLength)}`}
+        percent={progress.timePercent}
+        tone="bg-zinc-900"
+      />
+      <Bar
+        label="Spent against planned"
+        percent={progress.spentPercent}
+        tone={
+          progress.spentPercent > progress.timePercent
+            ? 'bg-red-600'
+            : 'bg-green-600'
+        }
+      />
+      <p className="text-xs text-zinc-500">
+        <Amount cents={progress.spent} /> of{' '}
+        <Amount cents={progress.plannedOut} /> planned.
+      </p>
+    </Card>
+  );
+}
+
+function Bar({
+  label,
+  percent,
+  tone,
+}: {
+  label: string;
+  percent: number;
+  tone: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex justify-between text-xs">
+        <span className="text-zinc-600">{label}</span>
+        <span className="font-mono text-zinc-500">{percent}%</span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
+        <div
+          className={`h-full rounded-full ${tone}`}
+          style={{ width: `${String(Math.min(100, percent))}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** UC-4.6 — each bucket as a compact chip, one click through to UC-6. */
+function BucketChips() {
+  const { data } = useBuckets();
+  const buckets = (data ?? []).filter((bucket) => bucket.status === 'ACTIVE');
+
+  if (buckets.length === 0) {
+    return null;
+  }
+
+  return (
+    <Card className="flex flex-col gap-3">
+      <CardTitle>Buckets</CardTitle>
+      {buckets.map((bucket) => (
+        <div key={bucket.id} className="flex flex-col gap-1">
+          <div className="flex items-baseline justify-between text-sm">
+            <span>{bucket.name}</span>
+            <Amount cents={bucket.balance} className="text-xs" />
+          </div>
+          {/* A goal shows progress; an ongoing bucket has nothing to complete. */}
+          {bucket.percentComplete === null ? (
+            <span className="text-xs text-zinc-500">
+              ongoing — no target to hit
+            </span>
+          ) : (
+            <>
+              <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                <div
+                  className="h-full rounded-full bg-teal-600"
+                  style={{ width: `${String(bucket.percentComplete)}%` }}
+                />
+              </div>
+              <span className="text-xs text-zinc-500">
+                {bucket.percentComplete}% of{' '}
+                {bucket.target === null ? (
+                  '—'
+                ) : (
+                  <Amount cents={bucket.target} />
+                )}
+              </span>
+            </>
+          )}
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+/**
+ * The headline reads as prose, so amounts appear without a leading minus —
+ * "pay R$ 9.110" rather than "pay −R$ 9.110". The direction is in the verb.
+ */
+function formatSigned(cents: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(Math.abs(cents) / 100);
 }
