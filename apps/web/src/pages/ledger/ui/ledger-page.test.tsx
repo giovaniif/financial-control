@@ -182,4 +182,50 @@ describe('LedgerPage', () => {
 
     expect(await screen.findByText('overridden')).toBeInTheDocument();
   });
+
+  // A closed cycle rejects every mutation, so it offers none: the actions are
+  // absent, not merely disabled.
+  it('offers no action on a closed cycle', async () => {
+    stubApi({
+      '/api/cycles': window,
+      '/api/cycles/2026-08': cycle({
+        status: 'CLOSED',
+        entries: [entry()],
+      }),
+    });
+    renderPage();
+
+    await screen.findByText('Rent');
+
+    expect(
+      screen.queryByRole('button', { name: 'Add an entry' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Settle' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('offers to add the one-off no template covers', async () => {
+    stubApi({ '/api/cycles': window, '/api/cycles/2026-08': cycle() });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: 'Add an entry' }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers both the one-click settle and the different-amount path', async () => {
+    stubApi({
+      '/api/cycles': window,
+      '/api/cycles/2026-08': cycle({ entries: [entry()] }),
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: 'Settle' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Settle at a different amount' }),
+    ).toBeInTheDocument();
+  });
 });

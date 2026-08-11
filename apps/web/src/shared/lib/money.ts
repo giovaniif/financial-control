@@ -26,3 +26,24 @@ export function formatBRLCompact(cents: Cents): string {
   }
   return brl.format(cents / 100);
 }
+
+/**
+ * The inverse of `formatBRL`, for a form: an amount typed the way it is
+ * written becomes integer cents without ever passing through a float, so a
+ * value entered as `1.000.000,01` is exactly 100000001 cents.
+ *
+ * Returns null rather than 0 for anything unreadable — a form must not turn a
+ * typo into a silent zero.
+ */
+export function parseBRL(input: string): Cents | null {
+  const cleaned = input.replace(/[R$\s.]/g, '');
+  if (!/^-?\d+(,\d{1,2})?$/.test(cleaned)) {
+    return null;
+  }
+
+  const negative = cleaned.startsWith('-');
+  const [reais = '0', cents = ''] = cleaned.replace('-', '').split(',');
+  const magnitude = Number(reais) * 100 + Number(cents.padEnd(2, '0'));
+
+  return negative ? -magnitude : magnitude;
+}
