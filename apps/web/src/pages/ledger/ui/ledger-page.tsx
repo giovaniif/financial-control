@@ -1,8 +1,9 @@
 import type { LedgerEntryResponse } from '@fin/contracts';
 
+import { AddEntryButton } from '@/features/add-entry';
 import { useCycle } from '@/entities/cycle';
 import { useSelectedCycle } from '@/features/navigate-cycle';
-import { SettleButton } from '@/features/settle-entry';
+import { SettleEntry } from '@/features/settle-entry';
 import { formatDate } from '@/shared/lib';
 import { Amount, Badge, CardTitle, EmptyState, Skeleton } from '@/shared/ui';
 import { AppShell } from '@/widgets/app-shell';
@@ -53,16 +54,30 @@ export function LedgerPage() {
           )}
 
           <section className="flex flex-col gap-2">
-            <CardTitle>
-              {data.label} · {data.entries.length} entries
-            </CardTitle>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle>
+                {data.label} · {data.entries.length} entries
+              </CardTitle>
+              {/* A closed cycle is read-only, so it offers no action at all. */}
+              {data.status === 'OPEN' && (
+                <AddEntryButton
+                  month={data.month}
+                  start={data.start}
+                  end={data.end}
+                />
+              )}
+            </div>
             {data.entries.length === 0 ? (
               <EmptyState
                 title="Nothing in this cycle yet"
                 body="Recurring templates fill future cycles. Add one, or add a one-off entry here."
               />
             ) : (
-              <Table month={data.month} entries={data.entries} />
+              <Table
+                month={data.month}
+                entries={data.entries}
+                isOpen={data.status === 'OPEN'}
+              />
             )}
           </section>
         </div>
@@ -74,9 +89,11 @@ export function LedgerPage() {
 function Table({
   month,
   entries,
+  isOpen,
 }: {
   month: string;
   entries: LedgerEntryResponse[];
+  isOpen: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
@@ -124,11 +141,12 @@ function Table({
                 <Badge tone={statusTones[entry.status]}>{entry.status}</Badge>
               </td>
               <td className="px-4 py-2 text-right">
-                {entry.status === 'PENDING' || entry.status === 'OVERDUE' ? (
-                  <SettleButton
+                {isOpen &&
+                (entry.status === 'PENDING' || entry.status === 'OVERDUE') ? (
+                  <SettleEntry
                     month={month}
                     entryId={entry.id}
-                    isIncoming={entry.planned > 0}
+                    planned={entry.planned}
                   />
                 ) : null}
               </td>
