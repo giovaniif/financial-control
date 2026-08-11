@@ -7,6 +7,7 @@ import {
   InMemoryAccountRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
+  InMemoryTemplateRepository,
 } from '../../../application/testing/fakes.js';
 import { FixedClock } from '../../../application/testing/fixed-clock.js';
 import {
@@ -63,6 +64,7 @@ const serverWith = (...cycles: Cycle[]) => {
       repository,
       new InMemorySettingsRepository(anchor),
       noHolidays,
+      new InMemoryTemplateRepository(),
     ),
   });
 };
@@ -187,6 +189,7 @@ describe('GET /cycles', () => {
         accounts,
         noHolidays,
         FixedClock.at('2026-08-10T12:00:00Z'),
+        new InMemoryTemplateRepository(),
       ),
     });
   };

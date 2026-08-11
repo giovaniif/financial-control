@@ -8,6 +8,7 @@ import type {
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
+import { monthOf } from './month.js';
 
 export interface AnchorSettings {
   readonly anchorDay: number;
@@ -168,7 +169,7 @@ export class ConfigurePaydayAnchor {
   ): Promise<{ cycle: Cycle; ref: CycleRef }[]> {
     const today = LocalDate.fromInstant(this.clock.now());
     const refs = CycleRef.rolling(
-      monthOf(today),
+      monthOf(today, anchor, this.holidays),
       WINDOW,
       anchor,
       this.holidays,
@@ -195,8 +196,4 @@ function findHome(
   entry: LedgerEntry,
 ): CycleRef | undefined {
   return refs.find((ref) => ref.contains(entry.dueDate));
-}
-
-function monthOf(date: LocalDate): string {
-  return `${String(date.year)}-${String(date.month).padStart(2, '0')}`;
 }

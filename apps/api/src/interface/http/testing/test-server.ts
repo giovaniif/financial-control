@@ -2,12 +2,14 @@ import type { FastifyInstance } from 'fastify';
 
 import { ConfigurePaydayAnchor } from '../../../application/budgeting/uc-1-1-configure-payday-anchor.js';
 import { ManageAccounts } from '../../../application/budgeting/uc-1-2-manage-accounts.js';
+import { ManageTemplates } from '../../../application/budgeting/uc-2-manage-templates.js';
 import { ReadCycle } from '../../../application/budgeting/uc-3-1-read-cycle.js';
 import { ListCycles } from '../../../application/budgeting/uc-3-3-list-cycles.js';
 import {
   InMemoryAccountRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
+  InMemoryTemplateRepository,
 } from '../../../application/testing/fakes.js';
 import { FixedClock } from '../../../application/testing/fixed-clock.js';
 import { noHolidays } from '../../../domain/ports/holiday-calendar.js';
@@ -27,6 +29,7 @@ export function buildTestServer(
   const settings = new InMemorySettingsRepository();
   const cycles = new InMemoryCycleRepository();
   const accounts = new InMemoryAccountRepository();
+  const templates = new InMemoryTemplateRepository();
 
   return buildServer({
     clock,
@@ -37,8 +40,22 @@ export function buildTestServer(
       clock,
     ),
     manageAccounts: new ManageAccounts(accounts),
-    readCycle: new ReadCycle(cycles, settings, noHolidays),
-    listCycles: new ListCycles(cycles, settings, accounts, noHolidays, clock),
+    readCycle: new ReadCycle(cycles, settings, noHolidays, templates),
+    listCycles: new ListCycles(
+      cycles,
+      settings,
+      accounts,
+      noHolidays,
+      clock,
+      templates,
+    ),
+    manageTemplates: new ManageTemplates(
+      templates,
+      cycles,
+      settings,
+      noHolidays,
+      clock,
+    ),
     ...overrides,
   });
 }

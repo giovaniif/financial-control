@@ -3,12 +3,14 @@ import type { FastifyInstance } from 'fastify';
 
 import { ConfigurePaydayAnchor } from './application/budgeting/uc-1-1-configure-payday-anchor.js';
 import { ManageAccounts } from './application/budgeting/uc-1-2-manage-accounts.js';
+import { ManageTemplates } from './application/budgeting/uc-2-manage-templates.js';
 import { ReadCycle } from './application/budgeting/uc-3-1-read-cycle.js';
 import { ListCycles } from './application/budgeting/uc-3-3-list-cycles.js';
 import { SystemClock } from './infrastructure/clock/system-clock.js';
 import { BrazilianHolidayCalendar } from './infrastructure/holidays/brazilian-holiday-calendar.js';
 import { PrismaAccountRepository } from './infrastructure/prisma/prisma-account-repository.js';
 import { PrismaCycleRepository } from './infrastructure/prisma/prisma-cycle-repository.js';
+import { PrismaTemplateRepository } from './infrastructure/prisma/prisma-template-repository.js';
 import { PrismaSettingsRepository } from './infrastructure/prisma/prisma-settings-repository.js';
 import { buildServer } from './interface/http/server.js';
 
@@ -25,6 +27,7 @@ export function createApp(): FastifyInstance {
   const settings = new PrismaSettingsRepository(prisma);
   const cycles = new PrismaCycleRepository(prisma);
   const accounts = new PrismaAccountRepository(prisma);
+  const templates = new PrismaTemplateRepository(prisma);
 
   return buildServer({
     clock,
@@ -35,7 +38,21 @@ export function createApp(): FastifyInstance {
       clock,
     ),
     manageAccounts: new ManageAccounts(accounts),
-    readCycle: new ReadCycle(cycles, settings, holidays),
-    listCycles: new ListCycles(cycles, settings, accounts, holidays, clock),
+    readCycle: new ReadCycle(cycles, settings, holidays, templates),
+    listCycles: new ListCycles(
+      cycles,
+      settings,
+      accounts,
+      holidays,
+      clock,
+      templates,
+    ),
+    manageTemplates: new ManageTemplates(
+      templates,
+      cycles,
+      settings,
+      holidays,
+      clock,
+    ),
   });
 }

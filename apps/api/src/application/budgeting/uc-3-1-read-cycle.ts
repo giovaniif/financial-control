@@ -5,11 +5,13 @@ import type { LedgerEntry } from '../../domain/budgeting/ledger-entry.js';
 import type { HolidayCalendar } from '../../domain/ports/holiday-calendar.js';
 import type {
   CycleRepository,
+  RecurringTemplateRepository,
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
 import { DomainError } from '../../domain/shared/domain-error.js';
 import type { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
+import { generateInto } from '../../domain/budgeting/template-generation.js';
 
 export class UnknownMonth extends DomainError {}
 
@@ -54,6 +56,7 @@ export class ReadCycle {
     private readonly cycles: CycleRepository,
     private readonly settings: SettingsRepository,
     private readonly holidays: HolidayCalendar,
+    private readonly templates: RecurringTemplateRepository,
   ) {}
 
   async byMonth(
@@ -61,11 +64,24 @@ export class ReadCycle {
     estimates: Estimates = Estimates.Included,
   ): Promise<CycleView> {
     const ref = await this.refFor(month);
-    const cycle =
+    const stored =
       (await this.cycles.findByMonth(ref)) ??
       Cycle.open({ id: month, ref, openingBalance: Money.zero() });
 
-    return toView(cycle, estimates);
+    // Materialised on read: a cycle nobody has opened yet is still made of the
+    // templates that apply to it. Generation is idempotent, so this is safe to
+    // repeat, and the result is persisted only when it actually added
+    // something — a plain read must not write.
+    const generated = generateInto(
+      stored,
+      await this.templates.findAll(),
+      entryId,
+    );
+    if (generated.added.length > 0) {
+      await this.cycles.save(generated.cycle);
+    }
+
+    return toView(generated.cycle, estimates);
   }
 
   /** Resolves a month against the configured anchor. */
@@ -115,6 +131,11 @@ export function toView(cycle: Cycle, estimates: Estimates): CycleView {
           },
     firstNegativeDate: isoOrUndefined(cycle.firstNegativeDate(estimates)),
   };
+}
+
+/** Stable and derived, so regenerating the same cycle reuses the same row. */
+export function entryId(templateId: string, month: string): string {
+  return `${templateId}@${month}`;
 }
 
 function isoOrUndefined(date: LocalDate | undefined): string | undefined {

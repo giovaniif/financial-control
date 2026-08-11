@@ -1,5 +1,4 @@
 import { Account } from '../../domain/budgeting/account.js';
-import type { PaydayAnchor } from '../../domain/budgeting/cycle-ref.js';
 import { CycleRef } from '../../domain/budgeting/cycle-ref.js';
 import { Cycle, Estimates } from '../../domain/budgeting/cycle.js';
 import type { Clock } from '../../domain/ports/clock.js';
@@ -7,9 +6,13 @@ import type { HolidayCalendar } from '../../domain/ports/holiday-calendar.js';
 import type {
   AccountRepository,
   CycleRepository,
+  RecurringTemplateRepository,
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
+import { generateInto } from '../../domain/budgeting/template-generation.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
+import { monthOf } from './month.js';
+import { entryId } from './uc-3-1-read-cycle.js';
 
 /** Where a cycle sits relative to today. */
 export const CyclePosition = {
@@ -51,6 +54,7 @@ export class ListCycles {
     private readonly accounts: AccountRepository,
     private readonly holidays: HolidayCalendar,
     private readonly clock: Clock,
+    private readonly templates: RecurringTemplateRepository,
   ) {}
 
   async rollingWindow(
@@ -59,7 +63,7 @@ export class ListCycles {
     const today = LocalDate.fromInstant(this.clock.now());
     const anchor = await this.settings.load();
     const refs = CycleRef.rolling(
-      currentMonth(today, anchor, this.holidays),
+      monthOf(today, anchor, this.holidays),
       WINDOW,
       anchor,
       this.holidays,
@@ -68,14 +72,20 @@ export class ListCycles {
     // Before the first cycle closes there is no previous closing balance to
     // carry in, so the window opens on what is actually in the accounts.
     let opening = Account.totalOf(await this.accounts.findAll());
+    const templates = await this.templates.findAll();
     const summaries: CycleSummaryView[] = [];
 
     for (const ref of refs) {
       const stored = await this.cycles.findByMonth(ref);
-      const cycle =
+      const base =
         stored === undefined
           ? Cycle.open({ id: ref.month, ref, openingBalance: opening })
           : stored.withOpeningBalance(opening);
+
+      // Projected from templates but never persisted: listing the window is a
+      // read, and writing twelve cycles because someone opened a dropdown
+      // would materialise months the user has not touched.
+      const cycle = generateInto(base, templates, entryId).cycle;
 
       const chain = cycle.chain(estimates);
       summaries.push({
@@ -111,23 +121,4 @@ function positionOf(ref: CycleRef, today: LocalDate): CyclePosition {
     return CyclePosition.Next;
   }
   return CyclePosition.Projected;
-}
-
-/**
- * The month of the cycle *containing* today, which is not today's calendar
- * month on the days before payday: on 3 September, with payday on the 5th,
- * the user is still in the August cycle.
- */
-function currentMonth(
-  today: LocalDate,
-  anchor: PaydayAnchor,
-  holidays: HolidayCalendar,
-): string {
-  const ref = CycleRef.forMonth(monthOf(today), anchor, holidays);
-
-  return today.isBefore(ref.start) ? ref.previous().month : ref.month;
-}
-
-function monthOf(date: LocalDate): string {
-  return `${String(date.year)}-${String(date.month).padStart(2, '0')}`;
 }

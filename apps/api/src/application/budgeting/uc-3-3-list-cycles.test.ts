@@ -15,6 +15,7 @@ import {
   InMemoryAccountRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
+  InMemoryTemplateRepository,
 } from '../testing/fakes.js';
 import { FixedClock } from '../testing/fixed-clock.js';
 import { ListCycles } from './uc-3-3-list-cycles.js';
@@ -36,6 +37,7 @@ const listing = (options: {
     new InMemoryAccountRepository(options.accounts ?? []),
     noHolidays,
     options.at === undefined ? clock : FixedClock.at(options.at),
+    new InMemoryTemplateRepository(),
   );
 
 const cycleWith = (month: string, reais: number) =>
@@ -158,6 +160,7 @@ describe('ListCycles balance chaining', () => {
       new InMemoryAccountRepository(),
       noHolidays,
       clock,
+      new InMemoryTemplateRepository(),
     );
 
     await useCase.rollingWindow();
