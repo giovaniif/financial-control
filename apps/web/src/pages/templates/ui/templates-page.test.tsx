@@ -147,4 +147,40 @@ describe('TemplatesPage', () => {
 
     expect(await screen.findByText('~estimate')).toBeInTheDocument();
   });
+
+  it('offers to create a template', async () => {
+    stubApi({ '/api/templates': templates() });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: 'New template' }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers to edit each template by name', async () => {
+    stubApi({
+      '/api/templates': templates({
+        templates: [
+          {
+            id: 't1',
+            name: 'Salary',
+            direction: 'IN',
+            dueDayOfMonth: 5,
+            amount: 1_800_000,
+            status: 'ACTIVE',
+            isEstimate: false,
+            startMonth: '2026-01',
+            endMonth: null,
+            valueSchedule: [],
+            nextOccurrenceMonth: '2026-08',
+          },
+        ],
+      }),
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: 'Edit Salary' }),
+    ).toBeInTheDocument();
+  });
 });
