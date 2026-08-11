@@ -1,7 +1,8 @@
 // Financial Control — persistence schema.
 //
-// Money columns are BigInt cents or Decimal(19,4), never Float. Models arrive
-// with the aggregates that need them, starting at roadmap issue 2.1.
+// Money columns are BigInt cents, never Float. Dates that mean a calendar day
+// are `@db.Date`, never a timestamp: a payday on the 5th is the 5th, and a
+// timezone must never be able to shift it onto the 4th.
 
 generator client {
   provider = "prisma-client-js"
@@ -14,4 +15,130 @@ datasource db {
   // sits in front of it, so migrations and the application share one URL — the
   // separate `directUrl` a hosted connection pooler would force is not needed.
   url = env("DATABASE_URL")
+}
+
+/// Which way pay moves when the anchor lands on a weekend or a holiday.
+enum ShiftPolicy {
+  PRECEDING
+  FOLLOWING
+}
+
+/// The app's configuration. One user, so exactly one row.
+model Settings {
+  id          String      @id @default("singleton")
+  anchorDay   Int
+  shiftPolicy ShiftPolicy @default(PRECEDING)
+  updatedAt   DateTime    @updatedAt
+
+  @@map("settings")
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CASH
+}
+
+/// Somewhere money actually sits. Their sum is the app's starting cash.
+model Account {
+  id      String      @id @default(uuid())
+  name    String
+  type    AccountType
+  /// Integer cents. Negative is legal — a cheque account can be overdrawn.
+  balance BigInt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("accounts")
+}
+
+enum CycleStatus {
+  OPEN
+  CLOSED
+}
+
+/// One payday cycle: salary date through the day before the next salary date.
+model Cycle {
+  id String @id @default(uuid())
+
+  /// The month the cycle is named for, `YYYY-MM`. One cycle per month.
+  month  String      @unique
+  status CycleStatus @default(OPEN)
+
+  /// Integer cents, carried in from the previous cycle's closing balance.
+  openingBalance BigInt
+
+  entries LedgerEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cycles")
+}
+
+enum EntryKind {
+  INCOME
+  FIXED
+  INVOICE
+  VARIABLE
+  ALLOCATION
+}
+
+enum SettlementStatus {
+  PENDING
+  PAID
+  RECEIVED
+  SKIPPED
+  OVERDUE
+}
+
+enum OriginKind {
+  MANUAL
+  FROM_TEMPLATE
+  FROM_INVOICE
+  FROM_ALLOCATION
+  OVERRIDE
+}
+
+/// One line in a cycle's ledger.
+model LedgerEntry {
+  id      String @id @default(uuid())
+  cycleId String
+  cycle   Cycle  @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  description String
+
+  /// A calendar day, not an instant: this is what assigns the entry to a cycle.
+  dueDate DateTime @db.Date
+
+  kind         EntryKind
+  plannedCents BigInt
+  actualCents  BigInt?
+  status       SettlementStatus @default(PENDING)
+
+  /// An unconfirmed placeholder, kept out of the confirmed-only totals.
+  isEstimate Boolean @default(false)
+
+  originKind OriginKind @default(MANUAL)
+
+  /// The template, invoice or bucket the entry came from, when it came from one.
+  originRef String?
+
+  /// For an OVERRIDE: what the entry was generated from, and what that
+  /// generator would have produced, so the override can be reverted.
+  overriddenKind OriginKind?
+  overriddenRef  String?
+  projectedCents BigInt?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// The ledger's primary read path: a cycle's entries in due-date order.
+  @@index([cycleId, dueDate])
+  /// Generation is idempotent — one template produces at most one entry per
+  /// cycle, and one invoice lands once. Manual entries have a null ref, which
+  /// PostgreSQL treats as distinct, so they are not constrained by this.
+  @@unique([cycleId, originKind, originRef])
+  @@map("ledger_entries")
 }
