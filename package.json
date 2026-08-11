@@ -1,0 +1,20 @@
+{
+  "name": "financial-control",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.11.0",
+  "engines": {
+    "node": ">=24.11.1 <25"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "dev": "turbo run dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2"
+  }
+}
