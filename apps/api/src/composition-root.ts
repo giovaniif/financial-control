@@ -2,8 +2,10 @@ import { PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 
 import { ConfigurePaydayAnchor } from './application/budgeting/uc-1-1-configure-payday-anchor.js';
+import { ManageAccounts } from './application/budgeting/uc-1-2-manage-accounts.js';
 import { SystemClock } from './infrastructure/clock/system-clock.js';
 import { BrazilianHolidayCalendar } from './infrastructure/holidays/brazilian-holiday-calendar.js';
+import { PrismaAccountRepository } from './infrastructure/prisma/prisma-account-repository.js';
 import { PrismaCycleRepository } from './infrastructure/prisma/prisma-cycle-repository.js';
 import { PrismaSettingsRepository } from './infrastructure/prisma/prisma-settings-repository.js';
 import { buildServer } from './interface/http/server.js';
@@ -20,6 +22,7 @@ export function createApp(): FastifyInstance {
 
   const settings = new PrismaSettingsRepository(prisma);
   const cycles = new PrismaCycleRepository(prisma);
+  const accounts = new PrismaAccountRepository(prisma);
 
   return buildServer({
     clock,
@@ -29,5 +32,6 @@ export function createApp(): FastifyInstance {
       holidays,
       clock,
     ),
+    manageAccounts: new ManageAccounts(accounts),
   });
 }

@@ -4,8 +4,10 @@ import type {
 } from '@fin/contracts';
 import { describe, expect, it } from 'vitest';
 
+import { ManageAccounts } from '../../../application/budgeting/uc-1-2-manage-accounts.js';
 import { ConfigurePaydayAnchor } from '../../../application/budgeting/uc-1-1-configure-payday-anchor.js';
 import {
+  InMemoryAccountRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
 } from '../../../application/testing/fakes.js';
@@ -37,6 +39,7 @@ const serverWith = (cycles: InMemoryCycleRepository) =>
       noHolidays,
       clock,
     ),
+    manageAccounts: new ManageAccounts(new InMemoryAccountRepository()),
   });
 
 const augustWith = (...dueDates: string[]) =>

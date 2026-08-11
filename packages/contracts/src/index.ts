@@ -7,3 +7,11 @@ export type {
   CycleShiftResponse,
   ShiftPolicy,
 } from './settings.js';
+export type {
+  AccountResponse,
+  AccountsResponse,
+  AccountType,
+  CorrectBalanceRequest,
+  OpenAccountRequest,
+  RenameAccountRequest,
+} from './accounts.js';
