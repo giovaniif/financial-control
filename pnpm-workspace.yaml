@@ -1,3 +1,6 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+allowBuilds:
+  # Native binary for eslint-import-resolver-typescript's resolver.
+  unrs-resolver: true

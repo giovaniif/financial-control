@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+.vercel/
+pnpm-lock.yaml
+
+# Markdown is authored by hand. Prettier pads table cells to the width of the
+# widest row, which ignores printWidth and rewrites an entire table whenever one
+# cell changes — churn on the specs in docs/ that no reviewer benefits from.
+*.md
