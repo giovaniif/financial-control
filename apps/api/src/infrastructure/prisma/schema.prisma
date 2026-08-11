@@ -197,3 +197,86 @@ model ValueScheduleStep {
   @@unique([templateId, fromMonth])
   @@map("value_schedule_steps")
 }
+
+enum InvoiceStatus {
+  OPEN
+  CLOSED
+  PAID
+}
+
+/// A credit card. Its closing and due days drive every invoice below it.
+model Card {
+  id         String @id @default(uuid())
+  name       String
+  limitCents BigInt
+
+  /// Days of the month. The pair is what decides which cycle pays a purchase.
+  closingDay Int
+  dueDay     Int
+
+  paymentAccountId String
+
+  invoices Invoice[]
+  plans    InstallmentPlan[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cards")
+}
+
+/// One billing period. Its DUE date assigns it to a cycle — never its items'.
+model Invoice {
+  id     String @id @default(uuid())
+  cardId String
+  card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  periodStart DateTime      @db.Date
+  periodEnd   DateTime      @db.Date
+  dueDate     DateTime      @db.Date
+  status      InvoiceStatus @default(OPEN)
+  paidCents   BigInt?
+
+  items InvoiceItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One invoice per due date per card: the due date is its identity.
+  @@unique([cardId, dueDate])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id        String  @id @default(uuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  /// Groups the instalments of one purchase across several invoices.
+  purchaseId  String
+  description String
+  purchasedOn DateTime @db.Date
+
+  /// Negative for a purchase, positive for a refund.
+  amountCents BigInt
+
+  installmentNumber Int?
+  installmentTotal  Int?
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+/// A purchase spread across N invoices, retired once the last is billed.
+model InstallmentPlan {
+  purchaseId String @id
+  cardId     String
+  card       Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  description       String
+  purchasedOn       DateTime @db.Date
+  totalCents        BigInt
+  totalInstallments Int
+
+  @@map("installment_plans")
+}

@@ -345,3 +345,89 @@ describe('Card limit and commitment', () => {
     expect(inter().availableLimit.cents).toBe(2_500_000);
   });
 });
+
+describe('Card edge cases', () => {
+  it('reports no invoice for an id that is not there', () => {
+    expect(inter().invoiceById('missing')).toBeUndefined();
+  });
+
+  it('refuses to pay an invoice that is not there', () => {
+    expect(() => inter().payInvoice('missing', reais(-1))).toThrow(
+      PurchaseNotFound,
+    );
+  });
+
+  it('closing an already-closed invoice changes nothing', () => {
+    const card = purchase(inter(), { on: '2026-08-20', amount: -420 })
+      .closeInvoice('inv-2026-09-10')
+      .closeInvoice('inv-2026-09-10');
+
+    expect(card.invoiceById('inv-2026-09-10')?.status).toBe(
+      InvoiceStatus.Closed,
+    );
+  });
+
+  it('refuses to pay an invoice twice', () => {
+    const card = purchase(inter(), { on: '2026-08-20', amount: -420 })
+      .closeInvoice('inv-2026-09-10')
+      .payInvoice('inv-2026-09-10', reais(-420));
+
+    expect(() => card.payInvoice('inv-2026-09-10', reais(-420))).toThrow();
+  });
+
+  it('refuses an item outside the invoice period', () => {
+    const card = purchase(inter(), { on: '2026-08-20', amount: -420 });
+    const invoice = card.invoiceById('inv-2026-09-10');
+
+    expect(() =>
+      invoice?.addItem({
+        id: 'stray',
+        purchaseId: 'p9',
+        description: 'Outside',
+        purchasedOn: date('2026-10-15'),
+        amount: reais(-10),
+        installment: undefined,
+      }),
+    ).toThrow();
+  });
+
+  it('refuses to strip items from a closed invoice', () => {
+    const card = purchase(inter(), {
+      on: '2026-08-20',
+      amount: -420,
+    }).closeInvoice('inv-2026-09-10');
+
+    expect(() =>
+      card.invoiceById('inv-2026-09-10')?.removeItemsOfPurchase('p1'),
+    ).toThrow();
+  });
+
+  it('pays off early with no discount when none is given', () => {
+    const card = purchase(inter(), {
+      description: 'Airfare',
+      on: '2026-08-20',
+      amount: -900,
+      installments: 3,
+    });
+
+    const settled = card.payOffEarly({ purchaseId: 'p1', newItemId });
+
+    expect(settled.invoices[0]?.total.cents).toBe(-90_000);
+  });
+
+  it('leaves a plan whose instalments are all billed to closed invoices', () => {
+    const card = purchase(inter(), {
+      description: 'Airfare',
+      on: '2026-08-20',
+      amount: -900,
+      installments: 3,
+    })
+      .closeInvoice('inv-2026-09-10')
+      .closeInvoice('inv-2026-10-10')
+      .closeInvoice('inv-2026-11-10');
+
+    expect(
+      card.payOffEarly({ purchaseId: 'p1', newItemId }).plans,
+    ).toHaveLength(1);
+  });
+});
