@@ -8,6 +8,8 @@ import type { CloseCycle } from '../../application/budgeting/uc-3-8-close-cycle.
 import type { LedgerActions } from '../../application/budgeting/uc-3-ledger-actions.js';
 import type { ManageCards } from '../../application/cards/uc-5-manage-cards.js';
 import type { ManageBuckets } from '../../application/goals/uc-6-manage-buckets.js';
+import type { BuildDashboard } from '../../application/projection/uc-4-build-dashboard.js';
+import type { ProjectWealth } from '../../application/projection/uc-7-project-wealth.js';
 import type { ListCycles } from '../../application/budgeting/uc-3-3-list-cycles.js';
 import type { Clock } from '../../domain/ports/clock.js';
 import { registerAccountRoutes } from './routes/accounts.js';
@@ -15,6 +17,7 @@ import { registerBucketRoutes } from './routes/buckets.js';
 import { registerCardRoutes } from './routes/cards.js';
 import { registerCycleRoutes } from './routes/cycles.js';
 import { registerHealthRoute } from './routes/health.js';
+import { registerProjectionRoutes } from './routes/projection.js';
 import { registerLedgerRoutes } from './routes/ledger.js';
 import { registerTemplateRoutes } from './routes/templates.js';
 import { registerSettingsRoutes } from './routes/settings.js';
@@ -30,6 +33,8 @@ interface Dependencies {
   closeCycle: CloseCycle;
   manageCards: ManageCards;
   manageBuckets: ManageBuckets;
+  buildDashboard: BuildDashboard;
+  projectWealth: ProjectWealth;
 }
 
 export function buildServer({
@@ -43,6 +48,8 @@ export function buildServer({
   closeCycle,
   manageCards,
   manageBuckets,
+  buildDashboard,
+  projectWealth,
 }: Dependencies): FastifyInstance {
   const app = Fastify({ logger: false });
 
@@ -54,6 +61,11 @@ export function buildServer({
   registerLedgerRoutes(app, { ledgerActions, closeCycle });
   registerCardRoutes(app, { manageCards });
   registerBucketRoutes(app, { manageBuckets });
+  registerProjectionRoutes(app, {
+    buildDashboard,
+    projectWealth,
+    manageBuckets,
+  });
 
   return app;
 }

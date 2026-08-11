@@ -8,6 +8,8 @@ import { CloseCycle } from '../../../application/budgeting/uc-3-8-close-cycle.js
 import { LedgerActions } from '../../../application/budgeting/uc-3-ledger-actions.js';
 import { ManageCards } from '../../../application/cards/uc-5-manage-cards.js';
 import { ManageBuckets } from '../../../application/goals/uc-6-manage-buckets.js';
+import { BuildDashboard } from '../../../application/projection/uc-4-build-dashboard.js';
+import { ProjectWealth } from '../../../application/projection/uc-7-project-wealth.js';
 import { ListCycles } from '../../../application/budgeting/uc-3-3-list-cycles.js';
 import {
   InMemoryAccountRepository,
@@ -68,6 +70,14 @@ export function buildTestServer(
     closeCycle: new CloseCycle(cycles, settings, accounts, noHolidays, clock),
     manageCards: new ManageCards(cards, cycles, settings, noHolidays),
     manageBuckets: new ManageBuckets(buckets, cycles, settings, noHolidays),
+    buildDashboard: new BuildDashboard(
+      cycles,
+      buckets,
+      settings,
+      noHolidays,
+      clock,
+    ),
+    projectWealth: new ProjectWealth(buckets),
     ...overrides,
   });
 }
