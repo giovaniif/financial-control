@@ -218,6 +218,71 @@ describe('the calculation chain', () => {
   });
 });
 
+describe('the running balance', () => {
+  it('shows the balance standing after every entry', () => {
+    const rows = workedExample().runningBalance();
+
+    expect(rows).toHaveLength(14);
+    expect(reais(rows[0]?.balance ?? Money.zero())).toBe(18_000);
+    expect(reais(rows[1]?.balance ?? Money.zero())).toBe(17_680);
+    expect(reais(rows.at(-1)?.balance ?? Money.zero())).toBe(3_556);
+  });
+
+  it('ends exactly where the chain says the cycle closes', () => {
+    const cycle = workedExample();
+
+    expect(cycle.runningBalance().at(-1)?.balance.cents).toBe(
+      cycle.closingBalance().cents,
+    );
+  });
+
+  it('leaves the estimate out when asked for confirmed figures only', () => {
+    const rows = workedExample().runningBalance(Estimates.Excluded);
+
+    expect(rows).toHaveLength(13);
+    expect(reais(rows.at(-1)?.balance ?? Money.zero())).toBe(5_056);
+  });
+
+  it('reports the lowest point and the entry that caused it', () => {
+    const low = workedExample().lowWaterMark();
+
+    expect(reais(low?.balance ?? Money.zero())).toBe(3_556);
+    expect(low?.entry.description).toBe('→ Apartment');
+  });
+
+  // The case the whole feature exists for: a cycle that closes comfortably
+  // positive can still run out of cash in the middle of the month.
+  it('surfaces a dip that the closing balance hides', () => {
+    const cycle = Cycle.open({
+      id: 'c',
+      ref: august,
+      openingBalance: Money.fromCents(50_000),
+      entries: [
+        entry('Big invoice', EntryKind.Invoice, '2026-08-10', -12_000),
+        entry('Salary', EntryKind.Income, '2026-08-25', 18_000),
+      ],
+    });
+
+    expect(reais(cycle.closingBalance())).toBe(6_500);
+    expect(reais(cycle.lowWaterMark()?.balance ?? Money.zero())).toBe(-11_500);
+    expect(cycle.firstNegativeDate()?.toISO()).toBe('2026-08-10');
+  });
+
+  it('reports no negative date when the balance never crosses zero', () => {
+    expect(workedExample().firstNegativeDate()).toBeUndefined();
+  });
+
+  it('has no low-water mark when there is nothing in the cycle', () => {
+    const empty = Cycle.open({
+      id: 'c',
+      ref: august,
+      openingBalance: Money.zero(),
+    });
+
+    expect(empty.lowWaterMark()).toBeUndefined();
+  });
+});
+
 describe('closing a cycle', () => {
   const settleEverything = (cycle: Cycle): Cycle =>
     cycle.entries.reduce<Cycle>(

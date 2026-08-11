@@ -43,6 +43,18 @@ export interface CalculationChain {
   readonly closingBalance: Money;
 }
 
+/** One row of the ledger, with the balance standing after it. */
+export interface RunningBalanceRow {
+  readonly entry: LedgerEntry;
+  readonly balance: Money;
+}
+
+export interface LowWaterMark {
+  readonly balance: Money;
+  readonly date: LocalDate;
+  readonly entry: LedgerEntry;
+}
+
 interface CycleState {
   readonly id: string;
   readonly ref: CycleRef;
@@ -218,6 +230,46 @@ export class Cycle {
   /** Becomes the next cycle's opening balance. */
   closingBalance(estimates: Estimates = Estimates.Included): Money {
     return this.chain(estimates).closingBalance;
+  }
+
+  /**
+   * The balance standing after each entry, in due-date order.
+   *
+   * This is what makes the ledger answer "when" and not just "how much": cash
+   * can bottom out mid-cycle and recover before the closing balance ever shows
+   * a problem.
+   */
+  runningBalance(
+    estimates: Estimates = Estimates.Included,
+  ): readonly RunningBalanceRow[] {
+    let balance = this.state.openingBalance;
+
+    return this.countedEntries(estimates).map((entry) => {
+      balance = balance.plus(entry.realised);
+      return { entry, balance };
+    });
+  }
+
+  /** The lowest the balance gets, and the entry that took it there. */
+  lowWaterMark(
+    estimates: Estimates = Estimates.Included,
+  ): LowWaterMark | undefined {
+    return this.runningBalance(estimates).reduce<LowWaterMark | undefined>(
+      (lowest, row) =>
+        lowest === undefined || row.balance.isLessThan(lowest.balance)
+          ? { balance: row.balance, date: row.entry.dueDate, entry: row.entry }
+          : lowest,
+      undefined,
+    );
+  }
+
+  /** The first date the balance crosses zero, if it ever does. */
+  firstNegativeDate(
+    estimates: Estimates = Estimates.Included,
+  ): LocalDate | undefined {
+    return this.runningBalance(estimates).find((row) =>
+      row.balance.isNegative(),
+    )?.entry.dueDate;
   }
 
   private countedEntries(estimates: Estimates): readonly LedgerEntry[] {
