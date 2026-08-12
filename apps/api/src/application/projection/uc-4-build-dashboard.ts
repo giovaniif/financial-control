@@ -107,7 +107,16 @@ export class BuildDashboard {
     private readonly clock: Clock,
   ) {}
 
-  async build(): Promise<DashboardView> {
+  /**
+   * `month` chooses which cycle the screen describes (UC-3.3). Left out, it is
+   * the cycle after the current one: the Dashboard opens on the cycle you are
+   * in but speaks about the next, because that is when the question is asked.
+   *
+   * The worklist and the alerts stay anchored to today either way. They are
+   * things to act on, not a view of the chosen cycle, and looking back at a
+   * settled cycle must not hide what is overdue now.
+   */
+  async build(month?: string): Promise<DashboardView> {
     const today = LocalDate.fromInstant(this.clock.now());
     const anchor = await this.settings.load();
     const current = CycleRef.forMonth(
@@ -127,17 +136,22 @@ export class BuildDashboard {
       throw new Error('The rolling window always holds at least three cycles.');
     }
 
+    const chosenRef =
+      month === undefined
+        ? nextRef
+        : CycleRef.forMonth(month, anchor, this.holidays);
+
     const currentCycle = await this.cycles.findByMonth(currentRef);
-    const next = await this.cycles.findByMonth(nextRef);
+    const chosen = await this.cycles.findByMonth(chosenRef);
     const buckets = await this.buckets.findAll();
 
     return {
       today: today.toISO(),
+      // Reported alongside the chosen cycle so the UI can still say which one
+      // is current, however far the user has navigated from it.
       currentCycleMonth: currentRef.month,
-      // The Dashboard opens on the current cycle but speaks about the next:
-      // the question is always asked from the middle of the one you are in.
-      headline: headlineOf(nextRef, next),
-      kpis: kpisOf(next),
+      headline: headlineOf(chosenRef, chosen),
+      kpis: kpisOf(chosen),
       progress: progressOf(currentRef, currentCycle, today),
       upcoming: await this.upcomingFrom(window.slice(LOOK_BACK), today),
       alerts: await this.alertsFrom(window, buckets, today),

@@ -105,6 +105,26 @@ describe('GET /dashboard', () => {
     expect(body.headline.free).toBe(1_039_000);
   });
 
+  it('answers about the cycle named in the query instead', async () => {
+    const body = (
+      await serverWith({ cycles: [september()] }).inject({
+        method: 'GET',
+        url: '/dashboard?month=2026-09',
+      })
+    ).json<DashboardResponse>();
+
+    expect(body.headline.cycleLabel).toBe('September 2026');
+  });
+
+  it('rejects a month it cannot read', async () => {
+    const response = await serverWith({ cycles: [september()] }).inject({
+      method: 'GET',
+      url: '/dashboard?month=nonsense',
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
   it('carries the four KPIs and the progress reading', async () => {
     const body = (
       await serverWith({ cycles: [september()] }).inject({

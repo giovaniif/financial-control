@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CycleRef,
+  InvalidAnchor,
   PaydayAnchor,
   ShiftPolicy,
 } from '../../domain/budgeting/cycle-ref.js';
@@ -77,7 +78,6 @@ describe('BuildDashboard headline — the answer to Q1', () => {
     expect(view.headline.cycleMonth).toBe('2026-10');
     expect(view.headline.cycleLabel).toBe('October 2026');
   });
-
   it('reports what arrives, what goes out and what stays free', async () => {
     const { headline } = await building({ cycles: [october()] }).build();
 
@@ -105,6 +105,64 @@ describe('BuildDashboard headline — the answer to Q1', () => {
 
     expect(headline.incomingCents).toBe(0);
     expect(headline.lowestPointDate).toBeUndefined();
+  });
+});
+
+// UC-3.3: cycle navigation is global, so the Dashboard has to be able to
+// describe a cycle other than the one after today's.
+describe('BuildDashboard for a chosen cycle', () => {
+  const september = () =>
+    Cycle.open({
+      id: '2026-09',
+      ref: ref('2026-09'),
+      openingBalance: Money.zero(),
+      entries: [
+        entry('Salary', EntryKind.Income, '2026-08-05', 10_000),
+        entry('Rent', EntryKind.Fixed, '2026-08-10', -4_000),
+      ],
+    });
+
+  it('describes the cycle it is asked for', async () => {
+    const view = await building({ cycles: [september(), october()] }).build(
+      '2026-09',
+    );
+
+    expect(view.headline.cycleMonth).toBe('2026-09');
+    expect(view.headline.cycleLabel).toBe('September 2026');
+    expect(view.headline.incomingCents).toBe(1_000_000);
+    expect(view.headline.outgoingCents).toBe(400_000);
+  });
+
+  it('still reports which cycle is the current one', async () => {
+    const view = await building({ cycles: [september()] }).build('2026-09');
+
+    expect(view.currentCycleMonth).toBe('2026-09');
+  });
+
+  it('reads a cycle nobody has put anything in as empty, not as an error', async () => {
+    const view = await building({ cycles: [october()] }).build('2027-03');
+
+    expect(view.headline.cycleMonth).toBe('2027-03');
+    expect(view.headline.incomingCents).toBe(0);
+  });
+
+  it('refuses a month it cannot parse', async () => {
+    await expect(
+      building({ cycles: [october()] }).build('nonsense'),
+    ).rejects.toThrow(InvalidAnchor);
+  });
+
+  // The worklist is anchored to today, not to whatever is being looked at:
+  // wandering back to a past cycle must not hide what is overdue now.
+  it('keeps the upcoming list anchored to today', async () => {
+    const chosen = await building({ cycles: [september(), october()] }).build(
+      '2026-09',
+    );
+    const unchosen = await building({
+      cycles: [september(), october()],
+    }).build();
+
+    expect(chosen.upcoming).toEqual(unchosen.upcoming);
   });
 });
 
