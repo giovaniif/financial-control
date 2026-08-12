@@ -23,6 +23,19 @@ export class PrismaSettingsRepository implements SettingsRepository {
     return PaydayAnchor.of(row.anchorDay, row.shiftPolicy);
   }
 
+  /**
+   * The row is only ever written by an explicit change, so its existence is
+   * the record that someone chose the anchor rather than inherited the default.
+   */
+  async isConfigured(): Promise<boolean> {
+    const row = await this.prisma.settings.findUnique({
+      where: { id: SINGLETON },
+      select: { id: true },
+    });
+
+    return row !== null;
+  }
+
   async save(anchor: PaydayAnchor): Promise<void> {
     const data = {
       anchorDay: anchor.dayOfMonth,

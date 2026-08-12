@@ -15,6 +15,7 @@ function useAccountMutation<TInput>(send: (input: TInput) => Promise<unknown>) {
         client.invalidateQueries({ queryKey: queryKeys.accounts() }),
         client.invalidateQueries({ queryKey: queryKeys.cycles() }),
         client.invalidateQueries({ queryKey: queryKeys.dashboard() }),
+        client.invalidateQueries({ queryKey: queryKeys.setup() }),
       ]);
     },
   });

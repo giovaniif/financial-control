@@ -12,6 +12,14 @@ export function stubApi(routes: Record<string, unknown>): void {
     '/api/buckets': [],
     '/api/cards': [],
     '/api/cycles': { estimates: 'included', cycles: [] },
+    '/api/setup': {
+      anchorConfigured: false,
+      accounts: 0,
+      cards: 0,
+      templates: 0,
+      buckets: 0,
+      isPristine: true,
+    },
     '/api/templates': {
       templates: [],
       summary: {

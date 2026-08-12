@@ -24,6 +24,7 @@ function useTemplateMutation<TInput>(
         client.invalidateQueries({ queryKey: queryKeys.templates() }),
         client.invalidateQueries({ queryKey: queryKeys.cycles() }),
         client.invalidateQueries({ queryKey: queryKeys.dashboard() }),
+        client.invalidateQueries({ queryKey: queryKeys.setup() }),
       ]);
     },
   });

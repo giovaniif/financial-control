@@ -10,6 +10,7 @@ import type { LedgerActions } from '../../application/budgeting/uc-3-ledger-acti
 import type { ManageCards } from '../../application/cards/uc-5-manage-cards.js';
 import type { ManageBuckets } from '../../application/goals/uc-6-manage-buckets.js';
 import type { BuildDashboard } from '../../application/projection/uc-4-build-dashboard.js';
+import type { ReadSetupState } from '../../application/projection/uc-1-5-read-setup-state.js';
 import type { ProjectWealth } from '../../application/projection/uc-7-project-wealth.js';
 import type { ListCycles } from '../../application/budgeting/uc-3-3-list-cycles.js';
 import type { Clock } from '../../domain/ports/clock.js';
@@ -23,6 +24,7 @@ import { registerProjectionRoutes } from './routes/projection.js';
 import { registerLedgerRoutes } from './routes/ledger.js';
 import { registerTemplateRoutes } from './routes/templates.js';
 import { registerSettingsRoutes } from './routes/settings.js';
+import { registerSetupRoutes } from './routes/setup.js';
 
 interface Dependencies {
   clock: Clock;
@@ -38,6 +40,7 @@ interface Dependencies {
   buildDashboard: BuildDashboard;
   projectWealth: ProjectWealth;
   backupRestore: BackupRestore;
+  readSetupState: ReadSetupState;
 }
 
 export function buildServer({
@@ -54,11 +57,13 @@ export function buildServer({
   buildDashboard,
   projectWealth,
   backupRestore,
+  readSetupState,
 }: Dependencies): FastifyInstance {
   const app = Fastify({ logger: false });
 
   registerHealthRoute(app, { clock, startedAt: clock.now() });
   registerSettingsRoutes(app, { configureAnchor });
+  registerSetupRoutes(app, { readSetupState });
   registerAccountRoutes(app, { manageAccounts });
   registerCycleRoutes(app, { readCycle, listCycles });
   registerTemplateRoutes(app, { manageTemplates });
