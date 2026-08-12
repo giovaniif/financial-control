@@ -5,6 +5,7 @@ import { CardsPage } from '@/pages/cards';
 import { DashboardPage } from '@/pages/dashboard';
 import { LedgerPage } from '@/pages/ledger';
 import { NotFoundPage } from '@/pages/not-found';
+import { OnboardingPage } from '@/pages/onboarding';
 import { SettingsPage } from '@/pages/settings';
 import { TemplatesPage } from '@/pages/templates';
 import { WealthPage } from '@/pages/wealth';
@@ -25,5 +26,6 @@ export const routes: RouteObject[] = [
   { path: '/wealth', element: <WealthPage /> },
   { path: '/templates', element: <TemplatesPage /> },
   { path: '/settings', element: <SettingsPage /> },
+  { path: '/onboarding', element: <OnboardingPage /> },
   { path: '*', element: <NotFoundPage /> },
 ];

@@ -23,6 +23,7 @@ describe('routes', () => {
     ['/wealth', 'Wealth Projection'],
     ['/templates', 'Recurring Templates'],
     ['/settings', 'Settings'],
+    ['/onboarding', 'Why this app exists'],
   ])('renders %s as the %s screen', async (path, heading) => {
     renderAt(path);
 
