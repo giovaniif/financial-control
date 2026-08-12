@@ -7,6 +7,7 @@ import {
   ArchiveBucket,
   RecordEvent,
 } from '@/features/manage-buckets';
+import { CreateBucketButton } from '@/features/create-bucket';
 import { useSelectedCycle } from '@/features/navigate-cycle';
 import { formatDate } from '@/shared/lib';
 import {
@@ -43,12 +44,18 @@ export function BucketsPage() {
       {isPending ? (
         <Skeleton className="h-64 w-full" />
       ) : buckets.length === 0 ? (
-        <EmptyState
-          title="No buckets yet"
-          body="A bucket is either a goal with a target and a date, or an ongoing amount with nothing to complete."
-        />
+        <div className="flex flex-col items-start gap-4">
+          <EmptyState
+            title="No buckets yet"
+            body="A bucket is either a goal with a target and a date, or an ongoing amount with nothing to complete."
+          />
+          <CreateBucketButton existingCount={0} />
+        </div>
       ) : (
         <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-end">
+            <CreateBucketButton existingCount={buckets.length} />
+          </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {buckets.map((bucket) => (
               <button
