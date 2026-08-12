@@ -1,7 +1,9 @@
-import type { DashboardResponse } from '@fin/contracts';
+import type { CyclePosition, DashboardResponse } from '@fin/contracts';
+import { useEffect } from 'react';
 
 import { useBuckets } from '@/entities/bucket';
 import { useDashboard } from '@/entities/dashboard';
+import { useSelectedCycle } from '@/features/navigate-cycle';
 import { formatDate } from '@/shared/lib';
 import {
   Amount,
@@ -22,7 +24,23 @@ import { UpcomingList } from '@/widgets/upcoming-list';
  * always asked from the middle of the cycle you are in.
  */
 export function DashboardPage() {
-  const { data, isPending, isError } = useDashboard();
+  const { cycles, selected, selectedMonth, isExplicit, select } =
+    useSelectedCycle();
+  const next = cycles.find((cycle) => cycle.position === 'next');
+
+  // The screen is about the next cycle unless the user has said otherwise, so
+  // it defaults there rather than to the current one. The default is written
+  // back to the URL so the header's navigation shows the cycle on screen —
+  // the two disagreeing is the bug this replaced.
+  const month = isExplicit ? selectedMonth : (next?.month ?? selectedMonth);
+
+  useEffect(() => {
+    if (!isExplicit && next !== undefined) {
+      select(next.month);
+    }
+  }, [isExplicit, next, select]);
+
+  const { data, isPending, isError } = useDashboard(month);
 
   return (
     <AppShell
@@ -38,7 +56,7 @@ export function DashboardPage() {
         />
       ) : (
         <div className="flex flex-col gap-4">
-          <Headline data={data} />
+          <Headline data={data} position={selected?.position} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {data.kpis.map((kpi) => (
               <StatTile
@@ -65,14 +83,28 @@ export function DashboardPage() {
   );
 }
 
+/** How the cycle on screen relates to today, since it is no longer always next. */
+const eyebrows: Record<CyclePosition, string> = {
+  past: 'Past cycle',
+  current: 'This cycle',
+  next: 'Next cycle',
+  projected: 'Projected cycle',
+};
+
 /** UC-4.1 — the answer as one sentence, and the three numbers qualifying it. */
-function Headline({ data }: { data: DashboardResponse }) {
+function Headline({
+  data,
+  position,
+}: {
+  data: DashboardResponse;
+  position: CyclePosition | undefined;
+}) {
   const { headline } = data;
 
   return (
     <section className="flex flex-col gap-4 rounded-xl bg-zinc-900 p-6 text-zinc-50">
       <div className="flex items-center gap-2 text-[10px] font-semibold tracking-widest text-zinc-400 uppercase">
-        Next cycle
+        {position === undefined ? 'Cycle' : eyebrows[position]}
         <span className="font-mono text-xs normal-case">{headline.range}</span>
       </div>
 

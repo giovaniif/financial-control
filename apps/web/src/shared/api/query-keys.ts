@@ -8,7 +8,16 @@ import type { EstimateMode } from '@fin/contracts';
 export const queryKeys = {
   health: () => ['health'] as const,
 
-  dashboard: () => ['dashboard'] as const,
+  /**
+   * Called with a month it identifies one cycle's dashboard; called without
+   * one it is the prefix every mutation invalidates by. Appending a `null`
+   * placeholder instead would stop `['dashboard']` matching `['dashboard',
+   * '2026-09']`, and every settle would leave the figures stale.
+   */
+  dashboard: (month?: string) =>
+    month === undefined
+      ? (['dashboard'] as const)
+      : (['dashboard', month] as const),
   wealth: (month?: string, yields?: string) =>
     ['wealth', month ?? null, yields ?? null] as const,
 

@@ -6,11 +6,17 @@ import { useQuery } from '@tanstack/react-query';
 
 import { api, queryKeys } from '@/shared/api';
 
-/** UC-4 — the answer to "how much will I pay, and what is left". */
-export function useDashboard() {
+/**
+ * UC-4 — the answer to "how much will I pay, and what is left", for whichever
+ * cycle the header has selected. With no month the API answers about the cycle
+ * after the current one, which is what the screen opens on.
+ */
+export function useDashboard(month?: string) {
+  const query = month === undefined ? '' : `?month=${month}`;
+
   return useQuery({
-    queryKey: queryKeys.dashboard(),
-    queryFn: () => api<DashboardResponse>('/dashboard'),
+    queryKey: queryKeys.dashboard(month),
+    queryFn: () => api<DashboardResponse>(`/dashboard${query}`),
   });
 }
 

@@ -1,5 +1,6 @@
 import type { BucketResponse, DashboardResponse } from '@fin/contracts';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -77,12 +78,78 @@ function respondWith(
   );
 }
 
-const renderPage = () =>
+const renderPage = (entry = '/') =>
   renderWithProviders(
     <RouterProvider
-      router={createMemoryRouter([{ path: '/', element: <DashboardPage /> }])}
+      router={createMemoryRouter([{ path: '/', element: <DashboardPage /> }], {
+        initialEntries: [entry],
+      })}
     />,
   );
+
+const summary = (
+  month: string,
+  position: 'current' | 'next' | 'projected',
+) => ({
+  month,
+  label: `${month} label`,
+  start: `${month}-01`,
+  end: `${month}-28`,
+  status: 'OPEN' as const,
+  position,
+  openingBalance: 0,
+  closingBalance: 0,
+  netSurplus: 0,
+  isMaterialised: true,
+});
+
+/**
+ * Answers the dashboard per requested cycle, so what the screen renders is
+ * evidence of which one it asked for.
+ */
+function respondPerCycle() {
+  const byMonth: Record<string, DashboardResponse> = {
+    '2026-08': dashboard({
+      headline: { ...dashboard().headline, cycleLabel: 'August 2026' },
+    }),
+    '2026-09': dashboard({
+      headline: { ...dashboard().headline, cycleLabel: 'September 2026' },
+    }),
+  };
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: string) => {
+      const url = new URL(input, 'http://test');
+      const body =
+        url.pathname === '/api/dashboard'
+          ? (byMonth[url.searchParams.get('month') ?? ''] ??
+            dashboard({
+              headline: { ...dashboard().headline, cycleLabel: 'no month' },
+            }))
+          : url.pathname === '/api/cycles'
+            ? {
+                estimates: 'included',
+                cycles: [
+                  summary('2026-08', 'current'),
+                  summary('2026-09', 'next'),
+                ],
+              }
+            : url.pathname === '/api/accounts'
+              ? { accounts: [], total: 0 }
+              : url.pathname === '/api/buckets'
+                ? []
+                : {};
+
+      return Promise.resolve(
+        new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    }),
+  );
+}
 
 beforeEach(() => {
   respondWith(dashboard());
@@ -288,6 +355,110 @@ describe('DashboardPage', () => {
     expect(await screen.findByText('Investments')).toBeInTheDocument();
     expect(screen.getByText('ongoing — no target to hit')).toBeInTheDocument();
     expect(screen.queryByText(/% of/)).not.toBeInTheDocument();
+  });
+});
+
+// UC-3.3: cycle navigation is global, and the Dashboard used to ignore it —
+// the control was rendered in the header and did nothing at all.
+describe('DashboardPage follows the selected cycle', () => {
+  beforeEach(() => {
+    respondPerCycle();
+  });
+
+  it('opens on the next cycle when none is selected', async () => {
+    renderPage();
+
+    expect(
+      await screen.findByText(/In the September 2026 cycle/),
+    ).toBeInTheDocument();
+  });
+
+  it('describes the cycle the nav has selected', async () => {
+    renderPage('/?cycle=2026-08');
+
+    expect(
+      await screen.findByText(/In the August 2026 cycle/),
+    ).toBeInTheDocument();
+  });
+
+  it('does not call a past cycle the next one', async () => {
+    renderPage('/?cycle=2026-08');
+
+    await screen.findByText(/In the August 2026 cycle/);
+
+    expect(screen.queryByText('Next cycle')).not.toBeInTheDocument();
+  });
+
+  /**
+   * Settling invalidates by the `['dashboard']` prefix, so the key the screen
+   * actually reads under must sit beneath it. Putting the month in the key
+   * without keeping that prefix is what silently stopped every settle from
+   * refreshing the figures: the request went out, the cache never moved.
+   */
+  it('shows the new figures after settling, not the stale ones', async () => {
+    const upcoming = {
+      id: 'e1',
+      cycleMonth: '2026-09',
+      description: 'Renovation Progress',
+      dueDate: '2026-09-24',
+      amount: -235_000,
+      isEstimate: false,
+      isOverdue: false,
+      daysLate: 0,
+    };
+    let settled = false;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: string, init?: RequestInit) => {
+        const url = new URL(input, 'http://test');
+
+        if (init?.method === 'POST') {
+          settled = true;
+          return Promise.resolve(new Response(null, { status: 204 }));
+        }
+
+        const body =
+          url.pathname === '/api/dashboard'
+            ? dashboard({
+                headline: {
+                  ...dashboard().headline,
+                  free: settled ? 1_000_000 : 355_600,
+                },
+                upcoming: settled ? [] : [upcoming],
+              })
+            : url.pathname === '/api/cycles'
+              ? {
+                  estimates: 'included',
+                  cycles: [
+                    summary('2026-08', 'current'),
+                    summary('2026-09', 'next'),
+                  ],
+                }
+              : url.pathname === '/api/accounts'
+                ? { accounts: [], total: 0 }
+                : url.pathname === '/api/buckets'
+                  ? []
+                  : {};
+
+        return Promise.resolve(
+          new Response(JSON.stringify(body), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      }),
+    );
+
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Settle' }),
+    );
+
+    // The freed-up figure is the visible proof the cache was invalidated and
+    // refetched, not just that a request went out.
+    expect(await screen.findByText('R$ 10.000,00')).toBeInTheDocument();
   });
 });
 
