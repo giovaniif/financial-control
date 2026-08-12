@@ -3,7 +3,9 @@ export type { HealthResponse } from './health.js';
 export type {
   AnchorChangePreviewResponse,
   AnchorChangeRequest,
+  AnchorResolveResponse,
   AnchorSettingsResponse,
+  ResolvedCycleResponse,
   CycleShiftResponse,
   ShiftPolicy,
 } from './settings.js';

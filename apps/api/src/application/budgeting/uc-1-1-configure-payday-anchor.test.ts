@@ -275,6 +275,92 @@ describe('ConfigurePaydayAnchor.change', () => {
     expect(cycles.saved[0]?.ref.start.toISO()).toBe('2026-08-05');
   });
 
+  /**
+   * The first run has to show what an anchor day *means* before anyone commits
+   * to it, and cycle resolution lives in CycleRef and nowhere else — so the
+   * boundaries are resolved here rather than recomputed in the frontend.
+   */
+  describe('resolveWindow', () => {
+    const useCase = () =>
+      new ConfigurePaydayAnchor(
+        new InMemorySettingsRepository(anchorFive),
+        new InMemoryCycleRepository(),
+        noHolidays,
+        clock,
+      );
+
+    /**
+     * Opens on the cycle containing today — 10 Aug 2026 with pay on the 5th is
+     * already the September cycle, because a cycle is named for the month it
+     * is spent in and so opens on the previous month's payday.
+     */
+    it('resolves the coming cycles for an anchor nobody has saved', async () => {
+      const window = await useCase().resolveWindow(
+        { anchorDay: 5, shiftPolicy: ShiftPolicy.Preceding },
+        2,
+      );
+
+      expect(window).toEqual([
+        {
+          month: '2026-09',
+          label: 'September 2026',
+          start: '2026-08-05',
+          end: '2026-09-03',
+          shifted: false,
+          clamped: false,
+        },
+        // 5 Sep 2026 is a Saturday, so October opens on Friday the 4th.
+        {
+          month: '2026-10',
+          label: 'October 2026',
+          start: '2026-09-04',
+          end: '2026-10-04',
+          shifted: true,
+          clamped: false,
+        },
+      ]);
+    });
+
+    it('leaves the stored anchor alone', async () => {
+      const settings = new InMemorySettingsRepository(anchorFive);
+      const configure = new ConfigurePaydayAnchor(
+        settings,
+        new InMemoryCycleRepository(),
+        noHolidays,
+        clock,
+      );
+
+      await configure.resolveWindow(
+        { anchorDay: 20, shiftPolicy: ShiftPolicy.Following },
+        1,
+      );
+
+      expect((await settings.load()).dayOfMonth).toBe(5);
+      expect(await settings.isConfigured()).toBe(false);
+    });
+
+    /**
+     * Day 31 clamps onto each month's length, which is how a last-day-of-month
+     * payday is expressed — day 30 would miss the 31st of the long months. The
+     * cycle opening in February is where that becomes visible.
+     */
+    it('reports the months where the anchor day ran past the month end', async () => {
+      const window = await useCase().resolveWindow(
+        { anchorDay: 31, shiftPolicy: ShiftPolicy.Preceding },
+        12,
+      );
+
+      expect(window.find((cycle) => cycle.month === '2027-03')).toMatchObject({
+        start: '2027-02-26',
+        clamped: true,
+      });
+      expect(window.find((cycle) => cycle.month === '2026-09')).toMatchObject({
+        start: '2026-08-31',
+        clamped: false,
+      });
+    });
+  });
+
   it('rejects an anchor day that is not a day of the month', async () => {
     const useCase = new ConfigurePaydayAnchor(
       new InMemorySettingsRepository(anchorFive),

@@ -1,5 +1,6 @@
 import type {
   AnchorChangePreviewResponse,
+  AnchorResolveResponse,
   AnchorSettingsResponse,
 } from '@fin/contracts';
 import { describe, expect, it } from 'vitest';
@@ -161,5 +162,61 @@ describe('PUT /settings/anchor', () => {
     });
 
     expect(response.statusCode).toBe(400);
+  });
+
+  // The first run has to show what an anchor day means before anyone commits
+  // to it, on an app where nothing has been configured yet.
+  describe('POST /settings/anchor/resolve', () => {
+    it('resolves the coming cycles without saving the anchor', async () => {
+      const app = buildTestServer();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/settings/anchor/resolve',
+        payload: { anchorDay: 5, shiftPolicy: 'PRECEDING' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const { cycles } = response.json<AnchorResolveResponse>();
+      expect(cycles).toHaveLength(12);
+      expect(cycles[0]).toEqual({
+        month: '2026-09',
+        label: 'September 2026',
+        start: '2026-08-05',
+        end: '2026-09-03',
+        shifted: false,
+        clamped: false,
+      });
+
+      const stored = await app.inject({
+        method: 'GET',
+        url: '/settings/anchor',
+      });
+      expect(stored.json<AnchorSettingsResponse>().anchorDay).toBe(5);
+    });
+
+    it('rejects a body that is not an anchor', async () => {
+      const app = buildTestServer();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/settings/anchor/resolve',
+        payload: { anchorDay: 5 },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('rejects an anchor day outside the month', async () => {
+      const app = buildTestServer();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/settings/anchor/resolve',
+        payload: { anchorDay: 32, shiftPolicy: 'PRECEDING' },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
   });
 });

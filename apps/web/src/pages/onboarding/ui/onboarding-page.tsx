@@ -1,11 +1,22 @@
-import { useEffect, useRef } from 'react';
+import type { AnchorChangeRequest } from '@fin/contracts';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
+import { useChangeAnchor } from '@/features/configure-anchor';
 import { skipSetup } from '@/shared/model';
 import { Button, Stepper } from '@/shared/ui';
 
-import { STEPS } from '../model/steps.js';
+import { STEPS, type StepId } from '../model/steps.js';
 import { useWizard } from '../model/use-wizard.js';
+import { AccountsStep } from './steps/accounts-step.js';
+import { CycleStep } from './steps/cycle-step.js';
+import { WhyStep } from './steps/why-step.js';
+
+/** Salary on the 5th, moving back off a closed bank — the app's default. */
+const DEFAULT_ANCHOR: AnchorChangeRequest = {
+  anchorDay: 5,
+  shiftPolicy: 'PRECEDING',
+};
 
 /** The gate records where the user was sent from; nothing else sets it. */
 function redirectedFrom(state: unknown): string | undefined {
@@ -25,12 +36,32 @@ export function OnboardingPage() {
   const heading = useRef<HTMLHeadingElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const [anchor, setAnchor] = useState(DEFAULT_ANCHOR);
+  const changeAnchor = useChangeAnchor();
 
   // Leaving lands on whatever the user originally asked for, not on the
   // dashboard they never chose.
   const leave = () => {
     skipSetup();
     void navigate(redirectedFrom(location.state) ?? '/', { replace: true });
+  };
+
+  /**
+   * Each step commits its own configuration before the wizard moves on, which
+   * is what makes this a setup rather than a tour. A step that writes nothing
+   * simply advances.
+   */
+  const commit: Partial<Record<StepId, () => Promise<unknown>>> = {
+    cycle: () => changeAnchor.mutateAsync(anchor),
+  };
+
+  const advance = () => {
+    const write = commit[wizard.stepId];
+    if (write === undefined) {
+      wizard.next();
+      return;
+    }
+    void write().then(wizard.next);
   };
 
   // Swapping the body alone would leave a screen reader announcing the
@@ -69,6 +100,11 @@ export function OnboardingPage() {
         >
           {step.title}
         </h1>
+        {wizard.stepId === 'why' && <WhyStep />}
+        {wizard.stepId === 'cycle' && (
+          <CycleStep anchor={anchor} onChange={setAnchor} />
+        )}
+        {wizard.stepId === 'accounts' && <AccountsStep />}
       </main>
 
       <footer className="flex items-center justify-between border-t border-zinc-200 pt-4">
@@ -77,8 +113,8 @@ export function OnboardingPage() {
         </Button>
         <Button
           variant="primary"
-          onClick={wizard.next}
-          disabled={wizard.isLast}
+          onClick={advance}
+          disabled={wizard.isLast || changeAnchor.isPending}
         >
           Continue
         </Button>

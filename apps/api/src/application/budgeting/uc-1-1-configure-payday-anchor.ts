@@ -37,6 +37,18 @@ export interface AnchorChangePreview {
   readonly orphanedEntries: number;
 }
 
+/** One cycle as a proposed anchor would slice it. Nothing is persisted. */
+export interface ResolvedCycle {
+  readonly month: string;
+  readonly label: string;
+  readonly start: string;
+  readonly end: string;
+  /** Payday landed on a weekend or holiday and moved by the policy. */
+  readonly shifted: boolean;
+  /** The anchor day ran past the month's length and clamped onto its end. */
+  readonly clamped: boolean;
+}
+
 export class AnchorChangeWouldOrphanEntries extends Error {
   constructor(readonly orphanedEntries: number) {
     super(
@@ -72,6 +84,39 @@ export class ConfigurePaydayAnchor {
       anchorDay: anchor.dayOfMonth,
       shiftPolicy: anchor.shiftPolicy,
     };
+  }
+
+  /**
+   * What a proposed anchor would make the coming cycles look like, resolved
+   * but not saved. The first run has to show what an anchor day *means*
+   * before anyone commits to it, and the weekend and short-month rules live
+   * in `CycleRef` and nowhere else — so they are answered here rather than
+   * reimplemented in the frontend.
+   */
+  resolveWindow(
+    proposed: AnchorSettings,
+    count: number,
+  ): Promise<readonly ResolvedCycle[]> {
+    const anchor = PaydayAnchor.of(proposed.anchorDay, proposed.shiftPolicy);
+    const today = LocalDate.fromInstant(this.clock.now());
+    const from = monthOf(today, anchor, this.holidays);
+
+    const window = CycleRef.rolling(from, count, anchor, this.holidays).map(
+      (ref) => {
+        const nominal = nominalPayday(ref.month, anchor.dayOfMonth);
+
+        return {
+          month: ref.month,
+          label: ref.label,
+          start: ref.start.toISO(),
+          end: ref.end.toISO(),
+          shifted: !ref.start.equals(nominal.date),
+          clamped: nominal.clamped,
+        };
+      },
+    );
+
+    return Promise.resolve(window);
   }
 
   async preview(proposed: AnchorSettings): Promise<AnchorChangePreview> {
@@ -196,4 +241,24 @@ function findHome(
   entry: LedgerEntry,
 ): CycleRef | undefined {
   return refs.find((ref) => ref.contains(entry.dueDate));
+}
+
+/**
+ * The payday a cycle nominally opens on, before any weekend shift: the anchor
+ * day of the month *before* the one the cycle is named for, clamped onto that
+ * month's length. Derived from the cycle's own month rather than from its
+ * resolved start, which a shift can push into a different month entirely.
+ */
+function nominalPayday(
+  month: string,
+  anchorDay: number,
+): { date: LocalDate; clamped: boolean } {
+  const [year, monthNumber] = month.split('-').map(Number) as [number, number];
+  const opens = LocalDate.of(year, monthNumber, 1).plusMonths(-1);
+  const lastDay = LocalDate.lastDayOfMonth(opens.year, opens.month);
+
+  return {
+    date: LocalDate.of(opens.year, opens.month, Math.min(anchorDay, lastDay)),
+    clamped: anchorDay > lastDay,
+  };
 }

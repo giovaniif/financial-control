@@ -17,6 +17,9 @@ interface Dependencies {
 
 const POLICIES = new Set(['PRECEDING', 'FOLLOWING']);
 
+/** The rolling window the app holds — see UC-1.1. */
+const WINDOW = 12;
+
 /** Narrows an unknown body without trusting it. */
 function readAnchorRequest(body: unknown): AnchorSettings | undefined {
   if (typeof body !== 'object' || body === null) {
@@ -40,6 +43,26 @@ export function registerSettingsRoutes(
   app.get('/settings/anchor', async (): Promise<AnchorSettingsResponse> =>
     configureAnchor.read(),
   );
+
+  /**
+   * What a proposed anchor would make the coming cycles look like, without
+   * saving it. The first run needs this before anything has been configured,
+   * which is why it is separate from the change preview: that one reports the
+   * impact on existing entries, and a new app has none.
+   */
+  app.post('/settings/anchor/resolve', async (request, reply) => {
+    const proposed = readAnchorRequest(request.body);
+    if (proposed === undefined) {
+      return badRequest(reply, 'anchorDay and shiftPolicy are required.');
+    }
+
+    try {
+      const cycles = await configureAnchor.resolveWindow(proposed, WINDOW);
+      return { cycles: [...cycles] };
+    } catch (error) {
+      return handle(error, reply);
+    }
+  });
 
   app.post('/settings/anchor/preview', async (request, reply) => {
     const proposed = readAnchorRequest(request.body);

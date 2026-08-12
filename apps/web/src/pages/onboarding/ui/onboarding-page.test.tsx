@@ -21,6 +21,19 @@ const renderPage = () =>
     />,
   );
 
+/** What the app actually asked the network for, in call order. */
+function requests(): { url: string; method: string }[] {
+  return vi.mocked(fetch).mock.calls.map(([input, init]) => ({
+    url:
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url,
+    method: init?.method ?? 'GET',
+  }));
+}
+
 beforeEach(() => {
   sessionStorage.clear();
 });
@@ -106,6 +119,120 @@ describe('OnboardingPage', () => {
 
     expect(await screen.findByText('Dashboard')).toBeInTheDocument();
     expect(hasSkippedSetup()).toBe(true);
+  });
+
+  it('opens on the two questions the app exists to answer', async () => {
+    stubApi({});
+    renderPage();
+
+    expect(
+      await screen.findByText(/how much will be left when I'm next paid/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/What does my future look like/),
+    ).toBeInTheDocument();
+  });
+
+  describe('the payday cycle step', () => {
+    const resolved = {
+      cycles: [
+        {
+          month: '2026-09',
+          label: 'September 2026',
+          start: '2026-08-05',
+          end: '2026-09-03',
+          shifted: false,
+          clamped: false,
+        },
+        {
+          month: '2026-10',
+          label: 'October 2026',
+          start: '2026-09-04',
+          end: '2026-10-04',
+          shifted: true,
+          clamped: false,
+        },
+      ],
+    };
+
+    const openCycleStep = async () => {
+      renderPage();
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Continue' }),
+      );
+    };
+
+    // Resolution lives in the domain's CycleRef, so the step shows the real
+    // boundaries rather than a description of them.
+    it('shows the cycles the chosen anchor actually produces', async () => {
+      stubApi({ '/api/settings/anchor/resolve': resolved });
+      await openCycleStep();
+
+      expect(await screen.findByText('September 2026')).toBeInTheDocument();
+      expect(screen.getByText('5 Aug – 3 Sep')).toBeInTheDocument();
+    });
+
+    it('calls out the cycles where payday moved off a closed day', async () => {
+      stubApi({ '/api/settings/anchor/resolve': resolved });
+      await openCycleStep();
+
+      expect(
+        await screen.findByText('payday moved off a closed day'),
+      ).toBeInTheDocument();
+    });
+
+    it('explains how a last-day-of-month payday is expressed', async () => {
+      stubApi({ '/api/settings/anchor/resolve': resolved });
+      await openCycleStep();
+
+      expect(await screen.findByText(/Use 31/)).toBeInTheDocument();
+    });
+
+    it('re-resolves when the anchor day changes', async () => {
+      stubApi({ '/api/settings/anchor/resolve': resolved });
+      await openCycleStep();
+
+      const day = await screen.findByLabelText('Salary lands on day');
+      await userEvent.clear(day);
+      await userEvent.type(day, '20');
+
+      expect(
+        requests().filter(({ url }) => url.includes('anchor/resolve')).length,
+      ).toBeGreaterThan(1);
+    });
+
+    it('saves the anchor before moving on', async () => {
+      stubApi({ '/api/settings/anchor/resolve': resolved });
+      await openCycleStep();
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Continue' }),
+      );
+
+      expect(
+        requests().find(
+          ({ url, method }) =>
+            url.endsWith('/settings/anchor') && method === 'PUT',
+        ),
+      ).toBeDefined();
+    });
+  });
+
+  it('keeps what a step captured when the user goes back to it', async () => {
+    stubApi({});
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Continue' }),
+    );
+    const day = await screen.findByLabelText('Salary lands on day');
+    await userEvent.clear(day);
+    await userEvent.type(day, '12');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    expect(await screen.findByLabelText('Salary lands on day')).toHaveValue(12);
   });
 
   // A step change that only swaps the body leaves a screen reader on the old
