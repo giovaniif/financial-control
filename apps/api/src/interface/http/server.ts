@@ -1,3 +1,4 @@
+import multipart from '@fastify/multipart';
 import Fastify, { type FastifyInstance } from 'fastify';
 
 import type { BackupRestore } from '../../application/backup/uc-1-6-backup-restore.js';
@@ -10,6 +11,7 @@ import type { LedgerActions } from '../../application/budgeting/uc-3-ledger-acti
 import type { ManageCards } from '../../application/cards/uc-5-manage-cards.js';
 import type { ManageBuckets } from '../../application/goals/uc-6-manage-buckets.js';
 import type { BuildDashboard } from '../../application/projection/uc-4-build-dashboard.js';
+import type { ImportSpreadsheet } from '../../application/import/uc-1-7-import-spreadsheet.js';
 import type { ReadSetupState } from '../../application/projection/uc-1-5-read-setup-state.js';
 import type { ProjectWealth } from '../../application/projection/uc-7-project-wealth.js';
 import type { ListCycles } from '../../application/budgeting/uc-3-3-list-cycles.js';
@@ -25,6 +27,7 @@ import { registerLedgerRoutes } from './routes/ledger.js';
 import { registerTemplateRoutes } from './routes/templates.js';
 import { registerSettingsRoutes } from './routes/settings.js';
 import { registerSetupRoutes } from './routes/setup.js';
+import { registerImportRoutes } from './routes/import.js';
 
 interface Dependencies {
   clock: Clock;
@@ -41,6 +44,7 @@ interface Dependencies {
   projectWealth: ProjectWealth;
   backupRestore: BackupRestore;
   readSetupState: ReadSetupState;
+  importSpreadsheet: ImportSpreadsheet;
 }
 
 export function buildServer({
@@ -58,8 +62,12 @@ export function buildServer({
   projectWealth,
   backupRestore,
   readSetupState,
+  importSpreadsheet,
 }: Dependencies): FastifyInstance {
   const app = Fastify({ logger: false });
+
+  // The spreadsheet import is the app's only upload.
+  void app.register(multipart);
 
   registerHealthRoute(app, { clock, startedAt: clock.now() });
   registerSettingsRoutes(app, { configureAnchor });
@@ -76,6 +84,7 @@ export function buildServer({
     manageBuckets,
   });
   registerBackupRoutes(app, { backupRestore });
+  registerImportRoutes(app, { importSpreadsheet });
 
   return app;
 }

@@ -11,6 +11,7 @@ import { LedgerActions } from './application/budgeting/uc-3-ledger-actions.js';
 import { ManageCards } from './application/cards/uc-5-manage-cards.js';
 import { ManageBuckets } from './application/goals/uc-6-manage-buckets.js';
 import { BuildDashboard } from './application/projection/uc-4-build-dashboard.js';
+import { ImportSpreadsheet } from './application/import/uc-1-7-import-spreadsheet.js';
 import { ReadSetupState } from './application/projection/uc-1-5-read-setup-state.js';
 import { ProjectWealth } from './application/projection/uc-7-project-wealth.js';
 import { ListCycles } from './application/budgeting/uc-3-3-list-cycles.js';
@@ -22,6 +23,7 @@ import { PrismaCardRepository } from './infrastructure/prisma/prisma-card-reposi
 import { PrismaCycleRepository } from './infrastructure/prisma/prisma-cycle-repository.js';
 import { PrismaTemplateRepository } from './infrastructure/prisma/prisma-template-repository.js';
 import { PrismaSettingsRepository } from './infrastructure/prisma/prisma-settings-repository.js';
+import { XlsxSpreadsheetReader } from './infrastructure/spreadsheet/xlsx-spreadsheet-reader.js';
 import { buildServer } from './interface/http/server.js';
 
 /**
@@ -35,11 +37,23 @@ export function createApp(): FastifyInstance {
   const holidays = new BrazilianHolidayCalendar();
 
   const settings = new PrismaSettingsRepository(prisma);
+  const spreadsheets = new XlsxSpreadsheetReader();
   const cycles = new PrismaCycleRepository(prisma);
   const accounts = new PrismaAccountRepository(prisma);
   const templates = new PrismaTemplateRepository(prisma);
   const cards = new PrismaCardRepository(prisma);
   const buckets = new PrismaBucketRepository(prisma);
+
+  const backup = new BackupRestore(
+    cycles,
+    accounts,
+    templates,
+    cards,
+    buckets,
+    settings,
+    holidays,
+    clock,
+  );
 
   return buildServer({
     clock,
@@ -70,13 +84,10 @@ export function createApp(): FastifyInstance {
     closeCycle: new CloseCycle(cycles, settings, accounts, holidays, clock),
     manageCards: new ManageCards(cards, cycles, settings, holidays),
     manageBuckets: new ManageBuckets(buckets, cycles, settings, holidays),
-    backupRestore: new BackupRestore(
-      cycles,
-      accounts,
-      templates,
-      cards,
-      buckets,
-      settings,
+    backupRestore: backup,
+    importSpreadsheet: new ImportSpreadsheet(
+      spreadsheets,
+      backup,
       holidays,
       clock,
     ),
