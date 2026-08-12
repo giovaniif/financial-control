@@ -179,7 +179,7 @@ Each page is its own issue and its own PR, stacked on the shared layers below it
 | 8.15 | Bucket event log widget | 2 | UC-6.7 |
 | 8.16 | Wealth page: stacked bars, inline assumptions, retirement figure | 3 | UC-7 |
 | 8.17 | Settings page: anchor, weekend rule, accounts, cards, formatting | 3 | UC-1.1–1.4 |
-| 8.18 | First-run checklist and empty states | 3 | UC-1.5 |
+| 8.18 | First-run teach-then-do wizard, and importing the spreadsheet | 28 | UC-1.5, UC-1.7 |
 | 8.19 | Backup and restore | 2 | UC-1.6 |
 
 **Subtotal 49.**

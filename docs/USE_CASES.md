@@ -107,14 +107,46 @@ what drives everything downstream, the form shows a plain-language preview:
 Read-only confirmation of how the app renders money, dates, outgoing amounts and cycle names. Not
 configurable in v1 — shown so the conventions are explicit.
 
-**UC-1.5 — Follow the first-run checklist**
-The app ships empty. An ordered, five-step checklist gets the user to a working state, each step depending on
-the ones before: **payday anchor → accounts → credit cards → recurring templates → buckets**. Each step shows
-its current state (*"3 accounts"*, *"12 templates"*) and is reachable from here.
+**UC-1.5 — Be walked through the first run**
+The app ships empty, so an app that has never been configured opens on a wizard rather than on a dashboard of
+zeros. It is **teach-then-do**: each step explains one idea and then performs the configuration that idea
+describes, in the order each depends on the last — **why the app exists → the payday cycle → accounts →
+credit cards → recurring templates → buckets**. The user finishes already set up, having clicked rather than
+read.
+
+The payday-cycle step resolves the real boundaries for the anchor day as it is chosen, including which cycles
+have their payday shifted off a closed day; the cards step shows the consequence of the closing/due day pair
+in the user's own numbers. Every step is skippable, the whole wizard is skippable, and the app stays fully
+usable without it.
+
+Settings keeps the same five steps as a checklist showing what is still outstanding, and can re-enter the
+wizard at any time.
 
 **UC-1.6 — Back up and restore**
-A full data export and re-import. The user is the only operator and the only backup, and there is no import
-path from any bank or spreadsheet — so this is the sole recovery mechanism.
+A full data export and re-import. The user is the only operator and the only backup, and nothing else takes
+snapshots — so this is the sole recovery mechanism. It is also offered on first run, since a backup is already
+a complete dataset and needs none of the wizard.
+
+**UC-1.7 — Import the spreadsheet this app replaces**
+A user arriving from the "Controle Financeiro" spreadsheet starts with their data already in place.
+
+The sheet cannot do this alone, and the app never pretends otherwise. It is one grid — month names across the
+top, one label/amount column pair each — and it holds **no dates whatsoever**: no due days, no years, no card
+closing or due days, no accounts, no bucket targets. So the import does not bypass the wizard, it
+**pre-fills** it. What the sheet does supply — the labels, the amounts, and the allocation rules recovered
+from its own cell formulas — arrives filled in, and each step asks only for the half the sheet is missing.
+
+The year mapping is inferred and shown with its reasoning before anything is written, because a wrong year
+files every entry a cycle out. Nothing is saved by the upload itself.
+
+Two things the import refuses to fake. A card row is a monthly invoice total with no purchases behind it, so
+cards come across as recurring estimates and the report says so; the card itself is still registered so
+purchases can be recorded from then on. And a bill whose due day falls in a gap its cycle never reaches would
+generate nothing at all, silently — so the import stops and names it.
+
+It ends in a reconciliation: the app's own figures against the sheet's `Total Gasto`, `Sobra` and
+`Sobra Esperada`, plus what did *not* come across. A figure that quietly differs from the spreadsheet is
+worse than one that is missing.
 
 ---
 
@@ -449,6 +481,12 @@ Payday anchor with its change preview, weekend rule, card configuration, account
 first-run checklist, backup and restore.
 *Primary action:* none — visited rarely, deliberately. → UC-1
 
+### First run — *outside the shell*
+Not one of the seven. An app that has never been configured opens here instead of on the Dashboard: a
+step indicator, one idea per screen, and the configuration that idea describes directly beneath it. No
+sidebar and no cycle navigation, because every screen they lead to is empty until this is finished.
+*Primary action:* continue. *Secondary:* skip for now. → UC-1.5, UC-1.7
+
 **Persistent shell:** a sidebar carrying navigation and the live "In accounts now" total, and a header
 carrying the screen title, global cycle navigation, and the estimates toggle.
 
@@ -471,8 +509,8 @@ carrying the screen title, global cycle navigation, and the estimates toggle.
 - **Settling is the most repeated action.** One click when actual equals planned, two when it does not, and
   reachable from the Dashboard without opening the ledger.
 
-- **Empty states matter.** The app ships with no data and has no import path. First run is the ordered
-  checklist in UC-1.5.
+- **Empty states matter.** The app ships with no data. First run is the wizard in UC-1.5, and the
+  spreadsheet import in UC-1.7 is the only way data arrives other than by hand.
 
 - **Single user, no login.** No account menus, no sharing, no permission states.
 
@@ -488,7 +526,13 @@ Recorded as decisions, not oversights:
   Dashboard alerts (UC-4.7) are the only analysis the app performs.
 - **A forecast grid.** Twelve cycles are modelled and navigable one at a time, but there is no
   all-cycles-at-once table and no what-if scenarios.
-- **Bank statement import** (CSV / OFX) and **spreadsheet migration**. All data is entered by hand or
-  generated from templates.
+- **Bank statement import** (CSV / OFX). All ongoing data is entered by hand or generated from
+  templates.
+
+  *Spreadsheet migration used to sit here too. It moved into scope as UC-1.7: the sheet is the only
+  data that exists, twenty-three months of it, and hand-entering that to start using the app was not
+  a real option. The import is narrow on purpose — it reads the one "Controle Financeiro" layout,
+  and because that sheet holds no dates at all it pre-fills the first-run wizard rather than
+  replacing it.*
 - **Asset-level investment holdings** and live market data. Buckets hold a balance, not positions.
 - **Multi-user, authentication, sharing.**
