@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 
+import { BackupRestore } from './application/backup/uc-1-6-backup-restore.js';
 import { ConfigurePaydayAnchor } from './application/budgeting/uc-1-1-configure-payday-anchor.js';
 import { ManageAccounts } from './application/budgeting/uc-1-2-manage-accounts.js';
 import { ManageTemplates } from './application/budgeting/uc-2-manage-templates.js';
@@ -68,6 +69,16 @@ export function createApp(): FastifyInstance {
     closeCycle: new CloseCycle(cycles, settings, accounts, holidays, clock),
     manageCards: new ManageCards(cards, cycles, settings, holidays),
     manageBuckets: new ManageBuckets(buckets, cycles, settings, holidays),
+    backupRestore: new BackupRestore(
+      cycles,
+      accounts,
+      templates,
+      cards,
+      buckets,
+      settings,
+      holidays,
+      clock,
+    ),
     buildDashboard: new BuildDashboard(
       cycles,
       buckets,

@@ -80,3 +80,17 @@ export type {
   UpcomingEntryResponse,
   WealthProjectionResponse,
 } from './projection.js';
+export { BACKUP_VERSION } from './backup.js';
+export type {
+  BackupAccount,
+  BackupBucket,
+  BackupBucketEvent,
+  BackupCard,
+  BackupCycle,
+  BackupDocument,
+  BackupEntry,
+  BackupEntryOrigin,
+  BackupInvoice,
+  BackupInvoiceItem,
+  BackupTemplate,
+} from './backup.js';

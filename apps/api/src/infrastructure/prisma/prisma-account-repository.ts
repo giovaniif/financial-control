@@ -34,4 +34,8 @@ export class PrismaAccountRepository implements AccountRepository {
   async delete(id: string): Promise<void> {
     await this.prisma.account.delete({ where: { id } });
   }
+
+  async deleteAll(): Promise<void> {
+    await this.prisma.account.deleteMany();
+  }
 }

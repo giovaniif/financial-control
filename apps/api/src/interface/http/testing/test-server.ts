@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 
+import { BackupRestore } from '../../../application/backup/uc-1-6-backup-restore.js';
 import { ConfigurePaydayAnchor } from '../../../application/budgeting/uc-1-1-configure-payday-anchor.js';
 import { ManageAccounts } from '../../../application/budgeting/uc-1-2-manage-accounts.js';
 import { ManageTemplates } from '../../../application/budgeting/uc-2-manage-templates.js';
@@ -70,6 +71,16 @@ export function buildTestServer(
     closeCycle: new CloseCycle(cycles, settings, accounts, noHolidays, clock),
     manageCards: new ManageCards(cards, cycles, settings, noHolidays),
     manageBuckets: new ManageBuckets(buckets, cycles, settings, noHolidays),
+    backupRestore: new BackupRestore(
+      cycles,
+      accounts,
+      templates,
+      cards,
+      buckets,
+      settings,
+      noHolidays,
+      clock,
+    ),
     buildDashboard: new BuildDashboard(
       cycles,
       buckets,

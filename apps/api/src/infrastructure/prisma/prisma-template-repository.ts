@@ -51,4 +51,8 @@ export class PrismaTemplateRepository implements RecurringTemplateRepository {
   async delete(id: string): Promise<void> {
     await this.prisma.recurringTemplate.delete({ where: { id } });
   }
+
+  async deleteAll(): Promise<void> {
+    await this.prisma.recurringTemplate.deleteMany();
+  }
 }
