@@ -113,15 +113,15 @@ describe('the cycle that pays an invoice', () => {
   it('pays a 20 Aug purchase in the September cycle', () => {
     const { dueDate } = inter().periodFor(date('2026-08-20'));
 
-    expect(cycle('2026-09').contains(dueDate)).toBe(true);
-    expect(cycle('2026-08').contains(dueDate)).toBe(false);
+    expect(cycle('2026-10').contains(dueDate)).toBe(true);
+    expect(cycle('2026-09').contains(dueDate)).toBe(false);
   });
 
   it('pays a 29 Aug purchase in the October cycle', () => {
     const { dueDate } = inter().periodFor(date('2026-08-29'));
 
-    expect(cycle('2026-10').contains(dueDate)).toBe(true);
-    expect(cycle('2026-09').contains(dueDate)).toBe(false);
+    expect(cycle('2026-11').contains(dueDate)).toBe(true);
+    expect(cycle('2026-10').contains(dueDate)).toBe(false);
   });
 });
 

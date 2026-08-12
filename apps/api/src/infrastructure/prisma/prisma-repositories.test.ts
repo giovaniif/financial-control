@@ -49,7 +49,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
     const buckets = new PrismaBucketRepository(prisma);
 
     const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
-    const august = CycleRef.forMonth('2026-08', anchor, noHolidays);
+    const august = CycleRef.forMonth('2026-09', anchor, noHolidays);
 
     beforeEach(async () => {
       await prisma.bucketEvent.deleteMany();
@@ -174,7 +174,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
     describe('cycles', () => {
       const withEntries = () =>
         Cycle.open({
-          id: 'cycle-aug',
+          id: 'cycle-sep',
           ref: august,
           openingBalance: Money.fromCents(216_000),
           entries: [
@@ -210,7 +210,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
 
         const loaded = await cycles.findByMonth(august);
 
-        expect(loaded?.id).toBe('cycle-aug');
+        expect(loaded?.id).toBe('cycle-sep');
         expect(loaded?.openingBalance.cents).toBe(216_000);
         expect(loaded?.entries).toHaveLength(3);
       });
@@ -358,7 +358,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
 
         const loaded = await cycles.findByMonth(august);
         const clash = Cycle.rehydrate({
-          id: 'cycle-aug',
+          id: 'cycle-sep',
           ref: august,
           status: CycleStatus.Open,
           openingBalance: Money.zero(),
@@ -380,7 +380,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
 
         await cycles.save(
           Cycle.open({
-            id: 'cycle-aug',
+            id: 'cycle-sep',
             ref: august,
             openingBalance: Money.zero(),
             entries: [manual('m1', 'Dinner split'), manual('m2', 'Gift')],
@@ -425,9 +425,9 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
           direction: Direction.In,
           dueDayOfMonth: 5,
           amount: Money.fromCents(1_000_000),
-          startMonth: '2026-08',
+          startMonth: '2026-09',
           valueSchedule: [
-            { fromMonth: '2026-09', amount: Money.fromCents(1_800_000) },
+            { fromMonth: '2026-10', amount: Money.fromCents(1_800_000) },
           ],
         });
 
@@ -450,7 +450,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
 
         expect(loaded?.amountFor(august).cents).toBe(1_000_000);
         expect(
-          loaded?.amountFor(CycleRef.forMonth('2026-09', anchor, noHolidays))
+          loaded?.amountFor(CycleRef.forMonth('2026-10', anchor, noHolidays))
             .cents,
         ).toBe(1_800_000);
       });
@@ -463,11 +463,11 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
             direction: Direction.Out,
             dueDayOfMonth: 20,
             amount: Money.fromCents(-120_000),
-            startMonth: '2026-08',
+            startMonth: '2026-09',
             valueSchedule: [
-              { fromMonth: '2026-11', amount: Money.fromCents(-134_000) },
-              { fromMonth: '2026-09', amount: Money.fromCents(-125_000) },
-              { fromMonth: '2026-10', amount: Money.fromCents(-130_000) },
+              { fromMonth: '2026-12', amount: Money.fromCents(-134_000) },
+              { fromMonth: '2026-10', amount: Money.fromCents(-125_000) },
+              { fromMonth: '2026-11', amount: Money.fromCents(-130_000) },
             ],
           }),
         );
@@ -475,16 +475,16 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
         const loaded = await templates.findById('tpl-reno');
 
         expect(loaded?.valueSchedule.map((s) => s.fromMonth)).toEqual([
-          '2026-09',
           '2026-10',
           '2026-11',
+          '2026-12',
         ]);
       });
 
       it('replaces the schedule wholesale rather than accumulating steps', async () => {
         await templates.save(salary());
         await templates.save(
-          salary().scheduleAmountFrom('2026-09', Money.fromCents(1_900_000)),
+          salary().scheduleAmountFrom('2026-10', Money.fromCents(1_900_000)),
         );
 
         const loaded = await templates.findById('tpl-salary');
@@ -503,10 +503,10 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
       });
 
       it('preserves an end cycle', async () => {
-        await templates.save(salary().endOn('2026-12'));
+        await templates.save(salary().endOn('2027-01'));
 
         expect((await templates.findById('tpl-salary'))?.endMonth).toBe(
-          '2026-12',
+          '2027-01',
         );
       });
 
@@ -519,7 +519,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
             direction: Direction.Out,
             dueDayOfMonth: 8,
             amount: Money.fromCents(-32_000),
-            startMonth: '2026-08',
+            startMonth: '2026-09',
           }),
         );
 
@@ -697,7 +697,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
       // difference between a correct balance and a wrong one.
       it('replays the event log in order and rebuilds the same balance', async () => {
         const original = reserve()
-          .contribute('e1', '2026-08', Money.fromCents(200_000))
+          .contribute('e1', '2026-09', Money.fromCents(200_000))
           .recordYield(
             'e2',
             LocalDate.parse('2026-08-31'),
@@ -709,7 +709,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
             Money.fromCents(190_000),
             'statement differed',
           )
-          .contribute('e4', '2026-09', Money.fromCents(200_000));
+          .contribute('e4', '2026-10', Money.fromCents(200_000));
         await buckets.save(original);
 
         const loaded = await buckets.findById('reserve');
@@ -727,7 +727,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
       it('keeps yield apart from saving after a round trip', async () => {
         await buckets.save(
           reserve()
-            .contribute('e1', '2026-08', Money.fromCents(100_000))
+            .contribute('e1', '2026-09', Money.fromCents(100_000))
             .recordYield(
               'e2',
               LocalDate.parse('2026-08-31'),
@@ -744,7 +744,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
       it('preserves the reason on a correction and a withdrawal', async () => {
         await buckets.save(
           reserve()
-            .contribute('e1', '2026-08', Money.fromCents(100_000))
+            .contribute('e1', '2026-09', Money.fromCents(100_000))
             .withdraw(
               'e2',
               LocalDate.parse('2026-09-01'),
@@ -765,7 +765,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
         await buckets.save(
           reserve().overrideContribution(
             'e1',
-            '2026-08',
+            '2026-09',
             Money.fromCents(700_000),
             Money.fromCents(200_000),
           ),
@@ -797,7 +797,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
 
       it('preserves an archived status with its history', async () => {
         await buckets.save(
-          reserve().contribute('e1', '2026-08', Money.fromCents(100)).archive(),
+          reserve().contribute('e1', '2026-09', Money.fromCents(100)).archive(),
         );
 
         const loaded = await buckets.findById('reserve');
@@ -808,7 +808,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
 
       it('deletes a bucket and its log with it', async () => {
         await buckets.save(
-          reserve().contribute('e1', '2026-08', Money.fromCents(100)),
+          reserve().contribute('e1', '2026-09', Money.fromCents(100)),
         );
         await buckets.delete('reserve');
 

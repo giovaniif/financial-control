@@ -39,15 +39,17 @@ describe('PaydayAnchor', () => {
   });
 });
 
+// A cycle is named for the month AFTER its payday, so the cycle a given
+// month's pay opens is named for the month following it.
 describe('CycleRef anchor resolution', () => {
-  it('starts on the anchor day when it is an ordinary weekday', () => {
-    // 5 Aug 2026 is a Wednesday.
-    expect(forMonth('2026-08').start.toISO()).toBe('2026-08-05');
+  it('opens on the anchor day when it is an ordinary weekday', () => {
+    // 5 Aug 2026 is a Wednesday, and that pay covers September.
+    expect(forMonth('2026-09').start.toISO()).toBe('2026-08-05');
   });
 
   it.each([
-    ['a Saturday moves back to the Friday', '2026-09', '2026-09-04'],
-    ['a Sunday moves back to the Friday', '2026-04', '2026-04-03'],
+    ['a Saturday moves back to the Friday', '2026-10', '2026-09-04'],
+    ['a Sunday moves back to the Friday', '2026-05', '2026-04-03'],
   ])('%s', (_name, month, expected) => {
     // 5 Sep 2026 is a Saturday; 5 Apr 2026 is a Sunday.
     expect(forMonth(month).start.toISO()).toBe(expected);
@@ -56,15 +58,15 @@ describe('CycleRef anchor resolution', () => {
   it('moves forward instead under the FOLLOWING policy', () => {
     const following = anchor(5, ShiftPolicy.Following);
 
-    expect(forMonth('2026-09', following).start.toISO()).toBe('2026-09-07');
-    expect(forMonth('2026-04', following).start.toISO()).toBe('2026-04-06');
+    expect(forMonth('2026-10', following).start.toISO()).toBe('2026-09-07');
+    expect(forMonth('2026-05', following).start.toISO()).toBe('2026-04-06');
   });
 
   it('moves off a public holiday just as it moves off a weekend', () => {
     // 1 May 2026 is a Friday and Labour Day, so pay lands on Thursday.
     const calendar = holidaysOn('2026-05-01');
 
-    expect(forMonth('2026-05', anchor(1), calendar).start.toISO()).toBe(
+    expect(forMonth('2026-06', anchor(1), calendar).start.toISO()).toBe(
       '2026-04-30',
     );
   });
@@ -73,15 +75,15 @@ describe('CycleRef anchor resolution', () => {
     // Fri 25 Dec and Thu 24 Dec blocked, plus the weekend before: back to Wed 23.
     const calendar = holidaysOn('2026-12-25', '2026-12-24');
 
-    expect(forMonth('2026-12', anchor(25), calendar).start.toISO()).toBe(
+    expect(forMonth('2027-01', anchor(25), calendar).start.toISO()).toBe(
       '2026-12-23',
     );
   });
 
   it.each([
-    ['February in a common year', '2026-02', '2026-02-27'],
-    ['February in a leap year', '2028-02', '2028-02-29'],
-    ['a 30-day month', '2026-04', '2026-04-30'],
+    ['February in a common year', '2026-03', '2026-02-27'],
+    ['February in a leap year', '2028-03', '2028-02-29'],
+    ['a 30-day month', '2026-05', '2026-04-30'],
   ])('clamps an anchor of 31 onto the last day of %s', (_name, month, iso) => {
     // 28 Feb 2026 is a Saturday, so the clamped date shifts back again to the 27th.
     expect(forMonth(month, anchor(31)).start.toISO()).toBe(iso);
@@ -92,21 +94,40 @@ describe('CycleRef boundaries and naming', () => {
   it('ends the day before the next cycle starts', () => {
     const august = forMonth('2026-08');
 
-    // September's payday shifts back to Friday the 4th, so August ends on the 3rd.
-    expect(august.end.toISO()).toBe('2026-09-03');
+    // August's own payday opens September's cycle, so August closes the day
+    // before it — and 5 Aug 2026 is a Wednesday, so nothing shifts.
+    expect(august.end.toISO()).toBe('2026-08-04');
   });
 
-  it('is named for the month its payday falls in, not the span it covers', () => {
-    expect(forMonth('2026-08').label).toBe('August 2026');
+  it('is named for the month after its payday, not the one pay lands in', () => {
+    const august = forMonth('2026-08');
+
+    // 5 Jul 2026 is a Sunday, so July's pay lands on Friday the 3rd.
+    expect(august.start.toISO()).toBe('2026-07-03');
+    expect(august.label).toBe('August 2026');
   });
 
-  it('keeps the label of its nominal month even when pay lands in the month before', () => {
-    // Anchor 1 May is a holiday, so pay lands 30 April — still the May cycle.
+  // The span moves with the anchor while the name stays put, which is the
+  // whole point: an anchor late in the month makes the cycle sit almost
+  // entirely inside the month it is named for.
+  it.each([
+    ['an anchor of 31', 31, '2026-07-31', '2026-08-30'],
+    ['an anchor of 5', 5, '2026-07-03', '2026-08-04'],
+    ['an anchor of 1', 1, '2026-07-01', '2026-07-30'],
+  ])('spans %s', (_name, day, start, end) => {
+    const august = forMonth('2026-08', anchor(day));
+
+    expect(august.start.toISO()).toBe(start);
+    expect(august.end.toISO()).toBe(end);
+  });
+
+  it('keeps its name even when pay lands two months before it', () => {
+    // Anchor 1 May is a holiday, so pay lands 30 April — the June cycle.
     const calendar = holidaysOn('2026-05-01');
-    const may = forMonth('2026-05', anchor(1), calendar);
+    const june = forMonth('2026-06', anchor(1), calendar);
 
-    expect(may.start.toISO()).toBe('2026-04-30');
-    expect(may.label).toBe('May 2026');
+    expect(june.start.toISO()).toBe('2026-04-30');
+    expect(june.label).toBe('June 2026');
   });
 
   it('exposes its span as an inclusive range', () => {
@@ -125,12 +146,13 @@ describe('CycleRef boundaries and naming', () => {
 describe('CycleRef.contains — the assignment rule', () => {
   const august = forMonth('2026-08');
 
+  // With pay on the 5th, the August cycle runs 3 Jul – 4 Aug.
   it.each([
-    ['the first day', '2026-08-05', true],
-    ['a day in the middle', '2026-08-20', true],
-    ['the last day', '2026-09-03', true],
-    ['the day before it opens', '2026-08-04', false],
-    ['the day the next cycle opens', '2026-09-04', false],
+    ['the first day', '2026-07-03', true],
+    ['a day in the middle', '2026-07-20', true],
+    ['the last day', '2026-08-04', true],
+    ['the day before it opens', '2026-07-02', false],
+    ['the day the next cycle opens', '2026-08-05', false],
   ])('%s', (_name, iso, expected) => {
     expect(august.contains(date(iso))).toBe(expected);
   });
@@ -138,18 +160,18 @@ describe('CycleRef.contains — the assignment rule', () => {
   // UC-5.4: an invoice belongs to the cycle containing its DUE date, not the
   // dates of the purchases on it. Two purchases nine days apart, on either
   // side of the card's closing day, are a whole cycle apart in cash terms.
-  it('puts an invoice due 10 Sep in the September cycle', () => {
-    const september = forMonth('2026-09');
-
-    expect(september.contains(date('2026-09-10'))).toBe(true);
-    expect(august.contains(date('2026-09-10'))).toBe(false);
-  });
-
-  it('puts an invoice due 10 Oct in the October cycle', () => {
+  it('puts an invoice due 10 Sep in the October cycle', () => {
     const october = forMonth('2026-10');
 
-    expect(october.contains(date('2026-10-10'))).toBe(true);
-    expect(forMonth('2026-09').contains(date('2026-10-10'))).toBe(false);
+    expect(october.contains(date('2026-09-10'))).toBe(true);
+    expect(forMonth('2026-09').contains(date('2026-09-10'))).toBe(false);
+  });
+
+  it('puts an invoice due 10 Oct in the November cycle', () => {
+    const november = forMonth('2026-11');
+
+    expect(november.contains(date('2026-10-10'))).toBe(true);
+    expect(forMonth('2026-10').contains(date('2026-10-10'))).toBe(false);
   });
 });
 
@@ -161,7 +183,7 @@ describe('CycleRef equality', () => {
 
   it('renders its bounds, never a bare month name', () => {
     expect(forMonth('2026-08').toString()).toBe(
-      'August 2026 (2026-08-05 – 2026-09-03)',
+      'August 2026 (2026-07-03 – 2026-08-04)',
     );
   });
 });

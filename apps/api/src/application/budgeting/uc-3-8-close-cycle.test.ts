@@ -73,48 +73,48 @@ const settled = (cycle: Cycle) =>
 describe('CloseCycle.close', () => {
   it('freezes a cycle whose entries are all settled', async () => {
     const { useCase, repository } = closing({
-      cycles: [settled(cycleOf('2026-08', 1_000))],
+      cycles: [settled(cycleOf('2026-09', 1_000))],
     });
 
-    await useCase.close('2026-08');
+    await useCase.close('2026-09');
 
-    expect((await repository.findByMonth(ref('2026-08')))?.status).toBe(
+    expect((await repository.findByMonth(ref('2026-09')))?.status).toBe(
       CycleStatus.Closed,
     );
   });
 
   it('refuses while an entry is unsettled', async () => {
-    const { useCase } = closing({ cycles: [cycleOf('2026-08', 1_000)] });
+    const { useCase } = closing({ cycles: [cycleOf('2026-09', 1_000)] });
 
-    await expect(useCase.close('2026-08')).rejects.toThrow(CycleNotSettled);
+    await expect(useCase.close('2026-09')).rejects.toThrow(CycleNotSettled);
   });
 
   // Offered once the end date has passed, never forced.
   it('refuses a cycle that has not ended yet', async () => {
     const { useCase } = closing({
-      cycles: [settled(cycleOf('2026-08', 1_000))],
+      cycles: [settled(cycleOf('2026-09', 1_000))],
       at: '2026-08-20T12:00:00Z',
     });
 
-    await expect(useCase.close('2026-08')).rejects.toThrow(CycleNotOverYet);
+    await expect(useCase.close('2026-09')).rejects.toThrow(CycleNotOverYet);
   });
 
   it('refuses a cycle that was never materialised', async () => {
     const { useCase } = closing({});
 
-    await expect(useCase.close('2026-08')).rejects.toThrow(CycleNotFound);
+    await expect(useCase.close('2026-09')).rejects.toThrow(CycleNotFound);
   });
 
   it("pushes its closing balance into the next cycle's opening", async () => {
     const { useCase, repository } = closing({
-      cycles: [settled(cycleOf('2026-08', 1_000)), cycleOf('2026-09', 2_000)],
+      cycles: [settled(cycleOf('2026-09', 1_000)), cycleOf('2026-10', 2_000)],
     });
 
-    await useCase.close('2026-08');
+    await useCase.close('2026-09');
 
     // Everything in August was skipped, so it realised nothing and closes at 0.
     expect(
-      (await repository.findByMonth(ref('2026-09')))?.openingBalance.cents,
+      (await repository.findByMonth(ref('2026-10')))?.openingBalance.cents,
     ).toBe(0);
   });
 });
@@ -122,10 +122,10 @@ describe('CloseCycle.close', () => {
 describe('CloseCycle.previewReopen', () => {
   it('reports nothing to move when no later cycle exists', async () => {
     const { useCase } = closing({
-      cycles: [settled(cycleOf('2026-08', 1_000))],
+      cycles: [settled(cycleOf('2026-09', 1_000))],
     });
 
-    expect((await useCase.previewReopen('2026-08')).shifts).toEqual([]);
+    expect((await useCase.previewReopen('2026-09')).shifts).toEqual([]);
   });
 
   // Reopening a cycle four cycles back shifts the whole cash curve since,
@@ -133,28 +133,28 @@ describe('CloseCycle.previewReopen', () => {
   it('reports every later opening balance that would move', async () => {
     const { useCase } = closing({
       cycles: [
-        cycleOf('2026-08', 1_000),
-        cycleOf('2026-09', 2_000, 999_999),
-        cycleOf('2026-10', 3_000, 999_999),
+        cycleOf('2026-09', 1_000),
+        cycleOf('2026-10', 2_000, 999_999),
+        cycleOf('2026-11', 3_000, 999_999),
       ],
     });
 
-    const preview = await useCase.previewReopen('2026-08');
+    const preview = await useCase.previewReopen('2026-09');
 
-    expect(preview.shifts.map((s) => s.month)).toEqual(['2026-09', '2026-10']);
+    expect(preview.shifts.map((s) => s.month)).toEqual(['2026-10', '2026-11']);
     expect(preview.shifts[0]?.currentOpeningCents).toBe(999_999);
     expect(preview.shifts[0]?.recomputedOpeningCents).toBe(100_000);
   });
 
   it('persists nothing', async () => {
     const { useCase, repository } = closing({
-      cycles: [cycleOf('2026-08', 1_000), cycleOf('2026-09', 2_000, 999_999)],
+      cycles: [cycleOf('2026-09', 1_000), cycleOf('2026-10', 2_000, 999_999)],
     });
 
-    await useCase.previewReopen('2026-08');
+    await useCase.previewReopen('2026-09');
 
     expect(
-      (await repository.findByMonth(ref('2026-09')))?.openingBalance.cents,
+      (await repository.findByMonth(ref('2026-10')))?.openingBalance.cents,
     ).toBe(999_999);
   });
 });
@@ -162,12 +162,12 @@ describe('CloseCycle.previewReopen', () => {
 describe('CloseCycle.reopen', () => {
   it('restores editability', async () => {
     const { useCase, repository } = closing({
-      cycles: [settled(cycleOf('2026-08', 1_000)).close()],
+      cycles: [settled(cycleOf('2026-09', 1_000)).close()],
     });
 
-    await useCase.reopen('2026-08');
+    await useCase.reopen('2026-09');
 
-    expect((await repository.findByMonth(ref('2026-08')))?.status).toBe(
+    expect((await repository.findByMonth(ref('2026-09')))?.status).toBe(
       CycleStatus.Open,
     );
   });
@@ -175,44 +175,44 @@ describe('CloseCycle.reopen', () => {
   it('recomputes every downstream opening balance', async () => {
     const { useCase, repository } = closing({
       cycles: [
-        cycleOf('2026-08', 1_000),
-        cycleOf('2026-09', 2_000, 999_999),
-        cycleOf('2026-10', 3_000, 999_999),
+        cycleOf('2026-09', 1_000),
+        cycleOf('2026-10', 2_000, 999_999),
+        cycleOf('2026-11', 3_000, 999_999),
       ],
     });
 
-    await useCase.reopen('2026-08');
+    await useCase.reopen('2026-09');
 
     expect(
-      (await repository.findByMonth(ref('2026-09')))?.openingBalance.cents,
+      (await repository.findByMonth(ref('2026-10')))?.openingBalance.cents,
     ).toBe(100_000);
     // September opens at 1.000 and takes in 2.000, so October opens at 3.000.
     expect(
-      (await repository.findByMonth(ref('2026-10')))?.openingBalance.cents,
+      (await repository.findByMonth(ref('2026-11')))?.openingBalance.cents,
     ).toBe(300_000);
   });
 
   it('returns the same shifts the preview reported', async () => {
     const { useCase } = closing({
-      cycles: [cycleOf('2026-08', 1_000), cycleOf('2026-09', 2_000, 999_999)],
+      cycles: [cycleOf('2026-09', 1_000), cycleOf('2026-10', 2_000, 999_999)],
     });
 
-    const applied = await useCase.reopen('2026-08');
+    const applied = await useCase.reopen('2026-09');
 
     expect(applied.shifts).toHaveLength(1);
-    expect(applied.month).toBe('2026-08');
+    expect(applied.month).toBe('2026-09');
   });
 
   it('skips months that were never materialised', async () => {
     const { useCase, repository } = closing({
-      cycles: [cycleOf('2026-08', 1_000), cycleOf('2026-11', 3_000, 999_999)],
+      cycles: [cycleOf('2026-09', 1_000), cycleOf('2026-12', 3_000, 999_999)],
     });
 
-    await useCase.reopen('2026-08');
+    await useCase.reopen('2026-09');
 
     // Nothing exists between them, so November still follows August's close.
     expect(
-      (await repository.findByMonth(ref('2026-11')))?.openingBalance.cents,
+      (await repository.findByMonth(ref('2026-12')))?.openingBalance.cents,
     ).toBe(100_000);
   });
 });

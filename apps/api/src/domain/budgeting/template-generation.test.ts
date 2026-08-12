@@ -10,7 +10,7 @@ import { Direction, RecurringTemplate } from './recurring-template.js';
 import { generateInto } from './template-generation.js';
 
 const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
-const august = CycleRef.forMonth('2026-08', anchor, noHolidays);
+const september = CycleRef.forMonth('2026-09', anchor, noHolidays);
 const reais = (amount: number) => Money.fromCents(amount * 100);
 
 /** Deterministic and stable, exactly as the persistence key must be. */
@@ -25,12 +25,12 @@ const template = (
     direction: Direction.Out,
     dueDayOfMonth: 8,
     amount: reais(-320),
-    startMonth: '2026-08',
+    startMonth: '2026-09',
     ...overrides,
   });
 
 const emptyCycle = () =>
-  Cycle.open({ id: 'cycle-aug', ref: august, openingBalance: Money.zero() });
+  Cycle.open({ id: 'cycle-sep', ref: september, openingBalance: Money.zero() });
 
 describe('generateInto', () => {
   it('adds one entry per applicable template', () => {
@@ -86,12 +86,12 @@ describe('generateInto', () => {
       direction: Direction.In,
       dueDayOfMonth: 5,
       amount: reais(10_000),
-      valueSchedule: [{ fromMonth: '2026-09', amount: reais(18_000) }],
+      valueSchedule: [{ fromMonth: '2026-10', amount: reais(18_000) }],
     });
 
-    const september = CycleRef.forMonth('2026-09', anchor, noHolidays);
+    const october = CycleRef.forMonth('2026-10', anchor, noHolidays);
     const inSeptember = generateInto(
-      Cycle.open({ id: 'c', ref: september, openingBalance: Money.zero() }),
+      Cycle.open({ id: 'c', ref: october, openingBalance: Money.zero() }),
       [salary],
       newId,
     );
@@ -102,7 +102,7 @@ describe('generateInto', () => {
   it('generates nothing before its start cycle', () => {
     const result = generateInto(
       emptyCycle(),
-      [template({ startMonth: '2026-09' })],
+      [template({ startMonth: '2026-10' })],
       newId,
     );
 
@@ -112,7 +112,7 @@ describe('generateInto', () => {
   it('generates nothing after its end cycle', () => {
     const result = generateInto(
       emptyCycle(),
-      [template({ startMonth: '2026-06', endMonth: '2026-07' })],
+      [template({ startMonth: '2026-07', endMonth: '2026-08' })],
       newId,
     );
 
@@ -139,7 +139,7 @@ describe('generateInto is idempotent', () => {
   it('leaves a settled entry exactly as it was', () => {
     const once = generateInto(emptyCycle(), [template()], newId);
     const settled = once.cycle.settleEntry(
-      'tpl-health@2026-08',
+      'tpl-health@2026-09',
       Money.fromCents(-33_000),
       SettlementStatus.Paid,
     );
@@ -153,7 +153,7 @@ describe('generateInto is idempotent', () => {
   it('leaves an overridden entry overridden', () => {
     const once = generateInto(emptyCycle(), [template()], newId);
     const overridden = once.cycle.overrideEntry(
-      'tpl-health@2026-08',
+      'tpl-health@2026-09',
       Money.fromCents(-45_000),
     );
 
@@ -181,7 +181,7 @@ describe('generateInto reports what it could not place', () => {
   // Moving a bill's date silently would land it in a cycle the user did not
   // expect, so it is reported instead.
   it('skips a due day that falls in neither month the cycle spans', () => {
-    // The August cycle runs 5 Aug – 3 Sep, so it has no 4th.
+    // The September cycle runs 5 Aug – 3 Sep, so it has no 4th.
     const result = generateInto(
       emptyCycle(),
       [template({ dueDayOfMonth: 4 })],

@@ -33,14 +33,19 @@ Everything hangs off the payday cycle. Getting this right first is what makes th
 ```
 CycleRef
   anchorDay        : 1–31            // configured payday, e.g. 5
-  start            : LocalDate       // resolved, e.g. 2026-08-05
-  end              : LocalDate       // day before next payday, e.g. 2026-09-04
-  label            : "August 2026"   // named for the month its payday falls in
+  start            : LocalDate       // resolved, e.g. 2026-07-03
+  end              : LocalDate       // day before next payday, e.g. 2026-08-04
+  label            : "August 2026"   // named for the month AFTER its payday
 ```
 
 **Resolution rules**, implemented once in `CycleRef` and nowhere else:
 
-1. The nominal start is `anchorDay` of the cycle's month.
+0. A cycle is named for the month it is **spent** in, so it opens on the *previous* month's payday and closes
+   the day before this month's. The offset is applied to the nominal month, never derived from the dates the
+   cycle resolved to — naming by the end date, or by whichever month holds most of the days, both break the
+   one-cycle-per-month mapping. With pay on the 2nd, 2 May 2026 is a Saturday, so two cycles would end in
+   April and none in May; with pay on the 16th, February is short enough that no cycle falls mostly inside it.
+1. The nominal start is `anchorDay` of the month before the cycle's own.
 2. If `anchorDay` exceeds the month's length, use the last day of the month.
 3. If the resulting date is a weekend or public holiday, shift by the configured policy (`PRECEDING` by
    default, `FOLLOWING` optional).

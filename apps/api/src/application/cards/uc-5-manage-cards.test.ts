@@ -60,8 +60,8 @@ describe('ManageCards.previewBilling', () => {
     const preview = await useCase.previewBilling('card-inter', '2026-08-20');
 
     expect(preview.dueDate).toBe('2026-09-10');
-    expect(preview.cycleMonth).toBe('2026-09');
-    expect(preview.cycleLabel).toBe('September 2026');
+    expect(preview.cycleMonth).toBe('2026-10');
+    expect(preview.cycleLabel).toBe('October 2026');
   });
 
   it('bills a 29 Aug purchase into the October cycle', async () => {
@@ -70,7 +70,7 @@ describe('ManageCards.previewBilling', () => {
     const preview = await useCase.previewBilling('card-inter', '2026-08-29');
 
     expect(preview.dueDate).toBe('2026-10-10');
-    expect(preview.cycleMonth).toBe('2026-10');
+    expect(preview.cycleMonth).toBe('2026-11');
   });
 
   it('persists nothing', async () => {
@@ -116,7 +116,7 @@ describe('ManageCards.registerPurchase', () => {
       amountCents: -42_000,
     });
 
-    expect(card.invoices[0]?.paidInCycle).toBe('2026-09');
+    expect(card.invoices[0]?.paidInCycle).toBe('2026-10');
   });
 
   it('spreads instalments across consecutive invoices', async () => {
@@ -164,7 +164,7 @@ describe('an invoice becomes a ledger entry in the cycle that pays it', () => {
       amountCents: -42_000,
     });
 
-    const september = await cycleRepo.findByMonth(cycle('2026-09'));
+    const september = await cycleRepo.findByMonth(cycle('2026-10'));
     const entry = september?.entries[0];
 
     expect(entry?.description).toBe('Inter — invoice');
@@ -183,7 +183,7 @@ describe('an invoice becomes a ledger entry in the cycle that pays it', () => {
       amountCents: -42_000,
     });
 
-    expect(await cycleRepo.findByMonth(cycle('2026-08'))).toBeUndefined();
+    expect(await cycleRepo.findByMonth(cycle('2026-09'))).toBeUndefined();
   });
 
   it('updates the existing line rather than adding a second', async () => {
@@ -202,7 +202,7 @@ describe('an invoice becomes a ledger entry in the cycle that pays it', () => {
       amountCents: -18_000,
     });
 
-    const september = await cycleRepo.findByMonth(cycle('2026-09'));
+    const september = await cycleRepo.findByMonth(cycle('2026-10'));
     expect(september?.entries).toHaveLength(1);
     expect(september?.entries[0]?.amount.planned.cents).toBe(-60_000);
   });
@@ -219,7 +219,7 @@ describe('an invoice becomes a ledger entry in the cycle that pays it', () => {
       amountCents: -42_000,
     });
 
-    const september = await cycleRepo.findByMonth(cycle('2026-09'));
+    const september = await cycleRepo.findByMonth(cycle('2026-10'));
     const entryId = september?.entries[0]?.id ?? '';
     if (september === undefined) {
       throw new Error('expected the invoice to have materialised a cycle');
@@ -235,7 +235,7 @@ describe('an invoice becomes a ledger entry in the cycle that pays it', () => {
       amountCents: -18_000,
     });
 
-    const after = await cycleRepo.findByMonth(cycle('2026-09'));
+    const after = await cycleRepo.findByMonth(cycle('2026-10'));
     expect(after?.entries[0]?.amount.actual?.cents).toBe(-42_000);
   });
 
@@ -255,7 +255,7 @@ describe('an invoice becomes a ledger entry in the cycle that pays it', () => {
       amountCents: 42_000,
     });
 
-    expect((await cycleRepo.findByMonth(cycle('2026-09')))?.entries).toEqual(
+    expect((await cycleRepo.findByMonth(cycle('2026-10')))?.entries).toEqual(
       [],
     );
   });
@@ -271,7 +271,7 @@ describe('an invoice becomes a ledger entry in the cycle that pays it', () => {
       installments: 3,
     });
 
-    for (const month of ['2026-09', '2026-10', '2026-11']) {
+    for (const month of ['2026-10', '2026-11', '2026-12']) {
       const stored = await cycleRepo.findByMonth(cycle(month));
       expect(stored?.entries[0]?.amount.planned.cents).toBe(-40_000);
     }
@@ -283,8 +283,8 @@ describe('projecting into a closed cycle', () => {
   // what was settled, and a later purchase must not reach back into it.
   it('leaves a closed cycle alone', async () => {
     const september = Cycle.open({
-      id: '2026-09',
-      ref: cycle('2026-09'),
+      id: '2026-10',
+      ref: cycle('2026-10'),
       openingBalance: Money.zero(),
     }).close();
     const { useCase, cycleRepo } = managing({
@@ -299,7 +299,7 @@ describe('projecting into a closed cycle', () => {
       amountCents: -42_000,
     });
 
-    expect((await cycleRepo.findByMonth(cycle('2026-09')))?.entries).toEqual(
+    expect((await cycleRepo.findByMonth(cycle('2026-10')))?.entries).toEqual(
       [],
     );
   });
@@ -314,7 +314,7 @@ describe('projecting into a closed cycle', () => {
       amountCents: 0,
     });
 
-    expect((await cycleRepo.findByMonth(cycle('2026-09')))?.entries).toEqual(
+    expect((await cycleRepo.findByMonth(cycle('2026-10')))?.entries).toEqual(
       [],
     );
   });
@@ -364,7 +364,7 @@ describe('a card due before payday', () => {
     const preview = await useCase.previewBilling('card-early', '2026-08-15');
 
     expect(preview.dueDate).toBe('2026-09-03');
-    expect(preview.cycleMonth).toBe('2026-08');
+    expect(preview.cycleMonth).toBe('2026-09');
   });
 
   it('reports the same cycle on the invoice it bills', async () => {
@@ -377,10 +377,10 @@ describe('a card due before payday', () => {
       amountCents: -20_000,
     });
 
-    expect(card.invoices[0]?.paidInCycle).toBe('2026-08');
+    expect(card.invoices[0]?.paidInCycle).toBe('2026-09');
     expect(
       (
-        await cycleRepo.findByMonth(cycle('2026-08'))
+        await cycleRepo.findByMonth(cycle('2026-09'))
       )?.entries[0]?.dueDate.toISO(),
     ).toBe('2026-09-03');
   });

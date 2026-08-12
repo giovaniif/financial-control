@@ -85,13 +85,25 @@ describe('CycleRef', () => {
 
     expect(september.start).toEqual(august.end.plusDays(1));
   });
+
+  // Named for the month it is SPENT in, so it opens on the previous month's
+  // payday: with pay on the 5th, August 2026 runs 3 Jul – 4 Aug.
+  it('is named for the month after its payday', () => {
+    const august = CycleRef.forMonth('2026-08', anchor(5));
+
+    expect(august.start).toEqual(date('2026-07-03'));
+    expect(august.end).toEqual(date('2026-08-04'));
+  });
 });
 ```
 
 Non-negotiable cases for this domain:
 
 - **`Money`** — rounding, the last-instalment remainder, never losing a cent.
-- **`CycleRef`** — weekend and holiday shifts, short months, tiling with no gap or overlap.
+- **`CycleRef`** — weekend and holiday shifts, short months, tiling with no gap or overlap,
+  and the naming offset across every anchor day. Tiling in particular must be
+  proven across all 31 anchor days and both policies, not on a handful of
+  examples: a naming rule can look right on day 5 and lose a month on day 16.
 - **Cycle assignment** — an invoice due date landing in a different cycle from its
   purchases (the `UC-5.4` example is a required test case).
 - **The calculation chain** — `surplus`, `expectedSurplus`, `netSurplus`, with and without

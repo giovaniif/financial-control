@@ -61,9 +61,11 @@ export class PaydayAnchor {
 /**
  * One payday cycle: salary date through the day before the next salary date.
  *
- * **The app does not think in calendar months.** The August 2026 cycle runs
- * 5 Aug → 4 Sep, because that is how the money is actually experienced: an
- * amount arrives and must cover everything until the next amount arrives.
+ * **The app does not think in calendar months.** With pay on the 5th the
+ * August 2026 cycle runs 3 Jul → 4 Aug, because that is how the money is
+ * actually experienced: an amount arrives and must cover everything until the
+ * next amount arrives. It is named for the month **after** its payday — the
+ * month the money is actually spent in.
  *
  * The resolution rules live here and nowhere else, and so does
  * {@link CycleRef.contains} — the single implementation of the rule that
@@ -80,21 +82,42 @@ export class CycleRef {
     private readonly holidays: HolidayCalendar,
   ) {}
 
+  /**
+   * The cycle named for `month`: it opens on the **previous** month's payday
+   * and closes the day before this month's.
+   *
+   * A cycle is named for the month the money is spent in rather than the month
+   * it arrives in. With pay on the last day of the month, 31 Jul → 30 Aug is
+   * *August* — which is what the money is for, and what every bill on it is
+   * dated.
+   *
+   * The offset is applied to the *nominal* month, never derived from the dates
+   * the cycle resolved to, and that is load-bearing. Naming by the resolved
+   * end date, or by whichever month holds most of the days, both break the
+   * one-cycle-per-month mapping: 2 May 2026 is a Saturday, so with pay on the
+   * 2nd two cycles end in April and none in May; with pay on the 16th,
+   * February is short enough that no cycle falls mostly inside it. Offsetting
+   * the nominal month cannot collide or skip, because resolving a month to its
+   * payday is total.
+   */
   static forMonth(
     month: string,
     anchor: PaydayAnchor,
     holidays: HolidayCalendar,
   ): CycleRef {
     const { year, monthNumber } = parseMonth(month);
-    const start = resolveStart(year, monthNumber, anchor, holidays);
-    const nextStart = resolveStart(
-      monthNumber === 12 ? year + 1 : year,
-      monthNumber === 12 ? 1 : monthNumber + 1,
+    const closes = LocalDate.of(year, monthNumber, 1);
+    const opens = closes.plusMonths(-1);
+
+    const start = resolveStart(opens.year, opens.month, anchor, holidays);
+    const end = resolveStart(
+      closes.year,
+      closes.month,
       anchor,
       holidays,
-    );
+    ).minusDays(1);
 
-    return new CycleRef(month, start, nextStart.minusDays(1), anchor, holidays);
+    return new CycleRef(month, start, end, anchor, holidays);
   }
 
   /** The `count` cycles starting at `month` — the rolling window the app holds. */
@@ -148,7 +171,7 @@ export class CycleRef {
     return DateRange.of(this.start, this.end);
   }
 
-  /** Named for the month its payday falls in — never `August–September`. */
+  /** Named for the month after its payday — never `August–September`. */
   get label(): string {
     const { year, monthNumber } = parseMonth(this.month);
 

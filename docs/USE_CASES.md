@@ -32,16 +32,18 @@ The **Dashboard** answers Q1 in a single glance. The **Wealth Projection** answe
 
 **The app does not think in calendar months. It thinks in payday cycles.**
 
-A **cycle** runs from one salary date to the day before the next. If salary arrives on the 5th, the cycle named
-*August 2026* spans **5 Aug → 4 Sep**. This matches how the money is actually experienced: an amount arrives,
-and it must cover everything until the next amount arrives.
+A **cycle** runs from one salary date to the day before the next, and is named for **the month it is spent
+in** — the month *after* its payday. If salary arrives on the 5th, the cycle named *August 2026* spans
+**5 Jul → 4 Aug**; if it arrives on the last day of the month, *August 2026* spans **31 Jul → 30 Aug**. This
+matches how the money is actually experienced: an amount arrives, and it must cover everything until the next
+amount arrives.
 
 | Situation | Behaviour |
 |---|---|
 | Payday anchor | A configurable day-of-month (default: 5) |
 | Payday falls on a weekend or public holiday | Configurable — pay lands on the *preceding* business day (default) or the following one. The cycle boundary moves with it |
 | Anchor day exceeds the month's length (e.g. 31 in February) | Cycle starts on the last day of that month |
-| Naming | A cycle is named for the month its payday falls in — *August 2026*, never *August–September* |
+| Naming | A cycle is named for the month **after** its payday — the month the money is spent in. *August 2026*, never *July–August* |
 
 **Consequence: every entry carries a due date.** The due date is what assigns an entry to a cycle, and it is
 what lets the ledger show a running balance through time rather than a single monthly total. It is also the
@@ -99,7 +101,7 @@ be corrected manually at any time.
 **UC-1.3 — Configure credit cards**
 Name, limit, **closing day**, **due day**, and the account the invoice is paid from. Because the day pair is
 what drives everything downstream, the form shows a plain-language preview:
-*"Purchases from 29 Jul to 28 Aug will be billed on the invoice due 10 Sep — the September cycle."*
+*"Purchases from 29 Jul to 28 Aug will be billed on the invoice due 10 Sep — the October cycle."*
 
 **UC-1.4 — Review formatting conventions**
 Read-only confirmation of how the app renders money, dates, outgoing amounts and cycle names. Not
@@ -287,11 +289,11 @@ purchases were made in. The app must make this legible rather than surprising.
 > **Worked example.** Payday is the 5th. The Inter card closes on the 28th and is due on the 10th.
 >
 > - A purchase on **20 Aug** falls before the 28 Aug closing → invoice **due 10 Sep**. 10 Sep sits in the cycle
->   running 5 Sep → 4 Oct, so it is paid in the **September cycle**.
-> - A purchase on **29 Aug** falls *after* the closing → invoice **due 10 Oct**, in the **October cycle**.
+>   running 4 Sep → 4 Oct, which is named for the month it is spent in, so it is paid in the **October cycle**.
+> - A purchase on **29 Aug** falls *after* the closing → invoice **due 10 Oct**, in the **November cycle**.
 >   Nine days later on the calendar, an entire cycle later in cash terms.
 >
-> The purchase form therefore shows, live: *"This will be billed 10 Sep, in the September cycle."*
+> The purchase form therefore shows, live: *"This will be billed 10 Sep, in the October cycle."*
 
 **UC-5.5 — Pay an invoice**
 Settle it from its linked account, recording the amount actually paid. Behaves identically to UC-3.5 in the
