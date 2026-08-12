@@ -163,7 +163,7 @@ describe('BackupRestore', () => {
     render();
 
     expect(
-      screen.getByText(/no import from a bank or a spreadsheet/),
+      screen.getByText(/nothing takes snapshots behind you/i),
     ).toBeInTheDocument();
   });
 });

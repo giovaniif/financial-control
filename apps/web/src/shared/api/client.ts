@@ -20,7 +20,11 @@ export class ApiError extends Error {
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   headers.set('Accept', 'application/json');
-  if (init?.body != null) headers.set('Content-Type', 'application/json');
+  // Only a JSON body says so. A FormData body has to set its own header,
+  // because only the browser knows the multipart boundary it generated.
+  if (typeof init?.body === 'string') {
+    headers.set('Content-Type', 'application/json');
+  }
 
   const response = await fetch(`${apiUrl}${path}`, { ...init, headers });
 

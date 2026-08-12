@@ -1,8 +1,9 @@
-import type { AnchorChangeRequest } from '@fin/contracts';
+import type { AnchorChangeRequest, SpreadsheetReading } from '@fin/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
 import { useChangeAnchor } from '@/features/configure-anchor';
+import { useReadSpreadsheet } from '@/features/import-spreadsheet';
 import { useSelectedCycle } from '@/features/navigate-cycle';
 import { skipSetup } from '@/shared/model';
 import { Button, Stepper } from '@/shared/ui';
@@ -15,7 +16,7 @@ import { CardsStep } from './steps/cards-step.js';
 import { CycleStep } from './steps/cycle-step.js';
 import { DoneStep } from './steps/done-step.js';
 import { TemplatesStep } from './steps/templates-step.js';
-import { WhyStep } from './steps/why-step.js';
+import { WhyStep, type StartMode } from './steps/why-step.js';
 
 /** Salary on the 5th, moving back off a closed bank — the app's default. */
 const DEFAULT_ANCHOR: AnchorChangeRequest = {
@@ -42,6 +43,10 @@ export function OnboardingPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [anchor, setAnchor] = useState(DEFAULT_ANCHOR);
+  const [startMode, setStartMode] = useState<StartMode>();
+  const [reading, setReading] = useState<SpreadsheetReading>();
+  const [sheetFile, setSheetFile] = useState<File>();
+  const reread = useReadSpreadsheet();
   const changeAnchor = useChangeAnchor();
   const { selectedMonth } = useSelectedCycle();
 
@@ -60,6 +65,26 @@ export function OnboardingPage() {
   const commit: Partial<Record<StepId, () => Promise<unknown>>> = {
     cycle: () => changeAnchor.mutateAsync(anchor),
   };
+
+  /**
+   * Why the wizard will not move on yet. Choosing to start from a file and
+   * then walking past it lands the user in the from-scratch flow having been
+   * told their data would be imported.
+   */
+  const blockedReason = (): string | undefined => {
+    if (wizard.stepId !== 'why') {
+      return undefined;
+    }
+    if (startMode === 'spreadsheet' && reading === undefined) {
+      return 'Choose your spreadsheet to go on.';
+    }
+    if (startMode === 'backup') {
+      return 'Restore the backup to go on, or pick another way to start.';
+    }
+    return undefined;
+  };
+
+  const blocked = blockedReason();
 
   const advance = () => {
     const write = commit[wizard.stepId];
@@ -106,7 +131,28 @@ export function OnboardingPage() {
         >
           {step.title}
         </h1>
-        {wizard.stepId === 'why' && <WhyStep />}
+        {wizard.stepId === 'why' && (
+          <WhyStep
+            mode={startMode}
+            onChooseMode={setStartMode}
+            reading={reading}
+            onRead={(read, file) => {
+              setReading(read);
+              setSheetFile(file);
+            }}
+            isRereading={reread.isPending}
+            onCorrectYear={(firstColumnYear) => {
+              if (sheetFile === undefined) {
+                return;
+              }
+              reread.mutate(
+                { file: sheetFile, firstColumnYear },
+                { onSuccess: setReading },
+              );
+            }}
+            onRestored={wizard.toEnd}
+          />
+        )}
         {wizard.stepId === 'cycle' && (
           <CycleStep anchor={anchor} onChange={setAnchor} />
         )}
@@ -123,13 +169,20 @@ export function OnboardingPage() {
         <Button onClick={wizard.back} disabled={wizard.isFirst}>
           Back
         </Button>
-        <Button
-          variant="primary"
-          onClick={advance}
-          disabled={wizard.isLast || changeAnchor.isPending}
-        >
-          Continue
-        </Button>
+        <div className="flex items-center gap-3">
+          {blocked !== undefined && (
+            <p className="text-xs text-zinc-500">{blocked}</p>
+          )}
+          <Button
+            variant="primary"
+            onClick={advance}
+            disabled={
+              wizard.isLast || changeAnchor.isPending || blocked !== undefined
+            }
+          >
+            Continue
+          </Button>
+        </div>
       </footer>
     </div>
   );
