@@ -83,18 +83,21 @@ and the resulting mapping to the user before loading anything.
 None of the following is in the spreadsheet. Ask all of it, batched into as few
 `AskUserQuestion` calls as possible, before building anything.
 
-### 2a — The column-to-cycle mapping (ask this first; it moves every number)
+### 2a — The column-to-cycle mapping (nothing to ask)
 
-A spreadsheet column can mean either of two things, and the difference shifts the whole
-dataset by one cycle:
+A cycle is named for the month it is **spent** in, which is what a spreadsheet column
+heading already means. So a column maps straight onto the cycle of the same name:
 
-- the month the salary **arrives**, or
-- the month the bills are **paid**, funded by the salary that arrived at the end of the
-  previous month.
+| Column | Cycle | With a last-day anchor |
+|---|---|---|
+| `Agosto` | `2026-08` | 31 Jul – 30 Aug |
+| `Setembro` | `2026-09` | 31 Aug – 29 Sep |
 
-With a late-month anchor these are different cycles. Show the user a worked preview of
-both readings using their real figures and let them pick. Getting this wrong puts every
-entry in the wrong cycle while still looking plausible.
+Do not offer the user a choice here, and do not shift the columns by one. An earlier
+version of this skill did, because cycles were then named for their *payday* month; that
+is no longer true and re-keying correctly keyed data is the error the naming change was
+made to remove. Still **state the mapping** you are about to use, with the resolved date
+ranges, so a wrong year is caught before anything is loaded.
 
 ### 2b — The payday anchor
 
@@ -102,12 +105,12 @@ Day of month, and the weekend/holiday policy (`PRECEDING` or `FOLLOWING` — the
 "never shift"). Two things to tell the user:
 
 - **For a last-day-of-month payday, the anchor day is 31**, not 30. `resolveStart` clamps
-  to the month's length, so 31 gives 30 Jun, 31 Jul, 31 Aug, 30 Sep automatically.
+  to the month's length, so 31 gives 30 Jun, 31 Jul, 31 Aug, 30 Sep automatically, while
+  30 gives a literal 30th and misses the 31st of the long months.
 - The shift still applies. Under `PRECEDING`, Sat 31 Oct 2026 resolves to Fri 30 Oct. Say
   which of the next twelve cycles will shift, so it is not a surprise later.
 
-Then compute and show the actual resolved boundaries. A day-30 anchor put the August 2026
-cycle at 28 Aug – 29 Sep because 30 Aug was a Sunday, which was not what the user wanted.
+Then compute and show the actual resolved boundaries rather than describing them.
 
 ### 2c — A due day for every fixed bill
 
