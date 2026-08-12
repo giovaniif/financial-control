@@ -21,54 +21,57 @@ export function registerProjectionRoutes(
   app: FastifyInstance,
   { buildDashboard, projectWealth, manageBuckets }: Dependencies,
 ): void {
-  app.get('/dashboard', async (_request, reply) => {
-    try {
-      const view = await buildDashboard.build();
-      const body: DashboardResponse = {
-        today: view.today,
-        currentCycleMonth: view.currentCycleMonth,
-        headline: {
-          cycleMonth: view.headline.cycleMonth,
-          cycleLabel: view.headline.cycleLabel,
-          range: view.headline.range,
-          incoming: view.headline.incomingCents,
-          outgoing: view.headline.outgoingCents,
-          free: view.headline.freeCents,
-          lowestPoint: view.headline.lowestPointCents ?? null,
-          lowestPointDate: view.headline.lowestPointDate ?? null,
-          closing: view.headline.closingCents,
-          closingWithoutEstimates: view.headline.closingWithoutEstimatesCents,
-        },
-        kpis: view.kpis.map((kpi) => ({
-          label: kpi.label,
-          amount: kpi.amountCents,
-          note: kpi.note,
-        })),
-        progress: {
-          dayOfCycle: view.progress.dayOfCycle,
-          cycleLength: view.progress.cycleLength,
-          timePercent: view.progress.timePercent,
-          spent: view.progress.spentCents,
-          plannedOut: view.progress.plannedOutCents,
-          spentPercent: view.progress.spentPercent,
-        },
-        upcoming: view.upcoming.map((entry) => ({
-          id: entry.id,
-          cycleMonth: entry.cycleMonth,
-          description: entry.description,
-          dueDate: entry.dueDate,
-          amount: entry.amountCents,
-          isEstimate: entry.isEstimate,
-          isOverdue: entry.isOverdue,
-          daysLate: entry.daysLate,
-        })),
-        alerts: view.alerts.map((alert) => ({ ...alert })),
-      };
-      return body;
-    } catch (error) {
-      return handle(error, reply);
-    }
-  });
+  app.get<{ Querystring: { month?: string } }>(
+    '/dashboard',
+    async (request, reply) => {
+      try {
+        const view = await buildDashboard.build(request.query.month);
+        const body: DashboardResponse = {
+          today: view.today,
+          currentCycleMonth: view.currentCycleMonth,
+          headline: {
+            cycleMonth: view.headline.cycleMonth,
+            cycleLabel: view.headline.cycleLabel,
+            range: view.headline.range,
+            incoming: view.headline.incomingCents,
+            outgoing: view.headline.outgoingCents,
+            free: view.headline.freeCents,
+            lowestPoint: view.headline.lowestPointCents ?? null,
+            lowestPointDate: view.headline.lowestPointDate ?? null,
+            closing: view.headline.closingCents,
+            closingWithoutEstimates: view.headline.closingWithoutEstimatesCents,
+          },
+          kpis: view.kpis.map((kpi) => ({
+            label: kpi.label,
+            amount: kpi.amountCents,
+            note: kpi.note,
+          })),
+          progress: {
+            dayOfCycle: view.progress.dayOfCycle,
+            cycleLength: view.progress.cycleLength,
+            timePercent: view.progress.timePercent,
+            spent: view.progress.spentCents,
+            plannedOut: view.progress.plannedOutCents,
+            spentPercent: view.progress.spentPercent,
+          },
+          upcoming: view.upcoming.map((entry) => ({
+            id: entry.id,
+            cycleMonth: entry.cycleMonth,
+            description: entry.description,
+            dueDate: entry.dueDate,
+            amount: entry.amountCents,
+            isEstimate: entry.isEstimate,
+            isOverdue: entry.isOverdue,
+            daysLate: entry.daysLate,
+          })),
+          alerts: view.alerts.map((alert) => ({ ...alert })),
+        };
+        return body;
+      } catch (error) {
+        return handle(error, reply);
+      }
+    },
+  );
 
   app.get<{ Querystring: { month?: string; yields?: string } }>(
     '/wealth',
