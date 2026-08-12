@@ -52,7 +52,11 @@ export interface BucketReading {
 
 export interface SpreadsheetReading {
   months: MonthReading[];
+  /** The column standing for today; everything before it is history. */
+  currentMonth: string;
+  /** Bills still running in `currentMonth` or later. Retired rows are left out. */
   outcomeLabels: string[];
+  /** Buckets still funded in `currentMonth` or later. */
   buckets: BucketReading[];
   /** The year mapping is inferred, so it travels with its reasoning. */
   inference: { firstColumnYear: number; reasoning: string };

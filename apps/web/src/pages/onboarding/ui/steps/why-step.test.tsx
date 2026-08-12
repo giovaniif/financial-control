@@ -27,6 +27,7 @@ const reading: SpreadsheetReading = {
       },
     },
   ],
+  currentMonth: '2026-09',
   outcomeLabels: ['Convênio', 'Energia'],
   buckets: [
     {

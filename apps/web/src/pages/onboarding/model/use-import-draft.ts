@@ -134,13 +134,6 @@ export function blankBucket(): DraftBucket {
   return { mode: 'ONGOING', target: '', targetDate: '', seedBalance: '' };
 }
 
-/** The first cycle the app's rolling window still holds. */
-function firstImportableMonth(reading: SpreadsheetReading): string {
-  const filled = reading.months.filter((month) => !month.isBlank);
-
-  return filled[0]?.month ?? reading.months[0]?.month ?? '';
-}
-
 /** The draft as the API wants it: cents, numbers, and no blank strings. */
 export function toImportAnswers(
   draft: ImportDraft,
@@ -195,6 +188,8 @@ export function toImportAnswers(
           : { seedBalance: seed }),
       };
     }),
-    fromMonth: fromMonth ?? firstImportableMonth(reading),
+    // The current cycle onward. Everything behind it is history the app's
+    // rolling twelve cycles never reach.
+    fromMonth: fromMonth ?? reading.currentMonth,
   };
 }
