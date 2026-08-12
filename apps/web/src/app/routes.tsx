@@ -10,6 +10,8 @@ import { SettingsPage } from '@/pages/settings';
 import { TemplatesPage } from '@/pages/templates';
 import { WealthPage } from '@/pages/wealth';
 
+import { SetupGate } from './setup-gate.js';
+
 /**
  * Route objects rather than `<Routes>` elements: this is React Router's data
  * mode, which is what gives the app `errorElement` boundaries, `useNavigation`
@@ -17,15 +19,23 @@ import { WealthPage } from '@/pages/wealth';
  *
  * Loaders stay empty on purpose. Server state is TanStack Query's job — see
  * `.claude/architecture.md` — so routes describe structure, not data.
+ *
+ * Every screen sits behind the first-run gate. The wizard itself does not, or
+ * the redirect would have nowhere to land.
  */
 export const routes: RouteObject[] = [
-  { path: '/', element: <DashboardPage /> },
-  { path: '/ledger', element: <LedgerPage /> },
-  { path: '/cards', element: <CardsPage /> },
-  { path: '/buckets', element: <BucketsPage /> },
-  { path: '/wealth', element: <WealthPage /> },
-  { path: '/templates', element: <TemplatesPage /> },
-  { path: '/settings', element: <SettingsPage /> },
   { path: '/onboarding', element: <OnboardingPage /> },
-  { path: '*', element: <NotFoundPage /> },
+  {
+    element: <SetupGate />,
+    children: [
+      { path: '/', element: <DashboardPage /> },
+      { path: '/ledger', element: <LedgerPage /> },
+      { path: '/cards', element: <CardsPage /> },
+      { path: '/buckets', element: <BucketsPage /> },
+      { path: '/wealth', element: <WealthPage /> },
+      { path: '/templates', element: <TemplatesPage /> },
+      { path: '/settings', element: <SettingsPage /> },
+      { path: '*', element: <NotFoundPage /> },
+    ],
+  },
 ];

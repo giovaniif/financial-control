@@ -11,6 +11,7 @@ import { BackupRestore } from '@/features/backup-restore';
 import { ChangeAnchor } from '@/features/configure-anchor';
 import { ManageAccounts } from '@/features/manage-accounts';
 import { api, queryKeys, useSetupState } from '@/shared/api';
+import { unskipSetup } from '@/shared/model';
 import { Amount, Badge, Card, CardTitle, Skeleton } from '@/shared/ui';
 import { AppShell } from '@/widgets/app-shell';
 
@@ -181,6 +182,15 @@ function FirstRun() {
           </li>
         ))}
       </ol>
+      <div>
+        <Link
+          to="/onboarding"
+          onClick={unskipSetup}
+          className="text-sm underline-offset-2 hover:underline"
+        >
+          Run setup again
+        </Link>
+      </div>
     </Card>
   );
 }

@@ -1,10 +1,20 @@
 import { screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { renderWithProviders } from '@/shared/testing';
+import { renderWithProviders, stubApi } from '@/shared/testing';
 
 import { routes } from './routes.js';
+
+/** Every screen sits behind the first-run gate, which a pristine app fails. */
+const configured = {
+  anchorConfigured: true,
+  accounts: 1,
+  cards: 1,
+  templates: 1,
+  buckets: 1,
+  isPristine: false,
+};
 
 function renderAt(path: string) {
   return renderWithProviders(
@@ -13,6 +23,14 @@ function renderAt(path: string) {
     />,
   );
 }
+
+beforeEach(() => {
+  stubApi({ '/api/setup': configured });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('routes', () => {
   it.each([

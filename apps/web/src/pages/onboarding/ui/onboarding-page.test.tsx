@@ -1,8 +1,9 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { hasSkippedSetup } from '@/shared/model';
 import { renderWithProviders, stubApi } from '@/shared/testing';
 
 import { OnboardingPage } from './onboarding-page.js';
@@ -19,6 +20,10 @@ const renderPage = () =>
       )}
     />,
   );
+
+beforeEach(() => {
+  sessionStorage.clear();
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -87,6 +92,20 @@ describe('OnboardingPage', () => {
       .find((li) => li.getAttribute('aria-current') === 'step');
 
     expect(current).toHaveTextContent('The payday cycle');
+  });
+
+  // The app stays fully usable without finishing setup; that escape hatch is
+  // what makes an automatic redirect acceptable in the first place.
+  it('lets the user leave for the app', async () => {
+    stubApi({});
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Skip for now' }),
+    );
+
+    expect(await screen.findByText('Dashboard')).toBeInTheDocument();
+    expect(hasSkippedSetup()).toBe(true);
   });
 
   // A step change that only swaps the body leaves a screen reader on the old
