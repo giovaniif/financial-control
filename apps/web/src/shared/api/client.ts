@@ -1,5 +1,7 @@
 import { apiUrl } from '../config/env.js';
 
+const NO_CONTENT = 204;
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -24,6 +26,13 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     throw new ApiError(response.status, path, await explanationOf(response));
+  }
+
+  // A write answers 204 with no body. Parsing that as JSON throws, which would
+  // reject a mutation whose write actually succeeded — leaving `onSuccess` to
+  // never run and the screen never to refresh.
+  if (response.status === NO_CONTENT) {
+    return null as T;
   }
 
   return (await response.json()) as T;

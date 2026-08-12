@@ -30,6 +30,18 @@ describe('api', () => {
     });
   });
 
+  /**
+   * Settling answers 204 with no body, and parsing that as JSON throws. The
+   * mutation then rejects even though the write succeeded, so `onSuccess`
+   * never invalidates anything and the screen keeps the stale figures — a
+   * write that visibly does nothing.
+   */
+  it('resolves to null on a 204 rather than trying to parse it', async () => {
+    stubFetch(new Response(null, { status: 204 }));
+
+    await expect(api('/cycles/2026-09/entries/e1/settle')).resolves.toBeNull();
+  });
+
   it('asks for JSON', async () => {
     const fetchMock = stubFetch(Response.json({}));
 
