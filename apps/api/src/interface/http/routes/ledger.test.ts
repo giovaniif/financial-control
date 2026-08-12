@@ -26,12 +26,12 @@ import { Money } from '../../../domain/shared/money.js';
 import { buildTestServer } from '../testing/test-server.js';
 
 const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
-const august = CycleRef.forMonth('2026-08', anchor, noHolidays);
+const august = CycleRef.forMonth('2026-09', anchor, noHolidays);
 const afterAugust = FixedClock.at('2026-09-20T12:00:00Z');
 
 const populated = () =>
   Cycle.open({
-    id: 'cycle-aug',
+    id: 'cycle-sep',
     ref: august,
     openingBalance: Money.zero(),
     entries: [
@@ -76,7 +76,7 @@ describe('POST /cycles/:month/entries', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/entries',
+      url: '/cycles/2026-09/entries',
       payload: {
         description: 'Dinner split',
         kind: 'VARIABLE',
@@ -94,7 +94,7 @@ describe('POST /cycles/:month/entries', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/entries',
+      url: '/cycles/2026-09/entries',
       payload: {
         description: 'Too late',
         kind: 'VARIABLE',
@@ -121,7 +121,7 @@ describe('POST /cycles/:month/entries', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/entries',
+      url: '/cycles/2026-09/entries',
       payload,
     });
 
@@ -133,7 +133,7 @@ describe('POST /cycles/:month/entries', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/entries',
+      url: '/cycles/2026-09/entries',
       payload: {
         description: 'X',
         kind: 'VARIABLE',
@@ -152,7 +152,7 @@ describe('POST /cycles/:month/entries/:id/settle', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/entries/e-health/settle',
+      url: '/cycles/2026-09/entries/e-health/settle',
       payload: { status: 'PAID' },
     });
 
@@ -166,7 +166,7 @@ describe('POST /cycles/:month/entries/:id/settle', () => {
 
     await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/entries/e-health/settle',
+      url: '/cycles/2026-09/entries/e-health/settle',
       payload: { status: 'PAID', actual: -33_016 },
     });
 
@@ -179,7 +179,7 @@ describe('POST /cycles/:month/entries/:id/settle', () => {
 
     await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/entries/e-health/settle',
+      url: '/cycles/2026-09/entries/e-health/settle',
       payload: { status: 'SKIPPED' },
     });
 
@@ -193,7 +193,7 @@ describe('POST /cycles/:month/entries/:id/settle', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/entries/e-health/settle',
+      url: '/cycles/2026-09/entries/e-health/settle',
       payload: { status: 'MAYBE' },
     });
 
@@ -205,7 +205,7 @@ describe('POST /cycles/:month/entries/:id/settle', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/entries/missing/settle',
+      url: '/cycles/2026-09/entries/missing/settle',
       payload: { status: 'PAID' },
     });
 
@@ -218,12 +218,12 @@ describe('POST /cycles/:month/entries/:id/settle', () => {
 
     await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/entries/e-health/settle',
+      url: '/cycles/2026-09/entries/e-health/settle',
       payload: { status: 'PAID' },
     });
     const again = await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/entries/e-health/settle',
+      url: '/cycles/2026-09/entries/e-health/settle',
       payload: { status: 'PAID' },
     });
 
@@ -237,7 +237,7 @@ describe('overriding over the API', () => {
 
     await app.inject({
       method: 'PUT',
-      url: '/cycles/2026-08/entries/e-health/override',
+      url: '/cycles/2026-09/entries/e-health/override',
       payload: { amount: -45_000 },
     });
     expect(
@@ -246,7 +246,7 @@ describe('overriding over the API', () => {
 
     await app.inject({
       method: 'DELETE',
-      url: '/cycles/2026-08/entries/e-health/override',
+      url: '/cycles/2026-09/entries/e-health/override',
     });
     expect(
       (await repository.findByMonth(august))?.entries[0]?.amount.planned.cents,
@@ -258,7 +258,7 @@ describe('overriding over the API', () => {
 
     const response = await app.inject({
       method: 'PUT',
-      url: '/cycles/2026-08/entries/e-health/override',
+      url: '/cycles/2026-09/entries/e-health/override',
       payload: {},
     });
 
@@ -270,7 +270,7 @@ describe('overriding over the API', () => {
 
     const response = await app.inject({
       method: 'DELETE',
-      url: '/cycles/2026-08/entries/e-health',
+      url: '/cycles/2026-09/entries/e-health',
     });
 
     expect(response.statusCode).toBe(204);
@@ -284,7 +284,7 @@ describe('closing and reopening over the API', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/close',
+      url: '/cycles/2026-09/close',
     });
 
     expect(response.statusCode).toBe(409);
@@ -295,7 +295,7 @@ describe('closing and reopening over the API', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/close',
+      url: '/cycles/2026-09/close',
     });
 
     expect(response.statusCode).toBe(204);
@@ -306,7 +306,7 @@ describe('closing and reopening over the API', () => {
 
     const response = await app.inject({
       method: 'PUT',
-      url: '/cycles/2026-08/entries/e-health/override',
+      url: '/cycles/2026-09/entries/e-health/override',
       payload: { amount: -1 },
     });
 
@@ -318,11 +318,11 @@ describe('closing and reopening over the API', () => {
 
     const response = await app.inject({
       method: 'GET',
-      url: '/cycles/2026-08/reopen-preview',
+      url: '/cycles/2026-09/reopen-preview',
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json<ReopenPreviewResponse>().month).toBe('2026-08');
+    expect(response.json<ReopenPreviewResponse>().month).toBe('2026-09');
   });
 
   it('reopens and reports what moved', async () => {
@@ -332,7 +332,7 @@ describe('closing and reopening over the API', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/cycles/2026-08/reopen',
+      url: '/cycles/2026-09/reopen',
     });
 
     expect(response.statusCode).toBe(200);

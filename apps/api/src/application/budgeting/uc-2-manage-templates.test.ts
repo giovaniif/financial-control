@@ -32,7 +32,7 @@ import {
 } from './uc-2-manage-templates.js';
 
 const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
-const august = CycleRef.forMonth('2026-08', anchor, noHolidays);
+const september = CycleRef.forMonth('2026-09', anchor, noHolidays);
 const clock = FixedClock.at('2026-08-10T12:00:00Z');
 const reais = (amount: number) => Money.fromCents(amount * 100);
 
@@ -45,7 +45,7 @@ const template = (
     direction: Direction.Out,
     dueDayOfMonth: 8,
     amount: reais(-320),
-    startMonth: '2026-08',
+    startMonth: '2026-09',
     ...overrides,
   });
 
@@ -99,7 +99,7 @@ describe('ManageTemplates.create', () => {
       amountCents: -28_000,
     });
 
-    expect(created.startMonth).toBe('2026-08');
+    expect(created.startMonth).toBe('2026-09');
   });
 
   it('reports the next cycle it will generate into', async () => {
@@ -110,10 +110,10 @@ describe('ManageTemplates.create', () => {
       direction: Direction.In,
       dueDayOfMonth: 20,
       amountCents: 100_000,
-      startMonth: '2026-11',
+      startMonth: '2026-12',
     });
 
-    expect(created.nextOccurrenceMonth).toBe('2026-11');
+    expect(created.nextOccurrenceMonth).toBe('2026-12');
   });
 
   it('carries an end cycle and the estimate flag through creation', async () => {
@@ -124,12 +124,12 @@ describe('ManageTemplates.create', () => {
       direction: Direction.Out,
       dueDayOfMonth: 25,
       amountCents: -150_000,
-      startMonth: '2026-08',
-      endMonth: '2026-12',
+      startMonth: '2026-09',
+      endMonth: '2027-01',
       isEstimate: true,
     });
 
-    expect(created.endMonth).toBe('2026-12');
+    expect(created.endMonth).toBe('2027-01');
     expect(created.isEstimate).toBe(true);
   });
 
@@ -148,7 +148,7 @@ describe('ManageTemplates.create', () => {
 });
 
 describe('ManageTemplates.changeAmount — the scope choice', () => {
-  // UC-2.3: salary is 10.000 through August and 18.000 from September.
+  // UC-2.3: salary is 10.000 through September and 18.000 from October.
   it('applies a "this and future" change from that cycle onward', async () => {
     const salary = template({
       id: 'tpl-salary',
@@ -161,22 +161,22 @@ describe('ManageTemplates.changeAmount — the scope choice', () => {
 
     await useCase.changeAmount({
       templateId: 'tpl-salary',
-      fromMonth: '2026-09',
+      fromMonth: '2026-10',
       amountCents: 1_800_000,
       scope: EditScope.ThisAndFuture,
     });
 
     const stored = await templateRepo.findById('tpl-salary');
-    expect(stored?.amountFor(august).cents).toBe(1_000_000);
+    expect(stored?.amountFor(september).cents).toBe(1_000_000);
     expect(
-      stored?.amountFor(CycleRef.forMonth('2026-09', anchor, noHolidays)).cents,
+      stored?.amountFor(CycleRef.forMonth('2026-10', anchor, noHolidays)).cents,
     ).toBe(1_800_000);
   });
 
   it('leaves the template alone for a "this cycle only" change', async () => {
     const cycle = Cycle.open({
-      id: 'cycle-aug',
-      ref: august,
+      id: 'cycle-sep',
+      ref: september,
       openingBalance: Money.zero(),
       entries: [
         LedgerEntry.create({
@@ -196,7 +196,7 @@ describe('ManageTemplates.changeAmount — the scope choice', () => {
 
     await useCase.changeAmount({
       templateId: 'tpl-health',
-      fromMonth: '2026-08',
+      fromMonth: '2026-09',
       amountCents: -45_000,
       scope: EditScope.ThisCycleOnly,
     });
@@ -204,7 +204,7 @@ describe('ManageTemplates.changeAmount — the scope choice', () => {
     expect((await templateRepo.findById('tpl-health'))?.hasValueSchedule).toBe(
       false,
     );
-    const saved = await cycleRepo.findByMonth(august);
+    const saved = await cycleRepo.findByMonth(september);
     expect(saved?.entries[0]?.amount.planned.cents).toBe(-45_000);
     expect(saved?.entries[0]?.isOverridden).toBe(true);
   });
@@ -214,7 +214,7 @@ describe('ManageTemplates.changeAmount — the scope choice', () => {
 
     await useCase.changeAmount({
       templateId: 'tpl-health',
-      fromMonth: '2026-08',
+      fromMonth: '2026-09',
       amountCents: -45_000,
       scope: EditScope.ThisCycleOnly,
     });
@@ -226,8 +226,8 @@ describe('ManageTemplates.changeAmount — the scope choice', () => {
   // second this-cycle-only change edits it rather than missing it.
   it('overrides an entry that was already overridden', async () => {
     const cycle = Cycle.open({
-      id: 'cycle-aug',
-      ref: august,
+      id: 'cycle-sep',
+      ref: september,
       openingBalance: Money.zero(),
       entries: [
         LedgerEntry.create({
@@ -247,19 +247,19 @@ describe('ManageTemplates.changeAmount — the scope choice', () => {
 
     await useCase.changeAmount({
       templateId: 'tpl-health',
-      fromMonth: '2026-08',
+      fromMonth: '2026-09',
       amountCents: -50_000,
       scope: EditScope.ThisCycleOnly,
     });
 
-    const saved = await cycleRepo.findByMonth(august);
+    const saved = await cycleRepo.findByMonth(september);
     expect(saved?.entries[0]?.amount.planned.cents).toBe(-50_000);
   });
 
   it('leaves a manual entry alone: it belongs to no template', async () => {
     const cycle = Cycle.open({
-      id: 'cycle-aug',
-      ref: august,
+      id: 'cycle-sep',
+      ref: september,
       openingBalance: Money.zero(),
       entries: [
         LedgerEntry.create({
@@ -278,7 +278,7 @@ describe('ManageTemplates.changeAmount — the scope choice', () => {
 
     await useCase.changeAmount({
       templateId: 'tpl-health',
-      fromMonth: '2026-08',
+      fromMonth: '2026-09',
       amountCents: -50_000,
       scope: EditScope.ThisCycleOnly,
     });
@@ -293,7 +293,7 @@ describe('ManageTemplates.changeAmount — the scope choice', () => {
     await expect(
       useCase.changeAmount({
         templateId: 'missing',
-        fromMonth: '2026-08',
+        fromMonth: '2026-09',
         amountCents: 1,
         scope: EditScope.ThisAndFuture,
       }),
@@ -324,8 +324,8 @@ describe('ManageTemplates lifecycle', () => {
   it('ends on a chosen cycle', async () => {
     const { useCase } = managing({ templates: [template()] });
 
-    expect((await useCase.endOn('tpl-health', '2026-12')).endMonth).toBe(
-      '2026-12',
+    expect((await useCase.endOn('tpl-health', '2027-01')).endMonth).toBe(
+      '2027-01',
     );
   });
 
@@ -406,8 +406,8 @@ describe('ManageTemplates.list — the summary', () => {
   it('names what falls off within the twelve cycles', async () => {
     const { useCase } = managing({
       templates: [
-        template({ id: 'a', name: 'Ending soon', endMonth: '2026-12' }),
-        template({ id: 'b', name: 'Ending later', endMonth: '2030-01' }),
+        template({ id: 'a', name: 'Ending soon', endMonth: '2027-01' }),
+        template({ id: 'b', name: 'Ending later', endMonth: '2030-02' }),
       ],
     });
 
@@ -465,7 +465,7 @@ describe('ManageTemplates identity', () => {
 describe('ManageTemplates summary edge cases', () => {
   it('counts nothing for a template that has not started yet', async () => {
     const { useCase } = managing({
-      templates: [template({ startMonth: '2030-01' })],
+      templates: [template({ startMonth: '2030-02' })],
     });
 
     const { summary, templates } = await useCase.list();
@@ -476,7 +476,7 @@ describe('ManageTemplates summary edge cases', () => {
 
   it('counts nothing for a template that already ended', async () => {
     const { useCase } = managing({
-      templates: [template({ startMonth: '2026-01', endMonth: '2026-06' })],
+      templates: [template({ startMonth: '2026-02', endMonth: '2026-07' })],
     });
 
     expect((await useCase.list()).summary.fixedCommitmentCents).toBe(0);

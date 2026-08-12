@@ -41,8 +41,8 @@ const serverWith = (cycles: InMemoryCycleRepository) =>
 
 const augustWith = (...dueDates: string[]) =>
   Cycle.open({
-    id: 'cycle-aug',
-    ref: CycleRef.forMonth('2026-08', anchorFive, noHolidays),
+    id: 'cycle-sep',
+    ref: CycleRef.forMonth('2026-09', anchorFive, noHolidays),
     openingBalance: Money.zero(),
     entries: dueDates.map((due, i) =>
       LedgerEntry.create({

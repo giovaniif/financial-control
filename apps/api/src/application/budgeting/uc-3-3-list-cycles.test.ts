@@ -23,7 +23,7 @@ import { ListCycles } from './uc-3-3-list-cycles.js';
 const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
 const refFor = (month: string) => CycleRef.forMonth(month, anchor, noHolidays);
 
-// 10 Aug 2026 sits inside the August cycle, which runs 5 Aug – 3 Sep.
+// 10 Aug 2026 sits inside the September cycle, which runs 5 Aug – 3 Sep.
 const clock = FixedClock.at('2026-08-10T12:00:00Z');
 
 const listing = (options: {
@@ -61,8 +61,8 @@ describe('ListCycles.rollingWindow', () => {
     const window = await listing({}).rollingWindow();
 
     expect(window).toHaveLength(12);
-    expect(window[0]?.month).toBe('2026-08');
-    expect(window[11]?.month).toBe('2027-07');
+    expect(window[0]?.month).toBe('2026-09');
+    expect(window[11]?.month).toBe('2027-08');
   });
 
   it('tags exactly one cycle as current', async () => {
@@ -85,22 +85,22 @@ describe('ListCycles.rollingWindow', () => {
       at: '2026-09-06T12:00:00Z',
     }).rollingWindow();
 
-    expect(window[0]?.month).toBe('2026-09');
+    expect(window[0]?.month).toBe('2026-10');
   });
 
-  // 4 Sep is still inside the August cycle: the boundary is payday, not the 1st.
+  // 4 Sep is still inside the September cycle: the boundary is payday, not the 1st.
   it('still calls August current on the day before September opens', async () => {
     const window = await listing({
       at: '2026-09-03T12:00:00Z',
     }).rollingWindow();
 
-    expect(window[0]?.month).toBe('2026-08');
+    expect(window[0]?.month).toBe('2026-09');
   });
 
   it('states each cycle bounds rather than a bare month name', async () => {
     const [august] = await listing({}).rollingWindow();
 
-    expect(august?.label).toBe('August 2026');
+    expect(august?.label).toBe('September 2026');
     expect(august?.start).toBe('2026-08-05');
     expect(august?.end).toBe('2026-09-03');
   });
@@ -124,7 +124,7 @@ describe('ListCycles balance chaining', () => {
 
   it("carries each closing balance into the next cycle's opening", async () => {
     const window = await listing({
-      cycles: [cycleWith('2026-08', 1_000), cycleWith('2026-09', 2_000)],
+      cycles: [cycleWith('2026-09', 1_000), cycleWith('2026-10', 2_000)],
     }).rollingWindow();
 
     expect(window[0]?.closingBalanceCents).toBe(100_000);
@@ -134,7 +134,7 @@ describe('ListCycles balance chaining', () => {
 
   it('chains straight through months nobody has touched', async () => {
     const window = await listing({
-      cycles: [cycleWith('2026-08', 1_000)],
+      cycles: [cycleWith('2026-09', 1_000)],
     }).rollingWindow();
 
     expect(window[11]?.openingBalanceCents).toBe(100_000);
@@ -143,7 +143,7 @@ describe('ListCycles balance chaining', () => {
 
   it('reports which months exist and which are only projected', async () => {
     const window = await listing({
-      cycles: [cycleWith('2026-08', 1_000)],
+      cycles: [cycleWith('2026-09', 1_000)],
     }).rollingWindow();
 
     expect(window[0]?.isMaterialised).toBe(true);
@@ -152,7 +152,7 @@ describe('ListCycles balance chaining', () => {
 
   it('persists nothing for a month it merely projects', async () => {
     const repository = new InMemoryCycleRepository([
-      cycleWith('2026-08', 1_000),
+      cycleWith('2026-09', 1_000),
     ]);
     const useCase = new ListCycles(
       repository,
@@ -171,8 +171,8 @@ describe('ListCycles balance chaining', () => {
 
   it('chains the confirmed-only reading separately', async () => {
     const estimated = Cycle.open({
-      id: '2026-08',
-      ref: refFor('2026-08'),
+      id: '2026-09',
+      ref: refFor('2026-09'),
       openingBalance: Money.zero(),
       entries: [
         LedgerEntry.create({
@@ -198,13 +198,13 @@ describe('ListCycles balance chaining', () => {
   // has to reach behind today or neither is ever offered.
   it('reaches back to a cycle that already exists', async () => {
     const cycles = await listing({
-      cycles: [cycleWith('2026-06', 5_000), cycleWith('2026-07', 5_000)],
+      cycles: [cycleWith('2026-07', 5_000), cycleWith('2026-08', 5_000)],
     }).rollingWindow();
 
     expect(cycles.slice(0, 3).map((cycle) => cycle.month)).toEqual([
-      '2026-06',
       '2026-07',
       '2026-08',
+      '2026-09',
     ]);
     expect(cycles.slice(0, 2).map((cycle) => cycle.position)).toEqual([
       'past',
@@ -215,27 +215,27 @@ describe('ListCycles balance chaining', () => {
   // A month nobody ever touched is not history — the window must not invent it.
   it('does not invent a past month that was never materialised', async () => {
     const window = await listing({
-      cycles: [cycleWith('2026-06', 5_000)],
+      cycles: [cycleWith('2026-07', 5_000)],
     }).rollingWindow();
 
-    expect(window.map((cycle) => cycle.month)).not.toContain('2026-07');
-    expect(window[0]?.month).toBe('2026-06');
+    expect(window.map((cycle) => cycle.month)).not.toContain('2026-08');
+    expect(window[0]?.month).toBe('2026-07');
   });
 
   it('still projects exactly twelve cycles forward from the current one', async () => {
     const window = await listing({
-      cycles: [cycleWith('2026-06', 5_000)],
+      cycles: [cycleWith('2026-07', 5_000)],
     }).rollingWindow();
 
     const ahead = window.filter((cycle) => cycle.position !== 'past');
 
     expect(ahead).toHaveLength(12);
-    expect(ahead[0]?.month).toBe('2026-08');
+    expect(ahead[0]?.month).toBe('2026-09');
   });
 
   it('names exactly one cycle current, whatever came before', async () => {
     const window = await listing({
-      cycles: [cycleWith('2026-06', 5_000), cycleWith('2026-07', 5_000)],
+      cycles: [cycleWith('2026-07', 5_000), cycleWith('2026-08', 5_000)],
     }).rollingWindow();
 
     expect(window.filter((cycle) => cycle.position === 'current')).toHaveLength(
@@ -247,7 +247,7 @@ describe('ListCycles balance chaining', () => {
   // opening balance would come from nowhere.
   it('chains the opening balance from the oldest cycle in the window', async () => {
     const window = await listing({
-      cycles: [cycleWith('2026-06', 5_000)],
+      cycles: [cycleWith('2026-07', 5_000)],
       accounts: [
         Account.open({
           id: 'a',

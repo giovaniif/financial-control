@@ -25,7 +25,7 @@ const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
 const ref = (month: string) => CycleRef.forMonth(month, anchor, noHolidays);
 const reais = (amount: number) => Money.fromCents(Math.round(amount * 100));
 
-/** 10 Aug: inside the August cycle, which runs 5 Aug – 3 Sep. */
+/** 10 Aug: inside the September cycle, which runs 5 Aug – 3 Sep. */
 const clock = FixedClock.at('2026-08-10T12:00:00Z');
 
 const entry = (
@@ -45,10 +45,10 @@ const entry = (
   });
 
 /** The September cycle from the worked example in USE_CASES §4. */
-const september = () =>
+const october = () =>
   Cycle.open({
-    id: '2026-09',
-    ref: ref('2026-09'),
+    id: '2026-10',
+    ref: ref('2026-10'),
     openingBalance: Money.zero(),
     entries: [
       entry('Salary', EntryKind.Income, '2026-09-04', 18_000),
@@ -71,15 +71,15 @@ describe('BuildDashboard headline — the answer to Q1', () => {
   // The Dashboard opens on the current cycle but speaks about the next: the
   // question is always asked from the middle of the one you are in.
   it('speaks about the next cycle, not the current one', async () => {
-    const view = await building({ cycles: [september()] }).build();
+    const view = await building({ cycles: [october()] }).build();
 
-    expect(view.currentCycleMonth).toBe('2026-08');
-    expect(view.headline.cycleMonth).toBe('2026-09');
-    expect(view.headline.cycleLabel).toBe('September 2026');
+    expect(view.currentCycleMonth).toBe('2026-09');
+    expect(view.headline.cycleMonth).toBe('2026-10');
+    expect(view.headline.cycleLabel).toBe('October 2026');
   });
 
   it('reports what arrives, what goes out and what stays free', async () => {
-    const { headline } = await building({ cycles: [september()] }).build();
+    const { headline } = await building({ cycles: [october()] }).build();
 
     expect(headline.incomingCents).toBe(1_800_000);
     expect(headline.outgoingCents).toBe(911_000);
@@ -87,14 +87,14 @@ describe('BuildDashboard headline — the answer to Q1', () => {
   });
 
   it('reports the closing balance both with and without the estimate', async () => {
-    const { headline } = await building({ cycles: [september()] }).build();
+    const { headline } = await building({ cycles: [october()] }).build();
 
     expect(headline.closingCents).toBe(355_600);
     expect(headline.closingWithoutEstimatesCents).toBe(505_600);
   });
 
   it('reports the lowest point and the date it happens', async () => {
-    const { headline } = await building({ cycles: [september()] }).build();
+    const { headline } = await building({ cycles: [october()] }).build();
 
     expect(headline.lowestPointCents).toBe(355_600);
     expect(headline.lowestPointDate).toBe('2026-09-28');
@@ -110,7 +110,7 @@ describe('BuildDashboard headline — the answer to Q1', () => {
 
 describe('BuildDashboard KPIs', () => {
   it('reports the four figures in the order the chain runs', async () => {
-    const { kpis } = await building({ cycles: [september()] }).build();
+    const { kpis } = await building({ cycles: [october()] }).build();
 
     expect(kpis.map((k) => k.label)).toEqual([
       'Total Outcome',
@@ -124,14 +124,14 @@ describe('BuildDashboard KPIs', () => {
 
 describe('BuildDashboard cycle progress', () => {
   it('reports how far through the cycle today is', async () => {
-    const august = Cycle.open({
-      id: '2026-08',
-      ref: ref('2026-08'),
+    const september = Cycle.open({
+      id: '2026-09',
+      ref: ref('2026-09'),
       openingBalance: Money.zero(),
       entries: [entry('Rent', EntryKind.Fixed, '2026-08-10', -1_000)],
     });
 
-    const { progress } = await building({ cycles: [august] }).build();
+    const { progress } = await building({ cycles: [september] }).build();
 
     // 5 Aug – 3 Sep is 30 days, and today is the 6th day.
     expect(progress.cycleLength).toBe(30);
@@ -141,9 +141,9 @@ describe('BuildDashboard cycle progress', () => {
 
   // The gap between time and spend is the signal.
   it('reports spend against what was planned', async () => {
-    const august = Cycle.open({
-      id: '2026-08',
-      ref: ref('2026-08'),
+    const september = Cycle.open({
+      id: '2026-09',
+      ref: ref('2026-09'),
       openingBalance: Money.zero(),
       entries: [
         entry('Rent', EntryKind.Fixed, '2026-08-10', -1_000),
@@ -151,7 +151,7 @@ describe('BuildDashboard cycle progress', () => {
       ],
     }).settleEntry('Rent', reais(-1_000), SettlementStatus.Paid);
 
-    const { progress } = await building({ cycles: [august] }).build();
+    const { progress } = await building({ cycles: [september] }).build();
 
     expect(progress.spentCents).toBe(100_000);
     expect(progress.plannedOutCents).toBe(200_000);
@@ -167,7 +167,7 @@ describe('BuildDashboard cycle progress', () => {
 
 describe('BuildDashboard upcoming list', () => {
   it('lists what is unsettled, soonest first', async () => {
-    const { upcoming } = await building({ cycles: [september()] }).build();
+    const { upcoming } = await building({ cycles: [october()] }).build();
 
     expect(upcoming.map((u) => u.description)).toEqual([
       'Salary',
@@ -178,9 +178,9 @@ describe('BuildDashboard upcoming list', () => {
   });
 
   it('puts an overdue entry first and says how late it is', async () => {
-    const august = Cycle.open({
-      id: '2026-08',
-      ref: ref('2026-08'),
+    const september = Cycle.open({
+      id: '2026-09',
+      ref: ref('2026-09'),
       openingBalance: Money.zero(),
       entries: [
         entry('Late bill', EntryKind.Fixed, '2026-08-06', -500),
@@ -188,7 +188,7 @@ describe('BuildDashboard upcoming list', () => {
       ],
     });
 
-    const { upcoming } = await building({ cycles: [august] }).build();
+    const { upcoming } = await building({ cycles: [september] }).build();
 
     expect(upcoming[0]?.description).toBe('Late bill');
     expect(upcoming[0]?.isOverdue).toBe(true);
@@ -196,7 +196,7 @@ describe('BuildDashboard upcoming list', () => {
   });
 
   it('leaves settled entries out', async () => {
-    const settled = september().skipEntry('Rent');
+    const settled = october().skipEntry('Rent');
 
     const { upcoming } = await building({ cycles: [settled] }).build();
 
@@ -209,8 +209,8 @@ describe('BuildDashboard alerts', () => {
   // a window starting at today could never reach a cycle old enough to raise it.
   it('flags a past cycle that cannot be closed, naming what is in the way', async () => {
     const july = Cycle.open({
-      id: '2026-07',
-      ref: ref('2026-07'),
+      id: '2026-08',
+      ref: ref('2026-08'),
       openingBalance: Money.zero(),
       entries: [
         entry('Renovation Progress', EntryKind.Fixed, '2026-07-20', -2_350),
@@ -221,14 +221,14 @@ describe('BuildDashboard alerts', () => {
     const alert = alerts.find((a) => a.title.includes('unsettled'));
 
     expect(alert?.severity).toBe('CRITICAL');
-    expect(alert?.title).toContain('July 2026');
+    expect(alert?.title).toContain('August 2026');
     expect(alert?.body).toContain('Renovation Progress');
   });
 
   it('says nothing about a past cycle whose entries are all settled', async () => {
     const july = Cycle.open({
-      id: '2026-07',
-      ref: ref('2026-07'),
+      id: '2026-08',
+      ref: ref('2026-08'),
       openingBalance: Money.zero(),
       entries: [entry('Paid up', EntryKind.Fixed, '2026-07-20', -500)],
     }).skipEntry('Paid up');
@@ -240,8 +240,8 @@ describe('BuildDashboard alerts', () => {
 
   it('names only the first few when many are unsettled', async () => {
     const july = Cycle.open({
-      id: '2026-07',
-      ref: ref('2026-07'),
+      id: '2026-08',
+      ref: ref('2026-08'),
       openingBalance: Money.zero(),
       entries: [
         entry('One', EntryKind.Fixed, '2026-07-10', -100),
@@ -259,8 +259,8 @@ describe('BuildDashboard alerts', () => {
 
   it('leaves a past cycle out of the upcoming list', async () => {
     const july = Cycle.open({
-      id: '2026-07',
-      ref: ref('2026-07'),
+      id: '2026-08',
+      ref: ref('2026-08'),
       openingBalance: Money.zero(),
       entries: [entry('Old', EntryKind.Fixed, '2026-07-20', -500)],
     });
@@ -272,8 +272,8 @@ describe('BuildDashboard alerts', () => {
 
   it('flags a projected negative balance with the entry that caused it', async () => {
     const broke = Cycle.open({
-      id: '2026-09',
-      ref: ref('2026-09'),
+      id: '2026-10',
+      ref: ref('2026-10'),
       openingBalance: Money.zero(),
       entries: [entry('Huge bill', EntryKind.Fixed, '2026-09-10', -5_000)],
     });
@@ -286,7 +286,7 @@ describe('BuildDashboard alerts', () => {
   });
 
   it('quantifies an unconfirmed estimate both ways', async () => {
-    const { alerts } = await building({ cycles: [september()] }).build();
+    const { alerts } = await building({ cycles: [october()] }).build();
     const alert = alerts.find((a) => a.title.includes('estimate'));
 
     expect(alert?.severity).toBe('WARNING');
@@ -344,7 +344,7 @@ describe('BuildDashboard alerts', () => {
       target: { amount: reais(100), date: LocalDate.parse('2026-06-30') },
       rule: Allocation.fixed(reais(1)),
       priority: 1,
-    }).contribute('e1', '2026-05', reais(200));
+    }).contribute('e1', '2026-06', reais(200));
 
     const { alerts } = await building({ buckets: [met] }).build();
 
@@ -353,8 +353,8 @@ describe('BuildDashboard alerts', () => {
 
   it('ranks critical alerts above warnings', async () => {
     const broke = Cycle.open({
-      id: '2026-09',
-      ref: ref('2026-09'),
+      id: '2026-10',
+      ref: ref('2026-10'),
       openingBalance: Money.zero(),
       entries: [
         entry('Huge bill', EntryKind.Fixed, '2026-09-10', -5_000),
@@ -369,8 +369,8 @@ describe('BuildDashboard alerts', () => {
 
   it('reports nothing to worry about when nothing is wrong', async () => {
     const clean = Cycle.open({
-      id: '2026-09',
-      ref: ref('2026-09'),
+      id: '2026-10',
+      ref: ref('2026-10'),
       openingBalance: Money.zero(),
       entries: [entry('Salary', EntryKind.Income, '2026-09-04', 18_000)],
     });

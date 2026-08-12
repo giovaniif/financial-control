@@ -33,10 +33,10 @@ const entry = (id: string, dueDate: string) =>
   });
 
 const augustWith = (...dueDates: string[]) => {
-  const ref = CycleRef.forMonth('2026-08', anchorFive, noHolidays);
+  const ref = CycleRef.forMonth('2026-09', anchorFive, noHolidays);
 
   return Cycle.open({
-    id: 'cycle-aug',
+    id: 'cycle-sep',
     ref,
     openingBalance: Money.zero(),
     entries: dueDates.map((due, i) => entry(`e${String(i)}`, due)),
@@ -65,7 +65,7 @@ describe('ConfigurePaydayAnchor.preview', () => {
   let useCase: ConfigurePaydayAnchor;
 
   beforeEach(() => {
-    // The August cycle under anchor 5 runs 5 Aug – 3 Sep.
+    // The September cycle under anchor 5 runs 5 Aug – 3 Sep.
     cycles = new InMemoryCycleRepository([
       augustWith('2026-08-06', '2026-08-20', '2026-09-02'),
     ]);
@@ -84,14 +84,14 @@ describe('ConfigurePaydayAnchor.preview', () => {
   });
 
   it('counts the entries a later anchor would push out of their cycle', async () => {
-    // Anchor 10 makes August run 10 Aug – 9 Sep, so the 6 Aug entry leaves.
+    // Anchor 10 makes September run 10 Aug – 9 Sep, so the 6 Aug entry leaves.
     const preview = await useCase.preview({
       anchorDay: 10,
       shiftPolicy: ShiftPolicy.Preceding,
     });
 
     expect(preview.totalEntriesMoving).toBe(1);
-    expect(preview.shifts[0]?.month).toBe('2026-08');
+    expect(preview.shifts[0]?.month).toBe('2026-09');
     expect(preview.shifts[0]?.entriesLeaving).toBe(1);
   });
 
@@ -189,9 +189,9 @@ describe('ConfigurePaydayAnchor.change', () => {
 
     await useCase.change({ anchorDay: 10, shiftPolicy: ShiftPolicy.Preceding });
 
-    const august = cycles.saved.find((c) => c.ref.month === '2026-08');
-    expect(august?.ref.start.toISO()).toBe('2026-08-10');
-    expect(august?.entries).toHaveLength(1);
+    const september = cycles.saved.find((c) => c.ref.month === '2026-09');
+    expect(september?.ref.start.toISO()).toBe('2026-08-10');
+    expect(september?.entries).toHaveLength(1);
   });
 
   it('never re-slices a closed cycle', async () => {

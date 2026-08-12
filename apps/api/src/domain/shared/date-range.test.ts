@@ -7,7 +7,7 @@ const date = (iso: string) => LocalDate.parse(iso);
 const range = (start: string, end: string) =>
   DateRange.of(date(start), date(end));
 
-// The August cycle: 5 Aug through 4 Sep, both ends included.
+// The September cycle: 5 Aug through 4 Sep, both ends included.
 const august = range('2026-08-05', '2026-09-04');
 
 describe('DateRange', () => {

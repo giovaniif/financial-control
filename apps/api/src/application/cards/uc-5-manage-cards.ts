@@ -19,7 +19,7 @@ import type {
 import { DomainError } from '../../domain/shared/domain-error.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
-import { calendarMonthOf } from '../budgeting/month.js';
+import { monthOf } from '../budgeting/month.js';
 
 export class CardNotFound extends DomainError {}
 
@@ -279,14 +279,16 @@ export class ManageCards {
   }
 
   /**
-   * The cycle containing a date is not always the one named for its month: a
-   * card due on the 3rd, with payday on the 5th, is paid by the cycle that
-   * opened the month before.
+   * The cycle containing a date is not always the one named for its calendar
+   * month, and it can sit either side of it. `monthOf` is the one place that
+   * rule lives — re-deriving it here is how this drifted before.
    */
   private cycleFor(date: LocalDate, anchor: PaydayAnchor): CycleRef {
-    const ref = CycleRef.forMonth(calendarMonthOf(date), anchor, this.holidays);
-
-    return ref.contains(date) ? ref : ref.previous();
+    return CycleRef.forMonth(
+      monthOf(date, anchor, this.holidays),
+      anchor,
+      this.holidays,
+    );
   }
 
   private async require(cardId: string): Promise<Card> {

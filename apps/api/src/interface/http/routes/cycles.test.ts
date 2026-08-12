@@ -26,7 +26,7 @@ import { Money } from '../../../domain/shared/money.js';
 import { buildTestServer } from '../testing/test-server.js';
 
 const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
-const august = CycleRef.forMonth('2026-08', anchor, noHolidays);
+const august = CycleRef.forMonth('2026-09', anchor, noHolidays);
 
 const entry = (
   id: string,
@@ -46,7 +46,7 @@ const entry = (
 
 const populated = () =>
   Cycle.open({
-    id: 'cycle-aug',
+    id: 'cycle-sep',
     ref: august,
     openingBalance: Money.zero(),
     entries: [
@@ -73,7 +73,7 @@ describe('GET /cycles/:month', () => {
   it('reports the chain, the entries and the running balance', async () => {
     const response = await serverWith(populated()).inject({
       method: 'GET',
-      url: '/cycles/2026-08',
+      url: '/cycles/2026-09',
     });
     const body = response.json<CycleResponse>();
 
@@ -87,11 +87,11 @@ describe('GET /cycles/:month', () => {
     const body = (
       await serverWith(populated()).inject({
         method: 'GET',
-        url: '/cycles/2026-08',
+        url: '/cycles/2026-09',
       })
     ).json<CycleResponse>();
 
-    expect(body.label).toBe('August 2026');
+    expect(body.label).toBe('September 2026');
     expect(body.start).toBe('2026-08-05');
     expect(body.end).toBe('2026-09-03');
   });
@@ -101,7 +101,7 @@ describe('GET /cycles/:month', () => {
     const body = (
       await serverWith(populated()).inject({
         method: 'GET',
-        url: '/cycles/2026-08?estimates=excluded',
+        url: '/cycles/2026-09?estimates=excluded',
       })
     ).json<CycleResponse>();
 
@@ -112,7 +112,7 @@ describe('GET /cycles/:month', () => {
 
   it('reports where the balance bottoms out', async () => {
     const dipping = Cycle.open({
-      id: 'cycle-aug',
+      id: 'cycle-sep',
       ref: august,
       openingBalance: Money.fromCents(50_000),
       entries: [
@@ -124,7 +124,7 @@ describe('GET /cycles/:month', () => {
     const body = (
       await serverWith(dipping).inject({
         method: 'GET',
-        url: '/cycles/2026-08',
+        url: '/cycles/2026-09',
       })
     ).json<CycleResponse>();
 
@@ -136,7 +136,7 @@ describe('GET /cycles/:month', () => {
     const body = (
       await serverWith(populated()).inject({
         method: 'GET',
-        url: '/cycles/2026-08',
+        url: '/cycles/2026-09',
       })
     ).json<CycleResponse>();
 
@@ -147,7 +147,7 @@ describe('GET /cycles/:month', () => {
   it('answers a well-formed empty cycle for a month never materialised', async () => {
     const response = await serverWith().inject({
       method: 'GET',
-      url: '/cycles/2026-11',
+      url: '/cycles/2026-12',
     });
     const body = response.json<CycleResponse>();
 
@@ -169,7 +169,7 @@ describe('GET /cycles/:month', () => {
   it('answers 400 to an unknown estimates mode', async () => {
     const response = await serverWith().inject({
       method: 'GET',
-      url: '/cycles/2026-08?estimates=maybe',
+      url: '/cycles/2026-09?estimates=maybe',
     });
 
     expect(response.statusCode).toBe(400);
@@ -203,7 +203,7 @@ describe('GET /cycles', () => {
 
     expect(response.statusCode).toBe(200);
     expect(body.cycles).toHaveLength(12);
-    expect(body.cycles[0]?.month).toBe('2026-08');
+    expect(body.cycles[0]?.month).toBe('2026-09');
   });
 
   it('tags exactly one cycle current, and the one after it next', async () => {

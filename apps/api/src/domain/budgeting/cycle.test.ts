@@ -17,7 +17,7 @@ import {
 import { EntryKind, LedgerEntry } from './ledger-entry.js';
 
 const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
-const august = CycleRef.forMonth('2026-08', anchor, noHolidays);
+const september = CycleRef.forMonth('2026-09', anchor, noHolidays);
 
 let nextId = 0;
 const entry = (
@@ -44,7 +44,7 @@ const entry = (
 const workedExample = () =>
   Cycle.open({
     id: 'cycle-2026-08',
-    ref: august,
+    ref: september,
     openingBalance: Money.zero(),
     entries: [
       entry('Salary', EntryKind.Income, '2026-08-05', 18_000),
@@ -70,7 +70,7 @@ describe('Cycle membership', () => {
   it('accepts an entry due inside its range', () => {
     const cycle = Cycle.open({
       id: 'c',
-      ref: august,
+      ref: september,
       openingBalance: Money.zero(),
     }).addEntry(entry('Salary', EntryKind.Income, '2026-08-05', 18_000));
 
@@ -80,7 +80,7 @@ describe('Cycle membership', () => {
   it('rejects an entry due outside its range', () => {
     const cycle = Cycle.open({
       id: 'c',
-      ref: august,
+      ref: september,
       openingBalance: Money.zero(),
     });
 
@@ -92,7 +92,7 @@ describe('Cycle membership', () => {
   it('reads its entries in due-date order however they were added', () => {
     const cycle = Cycle.open({
       id: 'c',
-      ref: august,
+      ref: september,
       openingBalance: Money.zero(),
       entries: [
         entry('Electricity', EntryKind.Fixed, '2026-08-15', -280),
@@ -113,7 +113,7 @@ describe('Cycle membership', () => {
   it('lands income before outgoings that share a date', () => {
     const cycle = Cycle.open({
       id: 'c',
-      ref: august,
+      ref: september,
       openingBalance: Money.zero(),
       entries: [
         entry('→ Reserve', EntryKind.Allocation, '2026-08-05', -1_778),
@@ -174,7 +174,7 @@ describe('the calculation chain', () => {
   it('carries the closing balance from the opening balance', () => {
     const cycle = Cycle.open({
       id: 'c',
-      ref: august,
+      ref: september,
       openingBalance: Money.fromCents(216_000),
       entries: [entry('Salary', EntryKind.Income, '2026-08-05', 18_000)],
     });
@@ -185,7 +185,7 @@ describe('the calculation chain', () => {
   it('is all zeroes for a cycle with nothing in it', () => {
     const chain = Cycle.open({
       id: 'c',
-      ref: august,
+      ref: september,
       openingBalance: Money.zero(),
     }).chain();
 
@@ -255,7 +255,7 @@ describe('the running balance', () => {
   it('surfaces a dip that the closing balance hides', () => {
     const cycle = Cycle.open({
       id: 'c',
-      ref: august,
+      ref: september,
       openingBalance: Money.fromCents(50_000),
       entries: [
         entry('Big invoice', EntryKind.Invoice, '2026-08-10', -12_000),
@@ -275,7 +275,7 @@ describe('the running balance', () => {
   it('has no low-water mark when there is nothing in the cycle', () => {
     const empty = Cycle.open({
       id: 'c',
-      ref: august,
+      ref: september,
       openingBalance: Money.zero(),
     });
 
@@ -391,12 +391,12 @@ describe('Cycle identity and rehydration', () => {
   it('exposes the identity and opening balance it was opened with', () => {
     const cycle = Cycle.open({
       id: 'cycle-2026-08',
-      ref: august,
+      ref: september,
       openingBalance: Money.fromCents(216_000),
     });
 
     expect(cycle.id).toBe('cycle-2026-08');
-    expect(cycle.ref.month).toBe('2026-08');
+    expect(cycle.ref.month).toBe('2026-09');
     expect(reais(cycle.openingBalance)).toBe(2_160);
   });
 
@@ -405,7 +405,7 @@ describe('Cycle identity and rehydration', () => {
   it('rebuilds a closed cycle from storage without replaying its invariants', () => {
     const restored = Cycle.rehydrate({
       id: 'cycle-2026-08',
-      ref: august,
+      ref: september,
       status: CycleStatus.Closed,
       openingBalance: Money.zero(),
       entries: [entry('Salary', EntryKind.Income, '2026-08-05', 18_000)],

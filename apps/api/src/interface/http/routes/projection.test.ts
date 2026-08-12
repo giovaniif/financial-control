@@ -36,8 +36,8 @@ const reais = (amount: number) => Money.fromCents(Math.round(amount * 100));
 
 const september = () =>
   Cycle.open({
-    id: '2026-09',
-    ref: CycleRef.forMonth('2026-09', anchor, noHolidays),
+    id: '2026-10',
+    ref: CycleRef.forMonth('2026-10', anchor, noHolidays),
     openingBalance: Money.zero(),
     entries: [
       LedgerEntry.create({
@@ -99,8 +99,8 @@ describe('GET /dashboard', () => {
     const body = response.json<DashboardResponse>();
 
     expect(response.statusCode).toBe(200);
-    expect(body.currentCycleMonth).toBe('2026-08');
-    expect(body.headline.cycleLabel).toBe('September 2026');
+    expect(body.currentCycleMonth).toBe('2026-09');
+    expect(body.headline.cycleLabel).toBe('October 2026');
     expect(body.headline.incoming).toBe(1_800_000);
     expect(body.headline.free).toBe(1_039_000);
   });
@@ -170,10 +170,10 @@ describe('GET /wealth', () => {
       await serverWith({
         buckets: [retirement()],
         cycles: [september()],
-      }).inject({ method: 'GET', url: '/wealth?month=2026-09' })
+      }).inject({ method: 'GET', url: '/wealth?month=2026-10' })
     ).json<WealthProjectionResponse>();
 
-    // 10 % of the September Expected Surplus of R$ 10.390.
+    // 10 % of the October Expected Surplus of R$ 10.390.
     expect(body.buckets[0]?.contributionPerCycle).toBe(103_900);
   });
 

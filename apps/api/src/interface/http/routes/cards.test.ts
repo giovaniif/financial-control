@@ -124,8 +124,8 @@ describe('GET /cards/:id/billing-preview', () => {
 
     expect(response.json<BillingPreviewResponse>()).toEqual({
       dueDate: '2026-09-10',
-      cycleMonth: '2026-09',
-      cycleLabel: 'September 2026',
+      cycleMonth: '2026-10',
+      cycleLabel: 'October 2026',
     });
   });
 
@@ -135,7 +135,7 @@ describe('GET /cards/:id/billing-preview', () => {
       url: '/cards/card-inter/billing-preview?purchasedOn=2026-08-29',
     });
 
-    expect(response.json<BillingPreviewResponse>().cycleMonth).toBe('2026-10');
+    expect(response.json<BillingPreviewResponse>().cycleMonth).toBe('2026-11');
   });
 
   it('answers 400 without a date', async () => {
@@ -172,7 +172,7 @@ describe('POST /cards/:id/purchases', () => {
 
     expect(response.statusCode).toBe(201);
     expect(card.invoices[0]?.total).toBe(-42_000);
-    expect(card.invoices[0]?.paidInCycle).toBe('2026-09');
+    expect(card.invoices[0]?.paidInCycle).toBe('2026-10');
   });
 
   it('labels instalment positions', async () => {

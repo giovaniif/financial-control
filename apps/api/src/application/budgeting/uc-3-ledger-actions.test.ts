@@ -27,12 +27,12 @@ import {
 import { CycleNotFound, LedgerActions } from './uc-3-ledger-actions.js';
 
 const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
-const august = CycleRef.forMonth('2026-08', anchor, noHolidays);
+const september = CycleRef.forMonth('2026-09', anchor, noHolidays);
 
 const populated = () =>
   Cycle.open({
-    id: 'cycle-aug',
-    ref: august,
+    id: 'cycle-sep',
+    ref: september,
     openingBalance: Money.zero(),
     entries: [
       LedgerEntry.create({
@@ -62,7 +62,7 @@ const acting = (...cycles: Cycle[]) => {
 };
 
 const reload = async (repository: InMemoryCycleRepository) =>
-  repository.findByMonth(august);
+  repository.findByMonth(september);
 
 describe('LedgerActions.settle', () => {
   // One click when the actual matches the plan: that is the whole point.
@@ -70,7 +70,7 @@ describe('LedgerActions.settle', () => {
     const { actions, repository } = acting(populated());
 
     await actions.settle({
-      month: '2026-08',
+      month: '2026-09',
       entryId: 'e-health',
       status: SettlementStatus.Paid,
     });
@@ -85,7 +85,7 @@ describe('LedgerActions.settle', () => {
     const { actions, repository } = acting(populated());
 
     await actions.settle({
-      month: '2026-08',
+      month: '2026-09',
       entryId: 'e-health',
       status: SettlementStatus.Paid,
       actualCents: -33_016,
@@ -109,7 +109,7 @@ describe('LedgerActions.settle', () => {
     const { actions, repository } = acting(cycle);
 
     await actions.settle({
-      month: '2026-08',
+      month: '2026-09',
       entryId: 'e-salary',
       status: SettlementStatus.Received,
     });
@@ -123,7 +123,7 @@ describe('LedgerActions.settle', () => {
   it('skips an entry, realising nothing', async () => {
     const { actions, repository } = acting(populated());
 
-    await actions.skip('2026-08', 'e-health');
+    await actions.skip('2026-09', 'e-health');
 
     const entry = (await reload(repository))?.entries[0];
     expect(entry?.status).toBe(SettlementStatus.Skipped);
@@ -135,7 +135,7 @@ describe('LedgerActions.settle', () => {
 
     await expect(
       actions.settle({
-        month: '2026-08',
+        month: '2026-09',
         entryId: 'missing',
         status: SettlementStatus.Paid,
       }),
@@ -147,7 +147,7 @@ describe('LedgerActions.settle', () => {
 
     await expect(
       actions.settle({
-        month: '2026-08',
+        month: '2026-09',
         entryId: 'e-health',
         status: SettlementStatus.Paid,
       }),
@@ -160,7 +160,7 @@ describe('LedgerActions.addEntry', () => {
     const { actions, repository } = acting(populated());
 
     const id = await actions.addEntry({
-      month: '2026-08',
+      month: '2026-09',
       description: 'Dinner split',
       kind: EntryKind.Variable,
       dueDate: '2026-08-14',
@@ -176,7 +176,7 @@ describe('LedgerActions.addEntry', () => {
     const { actions, repository } = acting(populated());
 
     const id = await actions.addEntry({
-      month: '2026-08',
+      month: '2026-09',
       description: 'Gift',
       kind: EntryKind.Variable,
       dueDate: '2026-08-14',
@@ -192,7 +192,7 @@ describe('LedgerActions.addEntry', () => {
 
     await expect(
       actions.addEntry({
-        month: '2026-08',
+        month: '2026-09',
         description: 'Too late',
         kind: EntryKind.Variable,
         dueDate: '2026-09-20',
@@ -204,7 +204,7 @@ describe('LedgerActions.addEntry', () => {
   it('removes an entry', async () => {
     const { actions, repository } = acting(populated());
 
-    await actions.removeEntry('2026-08', 'e-health');
+    await actions.removeEntry('2026-09', 'e-health');
 
     expect((await reload(repository))?.entries).toHaveLength(0);
   });
@@ -214,7 +214,7 @@ describe('LedgerActions.override', () => {
   it('changes the figure without touching the template', async () => {
     const { actions, repository } = acting(populated());
 
-    await actions.override('2026-08', 'e-health', -45_000);
+    await actions.override('2026-09', 'e-health', -45_000);
 
     const entry = (await reload(repository))?.entries[0];
     expect(entry?.amount.planned.cents).toBe(-45_000);
@@ -224,8 +224,8 @@ describe('LedgerActions.override', () => {
   it('reverts to what the template said', async () => {
     const { actions, repository } = acting(populated());
 
-    await actions.override('2026-08', 'e-health', -45_000);
-    await actions.revertOverride('2026-08', 'e-health');
+    await actions.override('2026-09', 'e-health', -45_000);
+    await actions.revertOverride('2026-09', 'e-health');
 
     const entry = (await reload(repository))?.entries[0];
     expect(entry?.amount.planned.cents).toBe(-32_000);
@@ -241,7 +241,7 @@ describe('LedgerActions on a closed cycle', () => {
       'settling',
       (a: LedgerActions) =>
         a.settle({
-          month: '2026-08',
+          month: '2026-09',
           entryId: 'e-health',
           status: SettlementStatus.Paid,
         }),
@@ -250,15 +250,15 @@ describe('LedgerActions on a closed cycle', () => {
       'adding',
       (a: LedgerActions) =>
         a.addEntry({
-          month: '2026-08',
+          month: '2026-09',
           description: 'Late',
           kind: EntryKind.Variable,
           dueDate: '2026-08-20',
           amountCents: 100,
         }),
     ],
-    ['overriding', (a: LedgerActions) => a.override('2026-08', 'e-health', -1)],
-    ['removing', (a: LedgerActions) => a.removeEntry('2026-08', 'e-health')],
+    ['overriding', (a: LedgerActions) => a.override('2026-09', 'e-health', -1)],
+    ['removing', (a: LedgerActions) => a.removeEntry('2026-09', 'e-health')],
   ])('refuses %s', async (_name, act) => {
     const { actions } = acting(closed());
 

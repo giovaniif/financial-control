@@ -23,7 +23,7 @@ import {
 import { ReadCycle, UnknownMonth } from './uc-3-1-read-cycle.js';
 
 const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
-const august = CycleRef.forMonth('2026-08', anchor, noHolidays);
+const august = CycleRef.forMonth('2026-09', anchor, noHolidays);
 
 const entry = (
   id: string,
@@ -43,7 +43,7 @@ const entry = (
 
 const populated = () =>
   Cycle.open({
-    id: 'cycle-aug',
+    id: 'cycle-sep',
     ref: august,
     openingBalance: Money.fromCents(216_000),
     entries: [
@@ -63,7 +63,7 @@ const reading = (...cycles: Cycle[]) =>
 
 describe('ReadCycle.byMonth', () => {
   it('reports the chain and the entries in due-date order', async () => {
-    const view = await reading(populated()).byMonth('2026-08');
+    const view = await reading(populated()).byMonth('2026-09');
 
     expect(view.entries.map((e) => e.description)).toEqual([
       'Salary',
@@ -74,7 +74,7 @@ describe('ReadCycle.byMonth', () => {
   });
 
   it('carries the balance standing after each entry', async () => {
-    const view = await reading(populated()).byMonth('2026-08');
+    const view = await reading(populated()).byMonth('2026-09');
 
     expect(view.entries.map((e) => e.balanceCents)).toEqual([
       2_016_000, 1_255_000, 1_105_000,
@@ -82,16 +82,16 @@ describe('ReadCycle.byMonth', () => {
   });
 
   it('states the cycle bounds, never a bare month name', async () => {
-    const view = await reading(populated()).byMonth('2026-08');
+    const view = await reading(populated()).byMonth('2026-09');
 
-    expect(view.label).toBe('August 2026');
+    expect(view.label).toBe('September 2026');
     expect(view.start).toBe('2026-08-05');
     expect(view.end).toBe('2026-09-03');
   });
 
   it('leaves the unconfirmed estimate out when asked for confirmed figures', async () => {
     const view = await reading(populated()).byMonth(
-      '2026-08',
+      '2026-09',
       Estimates.Excluded,
     );
 
@@ -110,7 +110,7 @@ describe('ReadCycle.byMonth', () => {
       ],
     });
 
-    const view = await reading(dipping).byMonth('2026-08');
+    const view = await reading(dipping).byMonth('2026-09');
 
     expect(view.lowWaterMark?.balanceCents).toBe(-1_150_000);
     expect(view.lowWaterMark?.description).toBe('Big invoice');
@@ -118,7 +118,7 @@ describe('ReadCycle.byMonth', () => {
   });
 
   it('reports no negative date when the balance never crosses zero', async () => {
-    const view = await reading(populated()).byMonth('2026-08');
+    const view = await reading(populated()).byMonth('2026-09');
 
     expect(view.firstNegativeDate).toBeUndefined();
   });
@@ -130,7 +130,7 @@ describe('ReadCycle.byMonth', () => {
       SettlementStatus.Paid,
     );
 
-    const view = await reading(settled).byMonth('2026-08');
+    const view = await reading(settled).byMonth('2026-09');
     const rent = view.entries.find((e) => e.description === 'Rent');
 
     expect(rent?.actualCents).toBe(-780_000);
@@ -143,7 +143,7 @@ describe('ReadCycle.byMonth', () => {
       Money.fromCents(-800_000),
     );
 
-    const view = await reading(overridden).byMonth('2026-08');
+    const view = await reading(overridden).byMonth('2026-09');
 
     expect(
       view.entries.find((e) => e.description === 'Rent')?.isOverridden,
@@ -152,14 +152,14 @@ describe('ReadCycle.byMonth', () => {
 
   // The month exists; nothing has been put in it yet.
   it('reads a month never materialised as an empty cycle', async () => {
-    const view = await reading().byMonth('2026-11');
+    const view = await reading().byMonth('2026-12');
 
     expect(view.entries).toEqual([]);
     expect(view.chain.closingBalance.isZero()).toBe(true);
     expect(view.lowWaterMark).toBeUndefined();
   });
 
-  it.each(['August-2026', '2026-13', ''])(
+  it.each(['August-2026', '2026-14', ''])(
     'refuses the unparsable month %s',
     async (month) => {
       await expect(reading().byMonth(month)).rejects.toThrow(UnknownMonth);
@@ -169,7 +169,7 @@ describe('ReadCycle.byMonth', () => {
 
 describe('ReadCycle.refFor', () => {
   it('resolves a month against the configured anchor', async () => {
-    const ref = await reading().refFor('2026-08');
+    const ref = await reading().refFor('2026-09');
 
     expect(ref.start.toISO()).toBe('2026-08-05');
   });
@@ -199,7 +199,7 @@ describe('ReadCycle materialises the cycle from templates', () => {
     direction: Direction.In,
     dueDayOfMonth: 5,
     amount: Money.fromCents(1_800_000),
-    startMonth: '2026-08',
+    startMonth: '2026-09',
   });
   const health = RecurringTemplate.create({
     id: 'tpl-health',
@@ -207,14 +207,14 @@ describe('ReadCycle materialises the cycle from templates', () => {
     direction: Direction.Out,
     dueDayOfMonth: 8,
     amount: Money.fromCents(-32_000),
-    startMonth: '2026-08',
+    startMonth: '2026-09',
   });
 
   // Until this worked, every cycle was permanently empty.
   it('fills an untouched month from the templates that apply to it', async () => {
     const { useCase } = readingWith([salary, health]);
 
-    const view = await useCase.byMonth('2026-08');
+    const view = await useCase.byMonth('2026-09');
 
     expect(view.entries.map((e) => e.description)).toEqual([
       'Salary',
@@ -226,8 +226,8 @@ describe('ReadCycle materialises the cycle from templates', () => {
   it('persists what it generated, so the entries have stable ids', async () => {
     const { useCase, cycleRepo } = readingWith([salary]);
 
-    const first = await useCase.byMonth('2026-08');
-    const second = await useCase.byMonth('2026-08');
+    const first = await useCase.byMonth('2026-09');
+    const second = await useCase.byMonth('2026-09');
 
     expect(cycleRepo.saved).toHaveLength(1);
     expect(second.entries[0]?.id).toBe(first.entries[0]?.id);
@@ -236,7 +236,7 @@ describe('ReadCycle materialises the cycle from templates', () => {
   it('does not write when there was nothing to generate', async () => {
     const { useCase, cycleRepo } = readingWith([]);
 
-    await useCase.byMonth('2026-08');
+    await useCase.byMonth('2026-09');
 
     expect(cycleRepo.saved).toHaveLength(0);
   });
@@ -248,17 +248,17 @@ describe('ReadCycle materialises the cycle from templates', () => {
       direction: Direction.In,
       dueDayOfMonth: 5,
       amount: Money.fromCents(1_000_000),
-      startMonth: '2026-08',
+      startMonth: '2026-09',
       valueSchedule: [
-        { fromMonth: '2026-09', amount: Money.fromCents(1_800_000) },
+        { fromMonth: '2026-10', amount: Money.fromCents(1_800_000) },
       ],
     });
     const { useCase } = readingWith([stepped]);
 
-    expect((await useCase.byMonth('2026-08')).chain.totalIncome.cents).toBe(
+    expect((await useCase.byMonth('2026-09')).chain.totalIncome.cents).toBe(
       1_000_000,
     );
-    expect((await useCase.byMonth('2026-09')).chain.totalIncome.cents).toBe(
+    expect((await useCase.byMonth('2026-10')).chain.totalIncome.cents).toBe(
       1_800_000,
     );
   });
@@ -266,7 +266,7 @@ describe('ReadCycle materialises the cycle from templates', () => {
   it('leaves a settled entry alone on the next read', async () => {
     const { useCase, cycleRepo } = readingWith([health]);
 
-    const first = await useCase.byMonth('2026-08');
+    const first = await useCase.byMonth('2026-09');
     const stored = await cycleRepo.findByMonth(august);
     if (stored === undefined) {
       throw new Error('expected the read to have persisted the cycle');
@@ -279,7 +279,7 @@ describe('ReadCycle materialises the cycle from templates', () => {
       ),
     );
 
-    const again = await useCase.byMonth('2026-08');
+    const again = await useCase.byMonth('2026-09');
 
     expect(again.entries).toHaveLength(1);
     expect(again.entries[0]?.actualCents).toBe(-33_000);
