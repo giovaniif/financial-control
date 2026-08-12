@@ -54,4 +54,34 @@ describe('api', () => {
     await expect(api('/health')).rejects.toThrow(ApiError);
     await expect(api('/health')).rejects.toMatchObject({ status: 503 });
   });
+
+  /**
+   * The domain refuses things for reasons the user needs to read — a cycle
+   * that is not settled, an anchor change that would orphan entries. A bare
+   * status code is not an explanation.
+   */
+  it('carries the server\u2019s explanation on a failure', async () => {
+    stubFetch(
+      Response.json({ error: 'Two entries are orphaned.' }, { status: 409 }),
+    );
+
+    await expect(api('/settings/anchor')).rejects.toThrow(
+      'Two entries are orphaned.',
+    );
+  });
+
+  it('falls back to the status when the body says nothing', async () => {
+    stubFetch(new Response('', { status: 500 }));
+
+    await expect(api('/health')).rejects.toThrow('/health responded 500');
+  });
+
+  it('still reports the status alongside the message', async () => {
+    stubFetch(Response.json({ error: 'Nope.' }, { status: 409 }));
+
+    await expect(api('/health')).rejects.toMatchObject({
+      status: 409,
+      path: '/health',
+    });
+  });
 });
