@@ -4,8 +4,10 @@ import { Link } from 'react-router';
 
 import { useAccounts } from '@/entities/account';
 import { useBuckets } from '@/entities/bucket';
+import { useCycleWindow } from '@/entities/cycle';
 import { useCards } from '@/entities/card';
 import { useTemplates } from '@/entities/template';
+import { BackupRestore } from '@/features/backup-restore';
 import { ChangeAnchor } from '@/features/configure-anchor';
 import { ManageAccounts } from '@/features/manage-accounts';
 import { api, queryKeys } from '@/shared/api';
@@ -24,6 +26,7 @@ export function SettingsPage() {
         <Accounts />
         <FirstRun />
         <Formatting />
+        <Backup />
       </div>
     </AppShell>
   );
@@ -170,6 +173,30 @@ function FirstRun() {
           </li>
         ))}
       </ol>
+    </Card>
+  );
+}
+
+/** UC-1.6 — the only recovery mechanism there is. */
+function Backup() {
+  const accounts = useAccounts();
+  const cards = useCards();
+  const templates = useTemplates();
+  const buckets = useBuckets();
+  const cycles = useCycleWindow();
+
+  return (
+    <Card className="flex flex-col gap-3">
+      <CardTitle>Backup</CardTitle>
+      <BackupRestore
+        counts={{
+          accounts: accounts.data?.accounts.length ?? 0,
+          cycles: cycles.data?.cycles.length ?? 0,
+          templates: templates.data?.templates.length ?? 0,
+          cards: cards.data?.length ?? 0,
+          buckets: buckets.data?.length ?? 0,
+        }}
+      />
     </Card>
   );
 }

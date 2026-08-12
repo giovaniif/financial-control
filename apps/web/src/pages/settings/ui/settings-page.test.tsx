@@ -111,4 +111,18 @@ describe('SettingsPage', () => {
       '/buckets',
     );
   });
+
+  // UC-1.6 — the app ships with no import path and nothing takes snapshots.
+  it('offers the export and the import, and says why they matter', async () => {
+    stubApi({ '/api/settings/anchor': anchor });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: 'Export' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
+    expect(
+      screen.getByText(/the only way back from a mistake/),
+    ).toBeInTheDocument();
+  });
 });
