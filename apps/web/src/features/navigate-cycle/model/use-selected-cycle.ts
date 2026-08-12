@@ -14,7 +14,8 @@ export function useSelectedCycle() {
 
   const cycles = useMemo(() => data?.cycles ?? [], [data]);
   const current = cycles.find((cycle) => cycle.position === 'current');
-  const selectedMonth = params.get('cycle') ?? current?.month;
+  const chosen = params.get('cycle');
+  const selectedMonth = chosen ?? current?.month;
   const selected = cycles.find((cycle) => cycle.month === selectedMonth);
   const index = cycles.findIndex((cycle) => cycle.month === selectedMonth);
 
@@ -36,6 +37,8 @@ export function useSelectedCycle() {
     cycles,
     selected,
     selectedMonth,
+    /** False when the month is only the default, so a screen can pick its own. */
+    isExplicit: chosen !== null,
     isPending,
     hasPrevious: index > 0,
     hasNext: index >= 0 && index < cycles.length - 1,
