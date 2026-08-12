@@ -128,4 +128,35 @@ describe('BucketsPage', () => {
 
     expect(await screen.findByText('archived')).toBeInTheDocument();
   });
+
+  it('offers to adjust the rule, record an event and archive', async () => {
+    stubApi({ '/api/buckets': [bucket({ name: 'Apartment' })] });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', {
+        name: 'Adjust the rule for Apartment',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Record on Apartment' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Archive Apartment' }),
+    ).toBeInTheDocument();
+  });
+
+  // An archived bucket is readable, not editable back into the projections.
+  it('does not offer to archive one already archived', async () => {
+    stubApi({
+      '/api/buckets': [bucket({ name: 'Apartment', status: 'ARCHIVED' })],
+    });
+    renderPage();
+
+    await screen.findByText('Apartment');
+
+    expect(
+      screen.queryByRole('button', { name: 'Archive Apartment' }),
+    ).not.toBeInTheDocument();
+  });
 });
