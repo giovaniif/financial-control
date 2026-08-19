@@ -1,5 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 
+import type { AssistantConversation } from '../../application/assistant/assistant-conversation.js';
+import type { ApplyProposal } from '../../application/assistant/uc-8-apply-proposal.js';
 import type { BackupRestore } from '../../application/backup/uc-1-6-backup-restore.js';
 import type { ConfigurePaydayAnchor } from '../../application/budgeting/uc-1-1-configure-payday-anchor.js';
 import type { ManageAccounts } from '../../application/budgeting/uc-1-2-manage-accounts.js';
@@ -17,6 +19,7 @@ import type { ProjectWealth } from '../../application/projection/uc-7-project-we
 import type { ListCycles } from '../../application/budgeting/uc-3-3-list-cycles.js';
 import type { Clock } from '../../domain/ports/clock.js';
 import { registerAccountRoutes } from './routes/accounts.js';
+import { registerAssistantRoutes } from './routes/assistant.js';
 import { registerBackupRoutes } from './routes/backup.js';
 import { registerBucketRoutes } from './routes/buckets.js';
 import { registerCardRoutes } from './routes/cards.js';
@@ -45,6 +48,8 @@ interface Dependencies {
   readSetupState: ReadSetupState;
   converseSetup: ConverseSetup;
   completeSetup: CompleteSetup;
+  converseAssistant: AssistantConversation;
+  applyProposal: ApplyProposal;
 }
 
 export function buildServer({
@@ -64,6 +69,8 @@ export function buildServer({
   readSetupState,
   converseSetup,
   completeSetup,
+  converseAssistant,
+  applyProposal,
 }: Dependencies): FastifyInstance {
   const app = Fastify({ logger: false });
 
@@ -82,6 +89,7 @@ export function buildServer({
     manageBuckets,
   });
   registerBackupRoutes(app, { backupRestore });
+  registerAssistantRoutes(app, { converseAssistant, applyProposal });
 
   return app;
 }

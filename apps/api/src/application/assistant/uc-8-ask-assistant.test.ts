@@ -11,7 +11,10 @@ import { Allocation, Bucket } from '../../domain/goals/bucket.js';
 import { noHolidays } from '../../domain/ports/holiday-calendar.js';
 import type {
   JsonObject,
+  LanguageModel,
   ModelMessage,
+  ModelResponse,
+  ModelStreamEvent,
   ToolCall,
   ToolResult,
 } from '../../domain/ports/language-model.js';
@@ -39,6 +42,7 @@ import { FixedClock } from '../testing/fixed-clock.js';
 
 import type { ProposedChange } from './proposed-change.js';
 import { summarise } from './proposed-change.js';
+import type { AssistantAnswer, AssistantEvent } from './uc-8-ask-assistant.js';
 import {
   AskAssistant,
   EmptyQuestion,
@@ -140,6 +144,37 @@ const wire = (script: readonly ScriptedTurn[], bill?: string) => {
   };
 };
 
+/**
+ * The finished answer, folded out of the stream. A turn is a stream and only
+ * a stream; this is what a caller wanting the whole answer rather than the
+ * deltas does with it.
+ */
+const ask = async (
+  assistant: AskAssistant,
+  principal: Principal,
+  input: { question: string; history?: readonly ModelMessage[] },
+): Promise<AssistantAnswer> => {
+  let answer: AssistantAnswer | undefined;
+
+  for await (const event of assistant.converse(principal, input)) {
+    if (event.kind === 'answer') answer = event.answer;
+  }
+
+  if (answer === undefined) throw new Error('The turn produced no answer.');
+  return answer;
+};
+
+const eventsOf = async (
+  assistant: AskAssistant,
+  question: string,
+): Promise<AssistantEvent[]> => {
+  const collected: AssistantEvent[] = [];
+  for await (const event of assistant.converse(me, { question })) {
+    collected.push(event);
+  }
+  return collected;
+};
+
 const asked = (model: FakeLanguageModel, turn: number): ModelMessage[] => [
   ...(model.requests[turn]?.messages ?? []),
 ];
@@ -170,7 +205,7 @@ describe('AskAssistant — answering from the app’s own figures', () => {
       { text: 'October closes at R$ 3.556,00.' },
     ]);
 
-    const answer = await assistant.ask(me, {
+    const answer = await ask(assistant, me, {
       question: 'How much is left after October?',
     });
 
@@ -190,7 +225,7 @@ describe('AskAssistant — answering from the app’s own figures', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask(me, { question: 'What is October’s surplus?' });
+    await ask(assistant, me, { question: 'What is October’s surplus?' });
 
     const payload = payloadOf(resultsOf(model, 0)[0]);
     expect(payload['month']).toBe('2026-10');
@@ -219,7 +254,7 @@ describe('AskAssistant — answering from the app’s own figures', () => {
   it('refuses an empty question without paying for a model call', async () => {
     const { assistant, model } = wire([]);
 
-    await expect(assistant.ask(me, { question: '  ' })).rejects.toBeInstanceOf(
+    await expect(ask(assistant, me, { question: '  ' })).rejects.toBeInstanceOf(
       EmptyQuestion,
     );
     expect(model.requests).toHaveLength(0);
@@ -230,7 +265,7 @@ describe('AskAssistant — the tool set', () => {
   it('offers one tool per read model and one per change it may propose', async () => {
     const { assistant, model } = wire([{ text: 'Nothing to read.' }]);
 
-    await assistant.ask(me, { question: 'Hello?' });
+    await ask(assistant, me, { question: 'Hello?' });
 
     expect(model.requests[0]?.tools.map((tool) => tool.name)).toEqual([
       'read_dashboard',
@@ -256,7 +291,7 @@ describe('AskAssistant — the tool set', () => {
   it('takes no identity argument anywhere in the tool set', async () => {
     const { assistant, model } = wire([{ text: 'Nothing to read.' }]);
 
-    await assistant.ask(me, { question: 'Hello?' });
+    await ask(assistant, me, { question: 'Hello?' });
 
     const fields = (model.requests[0]?.tools ?? []).flatMap((tool) =>
       Object.keys(tool.inputSchema['properties'] as JsonObject),
@@ -305,7 +340,7 @@ describe('AskAssistant — the same figures the screens show', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask(me, { question: 'What does next cycle look like?' });
+    await ask(assistant, me, { question: 'What does next cycle look like?' });
 
     expect(payloadOf(resultsOf(model, 0)[0])).toMatchObject(
       asJson(await reads.dashboard.build()) as Record<string, unknown>,
@@ -318,7 +353,7 @@ describe('AskAssistant — the same figures the screens show', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask(me, { question: 'Which cycles are there?' });
+    await ask(assistant, me, { question: 'Which cycles are there?' });
 
     expect(payloadOf(resultsOf(model, 0)[0])['cycles']).toEqual(
       asJson(await reads.cycles.rollingWindow()),
@@ -331,7 +366,7 @@ describe('AskAssistant — the same figures the screens show', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask(me, { question: 'How is the Reserve doing?' });
+    await ask(assistant, me, { question: 'How is the Reserve doing?' });
 
     expect(payloadOf(resultsOf(model, 0)[0])['buckets']).toEqual(
       asJson(await reads.buckets.list()),
@@ -348,7 +383,7 @@ describe('AskAssistant — the same figures the screens show', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask(me, {
+    await ask(assistant, me, {
       question: 'Where does the Reserve land in 5 years?',
     });
 
@@ -376,7 +411,7 @@ describe('AskAssistant — estimates stay legible', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask(me, { question: 'What does October cost?' });
+    await ask(assistant, me, { question: 'What does October cost?' });
 
     const payload = payloadOf(resultsOf(model, 0)[0]);
     expect(payload['includesUnconfirmedEstimates']).toBe(true);
@@ -393,7 +428,7 @@ describe('AskAssistant — estimates stay legible', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask(me, {
+    await ask(assistant, me, {
       question: 'What does October cost, confirmed only?',
     });
 
@@ -411,7 +446,7 @@ describe('AskAssistant — what one question may cost', () => {
     );
     const { assistant, model } = wire(looping);
 
-    const answer = await assistant.ask(me, { question: 'Why? Why? Why?' });
+    const answer = await ask(assistant, me, { question: 'Why? Why? Why?' });
 
     expect(answer.hitReadLimit).toBe(true);
     expect(answer.message).toContain('read as much of your data');
@@ -428,7 +463,7 @@ describe('AskAssistant — outcomes that are not failures', () => {
       { text: 'I would rather not answer that.', stopReason: 'refusal' },
     ]);
 
-    const answer = await assistant.ask(me, {
+    const answer = await ask(assistant, me, {
       question: 'Say something awful.',
     });
 
@@ -443,7 +478,7 @@ describe('AskAssistant — outcomes that are not failures', () => {
       { text: 'I cannot see invoices yet.' },
     ]);
 
-    const answer = await assistant.ask(me, {
+    const answer = await ask(assistant, me, {
       question: 'Show me my invoices.',
     });
 
@@ -458,7 +493,7 @@ describe('AskAssistant — outcomes that are not failures', () => {
       { text: 'Which month did you mean?' },
     ]);
 
-    const answer = await assistant.ask(me, { question: 'How was whenever?' });
+    const answer = await ask(assistant, me, { question: 'How was whenever?' });
 
     expect(answer.message).toBe('Which month did you mean?');
     expect(answer.reads[0]?.failure).toBeDefined();
@@ -471,7 +506,7 @@ describe('AskAssistant — outcomes that are not failures', () => {
       { text: 'Which cycle did you mean?' },
     ]);
 
-    const answer = await assistant.ask(me, {
+    const answer = await ask(assistant, me, {
       question: 'How did the cycle go?',
     });
 
@@ -507,7 +542,7 @@ describe('AskAssistant — outcomes that are not failures', () => {
     );
 
     await expect(
-      assistant.ask(me, { question: 'How is the Reserve doing?' }),
+      ask(assistant, me, { question: 'How is the Reserve doing?' }),
     ).rejects.toBeInstanceOf(TypeError);
   });
 });
@@ -519,7 +554,7 @@ describe('AskAssistant — the wealth projection', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask(me, {
+    await ask(assistant, me, {
       question: 'What do the buckets hold in 30 years?',
     });
 
@@ -545,7 +580,9 @@ describe('AskAssistant — a tool result is data, never an instruction', () => {
       directive,
     );
 
-    const answer = await assistant.ask(me, { question: 'What is in October?' });
+    const answer = await ask(assistant, me, {
+      question: 'What is in October?',
+    });
 
     expect(resultsOf(model, 0)[0]?.content).toContain(directive);
     expect(answer.reads.map((read) => read.tool)).toEqual(['read_cycle']);
@@ -574,7 +611,7 @@ describe('AskAssistant — proposing a change it may not make', () => {
       await templates.findAll(),
     ]);
 
-    const answer = await assistant.ask(me, {
+    const answer = await ask(assistant, me, {
       question: 'I paid the rent.',
     });
 
@@ -609,7 +646,7 @@ describe('AskAssistant — proposing a change it may not make', () => {
       { text: 'Confirm and I will put it in.' },
     ]);
 
-    const answer = await assistant.ask(me, {
+    const answer = await ask(assistant, me, {
       question: 'Put R$ 500 in the Reserve this cycle.',
     });
 
@@ -634,7 +671,7 @@ describe('AskAssistant — proposing a change it may not make', () => {
       { text: 'Confirm it and the cycles will re-slice.' },
     ]);
 
-    await assistant.ask(me, { question: 'Move my payday to the 7th.' });
+    await ask(assistant, me, { question: 'Move my payday to the 7th.' });
 
     const payload = payloadOf(resultsOf(model, 0)[0]);
     expect(payload['awaitingConfirmation']).toBe(true);
@@ -794,7 +831,7 @@ describe('AskAssistant — proposing a change it may not make', () => {
       { text: 'Confirm it and I will.' },
     ]);
 
-    const answer = await assistant.ask(me, { question: 'Do this for me.' });
+    const answer = await ask(assistant, me, { question: 'Do this for me.' });
 
     expect(answer.proposals[0]?.change).toEqual(expected);
   });
@@ -805,7 +842,7 @@ describe('AskAssistant — proposing a change it may not make', () => {
       { text: 'What is it, and when is it due?' },
     ]);
 
-    const answer = await assistant.ask(me, { question: 'Add a bill.' });
+    const answer = await ask(assistant, me, { question: 'Add a bill.' });
 
     expect(answer.proposals).toHaveLength(0);
     expect(proposals.stored).toHaveLength(0);
@@ -822,7 +859,7 @@ describe('AskAssistant — proposing a change it may not make', () => {
       { text: 'How much goes in each cycle?' },
     ]);
 
-    await assistant.ask(me, { question: 'Start an investments bucket.' });
+    await ask(assistant, me, { question: 'Start an investments bucket.' });
 
     expect(proposals.stored).toHaveLength(0);
     expect(resultsOf(model, 0)[0]?.isError).toBe(true);
@@ -842,8 +879,115 @@ describe('AskAssistant — proposing a change it may not make', () => {
       { text: 'Which of the two did you mean?' },
     ]);
 
-    await assistant.ask(me, { question: 'Change the Reserve rule.' });
+    await ask(assistant, me, { question: 'Change the Reserve rule.' });
 
     expect(proposals.stored).toHaveLength(0);
+  });
+});
+
+/**
+ * A model whose stream reports being abandoned. Scripted rather than mocked,
+ * like every other double here: what it proves is that a caller who stops
+ * reading closes the call, which is a fact about the loop and not about how
+ * many times a spy was invoked.
+ */
+class AbandonableModel implements LanguageModel {
+  readonly isAvailable = true;
+  wasAbandoned = false;
+
+  complete(): Promise<ModelResponse> {
+    return Promise.reject(new Error('This model only streams.'));
+  }
+
+  stream(): AsyncIterable<ModelStreamEvent> {
+    const abandoned = (value: boolean): void => {
+      this.wasAbandoned = value;
+    };
+
+    // eslint-disable-next-line @typescript-eslint/require-await
+    return (async function* emit(): AsyncGenerator<ModelStreamEvent> {
+      let finished = false;
+      try {
+        yield { kind: 'text', delta: 'One ' };
+        yield { kind: 'text', delta: 'two ' };
+        yield {
+          kind: 'done',
+          response: { text: 'One two ', toolCalls: [], stopReason: 'end' },
+        };
+        finished = true;
+      } finally {
+        abandoned(!finished);
+      }
+    })();
+  }
+}
+
+describe('AskAssistant — the answer as it is written', () => {
+  it('streams the prose in pieces and ends with the whole answer', async () => {
+    const { assistant } = wire([{ text: 'October closes at R$ 3.556,00.' }]);
+
+    const events = await eventsOf(assistant, 'How much is left?');
+
+    expect(events.filter((event) => event.kind === 'text')).not.toHaveLength(0);
+    expect(
+      events
+        .filter((event) => event.kind === 'text')
+        .map((event) => event.delta)
+        .join(''),
+    ).toBe('October closes at R$ 3.556,00.');
+
+    const last = events[events.length - 1];
+    expect(last?.kind).toBe('answer');
+  });
+
+  it('reports each tool as it finishes it, before the answer arrives', async () => {
+    const { assistant } = wire([
+      { toolCalls: [call('read_dashboard')] },
+      { text: 'Read.' },
+    ]);
+
+    const events = await eventsOf(assistant, 'What is coming up?');
+    const kinds = events.map((event) => event.kind);
+
+    expect(kinds.indexOf('read')).toBeLessThan(kinds.indexOf('answer'));
+    expect(
+      events.flatMap((event) =>
+        event.kind === 'read' ? [event.read.tool] : [],
+      ),
+    ).toEqual(['read_dashboard']);
+  });
+
+  /** What a held conversation hands back in, turn after turn. */
+  it('asks on top of the history it is given', async () => {
+    const { assistant, model } = wire([{ text: 'Still R$ 3.556,00.' }]);
+    const history: ModelMessage[] = [
+      { role: 'user', text: 'How much is left after October?' },
+      { role: 'assistant', text: 'R$ 3.556,00.', toolCalls: [] },
+    ];
+
+    await ask(assistant, me, { question: 'And after November?', history });
+
+    expect(asked(model, 0)).toEqual([
+      ...history,
+      { role: 'user', text: 'And after November?' },
+    ]);
+  });
+
+  it('closes the model stream when the caller stops reading', async () => {
+    const model = new AbandonableModel();
+    const assistant = new AskAssistant(
+      model,
+      wire([]).reads,
+      new FakeProposalStore<ProposedChange>(),
+      new SequentialIdSource('proposal'),
+      clock,
+    );
+
+    const events = assistant.converse(me, { question: 'Tell me everything.' });
+    const first = await events.next();
+    await events.return(undefined);
+
+    expect(first.value).toEqual({ kind: 'text', delta: 'One ' });
+    expect(model.wasAbandoned).toBe(true);
   });
 });
