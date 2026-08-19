@@ -145,6 +145,23 @@ describe('the composer', () => {
 
 describe('the shape of the conversation', () => {
   /**
+   * A chat has no "before you have spoken" mode. From the first paint it is a
+   * transcript and a composer, and Claude's opening question is simply the
+   * first message — not a hero with an explanation wrapped around it.
+   */
+  it('is a transcript and a composer from the first paint', async () => {
+    stubApi({ '/api/setup/conversation': conversation(turn()) });
+    renderPage();
+
+    expect(
+      await screen.findByRole('log', { name: 'Setup conversation' }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Your answer')).toBeInTheDocument();
+    expect(screen.queryByText(/Setting up is a conversation/)).toBeNull();
+    expect(screen.queryByText(/seven questions/)).toBeNull();
+  });
+
+  /**
    * A step indicator turns a conversation back into a wizard: it says there
    * are seven things to get through rather than one question to answer. What
    * comes next is Claude's next question, which the transcript already shows.
