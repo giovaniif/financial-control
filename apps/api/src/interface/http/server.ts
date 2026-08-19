@@ -11,6 +11,8 @@ import type { ManageCards } from '../../application/cards/uc-5-manage-cards.js';
 import type { ManageBuckets } from '../../application/goals/uc-6-manage-buckets.js';
 import type { BuildDashboard } from '../../application/projection/uc-4-build-dashboard.js';
 import type { ReadSetupState } from '../../application/projection/uc-1-5-read-setup-state.js';
+import type { CompleteSetup } from '../../application/setup/compose-setup.js';
+import type { ConverseSetup } from '../../application/setup/uc-1-5-converse-setup.js';
 import type { ProjectWealth } from '../../application/projection/uc-7-project-wealth.js';
 import type { ListCycles } from '../../application/budgeting/uc-3-3-list-cycles.js';
 import type { Clock } from '../../domain/ports/clock.js';
@@ -41,6 +43,8 @@ interface Dependencies {
   projectWealth: ProjectWealth;
   backupRestore: BackupRestore;
   readSetupState: ReadSetupState;
+  converseSetup: ConverseSetup;
+  completeSetup: CompleteSetup;
 }
 
 export function buildServer({
@@ -58,12 +62,14 @@ export function buildServer({
   projectWealth,
   backupRestore,
   readSetupState,
+  converseSetup,
+  completeSetup,
 }: Dependencies): FastifyInstance {
   const app = Fastify({ logger: false });
 
   registerHealthRoute(app, { clock, startedAt: clock.now() });
   registerSettingsRoutes(app, { configureAnchor });
-  registerSetupRoutes(app, { readSetupState });
+  registerSetupRoutes(app, { readSetupState, converseSetup, completeSetup });
   registerAccountRoutes(app, { manageAccounts });
   registerCycleRoutes(app, { readCycle, listCycles });
   registerTemplateRoutes(app, { manageTemplates });

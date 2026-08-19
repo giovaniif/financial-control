@@ -11,15 +11,21 @@ import { ManageCards } from '../../../application/cards/uc-5-manage-cards.js';
 import { ManageBuckets } from '../../../application/goals/uc-6-manage-buckets.js';
 import { BuildDashboard } from '../../../application/projection/uc-4-build-dashboard.js';
 import { ReadSetupState } from '../../../application/projection/uc-1-5-read-setup-state.js';
+import { CompleteSetup } from '../../../application/setup/compose-setup.js';
+import type { SetupConversations } from '../../../application/setup/uc-1-5-converse-setup.js';
+import { ConverseSetup } from '../../../application/setup/uc-1-5-converse-setup.js';
+import { FakeLanguageModel } from '../../../application/testing/fake-language-model.js';
 import { ProjectWealth } from '../../../application/projection/uc-7-project-wealth.js';
 import { ListCycles } from '../../../application/budgeting/uc-3-3-list-cycles.js';
 import {
+  FakeSetupConversationStore,
   InMemoryAccountRepository,
   InMemoryBucketRepository,
   InMemoryCardRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
+  SequentialIdSource,
 } from '../../../application/testing/fakes.js';
 import { FixedClock } from '../../../application/testing/fixed-clock.js';
 import { noHolidays } from '../../../domain/ports/holiday-calendar.js';
@@ -53,6 +59,8 @@ export function buildTestServer(
     noHolidays,
     clock,
   );
+
+  const conversations: SetupConversations = new FakeSetupConversationStore();
 
   return buildServer({
     clock,
@@ -99,6 +107,17 @@ export function buildTestServer(
       cards,
       buckets,
     ),
+    // An empty script: a route test that means to hold a conversation passes
+    // its own model, and one that does not gets a double that says so loudly
+    // rather than a turn nobody wrote.
+    converseSetup: new ConverseSetup(
+      new FakeLanguageModel([]),
+      conversations,
+      new SequentialIdSource('conv'),
+      noHolidays,
+      clock,
+    ),
+    completeSetup: new CompleteSetup(conversations, backup, clock),
     ...overrides,
   });
 }

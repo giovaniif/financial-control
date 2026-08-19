@@ -8,6 +8,13 @@ import { DomainError } from '../shared/domain-error.js';
  * scripted fake, so no test needs a key or a network.
  */
 export interface LanguageModel {
+  /**
+   * Whether there is a model behind this at all. The same object answers this
+   * and throws {@link LanguageModelUnavailable}, so a caller that reports
+   * availability up front and a caller that handles the failure can never
+   * disagree about it.
+   */
+  readonly isAvailable: boolean;
   complete(request: ModelRequest): Promise<ModelResponse>;
   stream(request: ModelRequest): AsyncIterable<ModelStreamEvent>;
 }

@@ -7,6 +7,7 @@ import type {
   ModelStreamEvent,
   ToolCall,
 } from '../../domain/ports/language-model.js';
+import { LanguageModelUnavailable } from '../../domain/ports/language-model.js';
 
 /** One scripted turn. Omit what the turn does not produce. */
 export interface ScriptedTurn {
@@ -14,7 +15,16 @@ export interface ScriptedTurn {
   toolCalls?: readonly ToolCall[];
   /** Defaults to what the turn's content implies; set it to script a refusal. */
   stopReason?: ModelStopReason;
+  /**
+   * The turn fails instead of answering — a transport error, an overloaded
+   * upstream. A refusal is scripted with `stopReason`, not with this: they are
+   * different outcomes and a caller has to be able to tell them apart.
+   */
+  fails?: Error;
 }
+
+const NO_KEY =
+  'No ANTHROPIC_API_KEY is configured, so the assistant is switched off.';
 
 export class ScriptExhausted extends DomainError {}
 
@@ -31,7 +41,15 @@ export class FakeLanguageModel implements LanguageModel {
   readonly requests: ModelRequest[] = [];
   private next = 0;
 
-  constructor(private readonly script: readonly ScriptedTurn[]) {}
+  constructor(
+    private readonly script: readonly ScriptedTurn[],
+    readonly isAvailable = true,
+  ) {}
+
+  /** A model with no key behind it: switched off, and every call rejects. */
+  static unavailable(): FakeLanguageModel {
+    return new FakeLanguageModel([], false);
+  }
 
   /**
    * `async` so running out of script rejects rather than throwing out of the
@@ -64,6 +82,8 @@ export class FakeLanguageModel implements LanguageModel {
   private take(request: ModelRequest): ModelResponse {
     this.requests.push(request);
 
+    if (!this.isAvailable) throw new LanguageModelUnavailable(NO_KEY);
+
     const turn = this.script[this.next];
     if (turn === undefined) {
       throw new ScriptExhausted(
@@ -71,6 +91,8 @@ export class FakeLanguageModel implements LanguageModel {
       );
     }
     this.next += 1;
+
+    if (turn.fails !== undefined) throw turn.fails;
 
     const toolCalls = turn.toolCalls ?? [];
     return {

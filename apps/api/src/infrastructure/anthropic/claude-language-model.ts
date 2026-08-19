@@ -37,6 +37,8 @@ export interface MessageStreamLike extends AsyncIterable<Anthropic.MessageStream
  * be tested without a key or a network.
  */
 export class ClaudeLanguageModel implements LanguageModel {
+  readonly isAvailable = true;
+
   /**
    * The model is a constructor argument, not a constant: extraction and the
    * assistant are different jobs and the composition root names which is

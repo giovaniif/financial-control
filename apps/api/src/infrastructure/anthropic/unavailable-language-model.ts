@@ -17,6 +17,8 @@ const REASON =
  * reading your own numbers.
  */
 export class UnavailableLanguageModel implements LanguageModel {
+  readonly isAvailable = false;
+
   complete(): Promise<ModelResponse> {
     return Promise.reject(new LanguageModelUnavailable(REASON));
   }
