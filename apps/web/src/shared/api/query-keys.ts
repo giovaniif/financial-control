@@ -28,6 +28,8 @@ export const queryKeys = {
     ['cycles', month, estimates] as const,
   allocationPreview: (month: string) =>
     ['cycles', month, 'allocation-preview'] as const,
+  reopenPreview: (month: string) =>
+    ['cycles', month, 'reopen-preview'] as const,
 
   accounts: () => ['accounts'] as const,
   templates: () => ['templates'] as const,
