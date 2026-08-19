@@ -273,6 +273,7 @@ Declared in the domain, implemented in infrastructure. The domain never imports 
 | `CycleRepository`, `RecurringTemplateRepository`, `CardRepository`, `BucketRepository`, `AccountRepository` | Prisma |
 | `Clock` | Real clock in production, fixed clock in tests. Nothing in the domain calls `new Date()` |
 | `HolidayCalendar` | Brazilian public holidays, for the payday resolution rule |
+| `SpreadsheetReader` | An xlsx reader, for UC-1.7. Returns cells **and their formulas** — `=AJ26*0.2` is what says an allocation rule is 20% of Expected Surplus, and the computed number alone has lost that |
 
 ---
 
@@ -298,7 +299,7 @@ src/
 
   infrastructure/
     prisma/           schema.prisma, migrations/, repositories/, mappers/
-    clock/  holidays/
+    clock/  holidays/  spreadsheet/
 
   interface/
     http/             controllers/, routes/, dto/
@@ -316,9 +317,11 @@ are enforced by `eslint-plugin-boundaries` — see `.claude/architecture.md`.
 src/
   app/         providers, router, global styles, the persistent shell
   pages/       dashboard/ ledger/ cards/ buckets/ wealth/ templates/ settings/
+               onboarding/
   widgets/     chain-strip/ upcoming-list/ alert-list/ bucket-event-log/ wealth-bars/
   features/    settle-entry/ register-purchase/ override-contribution/
                adjust-allocation-rule/ toggle-estimates/ navigate-cycle/
+               create-bucket/ import-spreadsheet/
   entities/    cycle/ ledger-entry/ card/ invoice/ bucket/ template/ account/
   shared/      ui/ api/ lib/ config/
 ```
