@@ -27,7 +27,11 @@ import type {
   ConverseSetup,
   SetupTurn,
 } from '../../../application/setup/uc-1-5-converse-setup.js';
-import { SetupConversationNotFound } from '../../../application/setup/uc-1-5-converse-setup.js';
+import {
+  SetupConversationNotFound,
+  SetupConversationTooLong,
+  SetupMessageTooLong,
+} from '../../../application/setup/uc-1-5-converse-setup.js';
 import { Allocation } from '../../../domain/goals/bucket.js';
 import type { AllocationRule } from '../../../domain/goals/bucket.js';
 import {
@@ -377,14 +381,21 @@ function handle(error: unknown, reply: FastifyReply) {
       })),
     } satisfies SetupDueDayRefusalResponse);
   }
+  // The two caps answer with the codes the assistant's already do — FIN-113.
+  // An over-long message is a request that was never acceptable; a
+  // conversation past its turns is a state the next request conflicts with.
   if (
     error instanceof NothingToCorrect ||
     error instanceof InvalidSetupRecord ||
-    error instanceof AnchorNotChosen
+    error instanceof AnchorNotChosen ||
+    error instanceof SetupMessageTooLong
   ) {
     return badRequest(reply, error.message);
   }
-  if (error instanceof SetupNotComplete) {
+  if (
+    error instanceof SetupNotComplete ||
+    error instanceof SetupConversationTooLong
+  ) {
     return reply.status(409).send({ error: error.message });
   }
   // 503 is the same fact `GET /setup` reports as `assistantAvailable: false`:

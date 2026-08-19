@@ -1,5 +1,6 @@
 import type { AssistantLimits } from '../../application/assistant/assistant-conversation.js';
 import { MAX_TOOL_ROUND_TRIPS } from '../../application/assistant/uc-8-ask-assistant.js';
+import type { SetupLimits } from '../../application/setup/uc-1-5-converse-setup.js';
 
 /**
  * Which model answers, chosen per task rather than per tier.
@@ -54,6 +55,33 @@ export const ASSISTANT_LIMITS: AssistantLimits = {
   // grows with its length rather than with its last message.
   maxTurnsPerConversation: 20,
   maxToolRoundTrips: MAX_TOOL_ROUND_TRIPS,
+};
+
+/**
+ * What one turn of the first-run conversation may cost — the same surface as
+ * {@link ASSISTANT_LIMITS}, sized to a different shape of conversation.
+ *
+ * Both figures are looser than the assistant's, because the two flows are not
+ * the same thing. A question to the assistant is a sentence about one figure;
+ * an answer here is somebody listing what they pay for, and the conversation
+ * walks seven sections rather than asking once.
+ *
+ * The turn cap. Anchor, accounts, salary, fixed bills, variable bills, cards
+ * and buckets — and the five that hold lists are answered an item at a time,
+ * so a dozen bills is a dozen turns. Sixty is several times what a first run
+ * actually takes and still bounds what one conversation can spend. Nothing is
+ * lost when it is reached, either: what the conversation recorded is still
+ * held, to correct or to apply.
+ *
+ * As above, every one of these is a **rejection**, never a truncation.
+ * Extracting records from half of an answer would record half a sentence as
+ * fact, with nothing to show the user which half was read.
+ */
+export const SETUP_LIMITS: SetupLimits = {
+  // An answer here legitimately lists several bills at once. Past this, the
+  // model is being pasted at rather than answered.
+  maxMessageCharacters: 4_000,
+  maxTurnsPerConversation: 60,
 };
 
 /**
