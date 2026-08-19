@@ -1,11 +1,37 @@
-import type { BucketResponse, WealthProjectionResponse } from '@fin/contracts';
-import { screen } from '@testing-library/react';
+import type {
+  AllocationPreviewResponse,
+  BucketEventResponse,
+  BucketProjectionResponse,
+  BucketResponse,
+  CycleWindowResponse,
+  WealthProjectionResponse,
+} from '@fin/contracts';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithProviders, stubApi } from '@/shared/testing';
 
 import { SavingsPage } from './savings-page.js';
+
+const window_: CycleWindowResponse = {
+  estimates: 'included',
+  cycles: [
+    {
+      month: '2026-08',
+      label: 'August 2026',
+      start: '2026-07-03',
+      end: '2026-08-04',
+      status: 'OPEN',
+      position: 'current',
+      openingBalance: 0,
+      closingBalance: 0,
+      netSurplus: 0,
+      isMaterialised: true,
+    },
+  ],
+};
 
 const bucket = (overrides: Partial<BucketResponse> = {}): BucketResponse => ({
   id: 'reserve',
@@ -26,6 +52,88 @@ const bucket = (overrides: Partial<BucketResponse> = {}): BucketResponse => ({
   ...overrides,
 });
 
+const ongoing = (overrides: Partial<BucketResponse> = {}): BucketResponse =>
+  bucket({
+    id: 'investments',
+    name: 'Investments',
+    mode: 'ONGOING',
+    target: null,
+    targetDate: null,
+    percentComplete: null,
+    rule: { kind: 'FIXED', amount: 177_800 },
+    ...overrides,
+  });
+
+const event = (
+  overrides: Partial<BucketEventResponse> = {},
+): BucketEventResponse => ({
+  id: 'e1',
+  kind: 'CONTRIBUTION',
+  when: '2026-08',
+  amount: 177_800,
+  reason: null,
+  ruleWouldHaveBeen: null,
+  ...overrides,
+});
+
+const preview = (
+  overrides: Partial<AllocationPreviewResponse> = {},
+): AllocationPreviewResponse => ({
+  month: '2026-08',
+  expectedSurplus: 889_000,
+  fundings: [],
+  shortfall: 0,
+  isOvercommitted: false,
+  ...overrides,
+});
+
+const projected = (
+  overrides: Partial<BucketProjectionResponse> = {},
+): BucketProjectionResponse => ({
+  bucketId: 'investments',
+  name: 'Investments',
+  isGoal: false,
+  contributionPerCycle: 177_800,
+  expectedYieldPercent: 9,
+  reachesTargetIn: null,
+  target: null,
+  targetDate: null,
+  isOnTrack: null,
+  contributionToCatchUp: null,
+  inFiveYears: 14_200_000,
+  inTenYears: 33_100_000,
+  ...overrides,
+});
+
+const wealth = (
+  overrides: Partial<WealthProjectionResponse> = {},
+): WealthProjectionResponse => ({
+  horizons: [5, 10, 20, 30].map((years) => ({
+    years,
+    total: years * 1_000_000,
+    byBucket: [
+      {
+        bucketId: 'investments',
+        name: 'Investments',
+        amount: years * 1_000_000,
+      },
+    ],
+  })),
+  buckets: [projected()],
+  retirement: null,
+  ...overrides,
+});
+
+type Routes = Parameters<typeof stubApi>[0];
+
+const stub = (routes: Routes) => {
+  stubApi({
+    '/api/cycles': window_,
+    '/api/cycles/2026-08/allocation-preview': preview(),
+    ...routes,
+  });
+};
+
 const renderPage = () =>
   renderWithProviders(
     <RouterProvider
@@ -33,104 +141,135 @@ const renderPage = () =>
     />,
   );
 
+const regionNames = () =>
+  screen
+    .getAllByRole('region')
+    .map((section) => section.getAttribute('aria-label'));
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe('SavingsPage', () => {
   it('explains the two kinds when there are none', async () => {
-    stubApi({ '/api/buckets': [] });
+    stub({ '/api/buckets': [] });
     renderPage();
 
     expect(await screen.findByText('No buckets yet')).toBeInTheDocument();
   });
 
-  it('shows progress toward a goal', async () => {
-    stubApi({ '/api/buckets': [bucket()] });
+  /**
+   * UC-6 then UC-7: the buckets, what this cycle actually funds, the selected
+   * bucket in full, and only then where the rate lands.
+   */
+  it('orders its sections from the buckets to the decades', async () => {
+    stub({ '/api/buckets': [bucket()], '/api/wealth': wealth() });
     renderPage();
+    await screen.findByRole('region', { name: 'Net worth' });
 
-    expect(await screen.findByText('Reserve')).toBeInTheDocument();
-    expect(screen.getByText(/50% of/)).toBeInTheDocument();
+    expect(regionNames()).toEqual([
+      'Buckets',
+      'Allocation this cycle',
+      'Planned against real',
+      'History',
+      'Net worth',
+      'Per bucket',
+    ]);
   });
 
-  // Reporting progress toward a target that does not exist is the bug the
-  // mode distinction prevents.
-  it('shows no progress bar for an ongoing bucket', async () => {
-    stubApi({
+  // The detail below the grid is always about one bucket, and which one is
+  // the user's choice rather than whichever came back first.
+  it('turns the detail below the grid to whichever bucket is picked', async () => {
+    stub({ '/api/buckets': [bucket(), ongoing()] });
+    renderPage();
+
+    const history = await screen.findByRole('region', { name: 'History' });
+
+    expect(history).toHaveTextContent('Reserve — history');
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Select Investments' }),
+    );
+
+    expect(screen.getByRole('region', { name: 'History' })).toHaveTextContent(
+      'Investments — history',
+    );
+    expect(
+      screen.getByRole('button', { name: 'Select Investments' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+/**
+ * UC-6.1 — reporting progress toward a target that does not exist is the
+ * specific failure the mode distinction prevents, so the two paths are covered
+ * apart from each other.
+ */
+describe('SavingsPage tells a goal from an ongoing commitment', () => {
+  it('shows a goal as progress toward its target', async () => {
+    stub({ '/api/buckets': [bucket()] });
+    renderPage();
+
+    const buckets = await screen.findByRole('region', { name: 'Buckets' });
+
+    expect(within(buckets).getByText('goal')).toBeInTheDocument();
+    expect(buckets).toHaveTextContent('50% of R$ 60.000,00 by 31/12/2027');
+    expect(buckets).toHaveTextContent('20% of Expected Surplus per cycle');
+  });
+
+  it('shows an ongoing bucket as a rate, with nothing to complete', async () => {
+    stub({ '/api/buckets': [ongoing()] });
+    renderPage();
+
+    const buckets = await screen.findByRole('region', { name: 'Buckets' });
+
+    expect(within(buckets).getByText('ongoing')).toBeInTheDocument();
+    expect(buckets).toHaveTextContent(
+      'R$ 1.778,00 per cycle — no target to hit',
+    );
+    expect(within(buckets).queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  // The half that is missing is never invented: a goal without a target is
+  // read as having none, not as being 0% of the way toward nothing.
+  it('never reports progress for a goal whose target is missing', async () => {
+    stub({
       '/api/buckets': [
-        bucket({
-          id: 'investments',
-          name: 'Investments',
-          mode: 'ONGOING',
-          target: null,
-          targetDate: null,
-          percentComplete: null,
-        }),
+        bucket({ target: null, targetDate: null, percentComplete: null }),
       ],
     });
     renderPage();
 
-    expect(
-      await screen.findByText(/no target to hit, the question is whether/),
-    ).toBeInTheDocument();
+    const buckets = await screen.findByRole('region', { name: 'Buckets' });
+
+    expect(within(buckets).queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(buckets).toHaveTextContent('no target to hit');
   });
 
   it('keeps growth from saving apart from growth from returns', async () => {
-    stubApi({
+    stub({
       '/api/buckets': [bucket({ contributed: 2_900_000, yielded: 100_000 })],
     });
     renderPage();
 
-    const summary = await screen.findByText(/saved/);
+    const buckets = await screen.findByRole('region', { name: 'Buckets' });
 
-    expect(summary).toHaveTextContent('R$ 29.000,00');
-    expect(summary).toHaveTextContent('R$ 1.000,00');
-  });
-
-  // The spreadsheet overwrote its running total with no trace of why.
-  it('shows the event history with the reason for a correction', async () => {
-    stubApi({
-      '/api/buckets': [
-        bucket({
-          events: [
-            {
-              id: 'e1',
-              kind: 'CORRECTION',
-              when: '2026-09-01',
-              amount: 845_020,
-              reason: 'statement differed after fees',
-              ruleWouldHaveBeen: null,
-            },
-          ],
-        }),
-      ],
-    });
-    renderPage();
-
-    expect(await screen.findByText('correction')).toBeInTheDocument();
-    expect(
-      screen.getByText('statement differed after fees'),
-    ).toBeInTheDocument();
-  });
-
-  it('says nothing has moved when the log is empty', async () => {
-    stubApi({ '/api/buckets': [bucket()] });
-    renderPage();
-
-    expect(
-      await screen.findByText('Nothing has moved yet'),
-    ).toBeInTheDocument();
+    expect(buckets).toHaveTextContent('saved R$ 29.000,00');
+    expect(buckets).toHaveTextContent('earned R$ 1.000,00');
   });
 
   it('dims an archived bucket but keeps it readable', async () => {
-    stubApi({ '/api/buckets': [bucket({ status: 'ARCHIVED' })] });
+    stub({ '/api/buckets': [bucket({ status: 'ARCHIVED' })] });
     renderPage();
 
     expect(await screen.findByText('archived')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Archive Reserve' }),
+    ).not.toBeInTheDocument();
   });
 
   it('offers to adjust the rule, record an event and archive', async () => {
-    stubApi({ '/api/buckets': [bucket({ name: 'Apartment' })] });
+    stub({ '/api/buckets': [bucket({ name: 'Apartment' })] });
     renderPage();
 
     expect(
@@ -145,119 +284,324 @@ describe('SavingsPage', () => {
       screen.getByRole('button', { name: 'Archive Apartment' }),
     ).toBeInTheDocument();
   });
-
-  // An archived bucket is readable, not editable back into the projections.
-  it('does not offer to archive one already archived', async () => {
-    stubApi({
-      '/api/buckets': [bucket({ name: 'Apartment', status: 'ARCHIVED' })],
-    });
-    renderPage();
-
-    await screen.findByText('Apartment');
-
-    expect(
-      screen.queryByRole('button', { name: 'Archive Apartment' }),
-    ).not.toBeInTheDocument();
-  });
 });
-
-const projection = (
-  overrides: Partial<WealthProjectionResponse> = {},
-): WealthProjectionResponse => ({
-  horizons: [5, 10, 20, 30].map((years) => ({
-    years,
-    total: years * 1_000_000,
-    byBucket: [
-      { bucketId: 'retirement', name: 'Retirement', amount: years * 1_000_000 },
-    ],
-  })),
-  buckets: [],
-  retirement: null,
-  ...overrides,
-});
-
-const ongoingProjection = {
-  bucketId: 'retirement',
-  name: 'Retirement',
-  isGoal: false,
-  contributionPerCycle: 100_000,
-  expectedYieldPercent: 8,
-  reachesTargetIn: null,
-  target: null,
-  targetDate: null,
-  isOnTrack: null,
-  contributionToCatchUp: null,
-  inFiveYears: 5_000_000,
-  inTenYears: 12_000_000,
-};
 
 /**
- * UC-7 merged into this screen when the Wealth Projection screen went: the
- * projection sits beneath the buckets that feed it rather than on a page of
- * its own.
+ * UC-6.7 — the spreadsheet overwrote its own running total whenever reality
+ * drifted, and could not tell a deposit from accrued interest.
  */
-describe('SavingsPage projects what the buckets grow into', () => {
-  it('shows the four horizons beneath the buckets', async () => {
-    stubApi({
-      '/api/buckets': [bucket()],
-      '/api/wealth': projection({ buckets: [ongoingProjection] }),
-    });
+describe('SavingsPage reads the event log', () => {
+  const everyKind = [
+    event({ id: 'c', kind: 'CONTRIBUTION', when: '2026-08', amount: 177_800 }),
+    event({
+      id: 'o',
+      kind: 'OVERRIDE',
+      when: '2026-09',
+      amount: 100_000,
+      ruleWouldHaveBeen: 177_800,
+    }),
+    event({ id: 'y', kind: 'YIELD', when: '2026-09-30', amount: 12_500 }),
+    event({
+      id: 'k',
+      kind: 'CORRECTION',
+      when: '2026-10-01',
+      amount: 845_020,
+      reason: 'statement differed after fees',
+    }),
+    event({
+      id: 'w',
+      kind: 'WITHDRAWAL',
+      when: '2026-10-05',
+      amount: 50_000,
+      reason: 'paid the deposit',
+    }),
+  ];
+
+  it('tells the five kinds apart', async () => {
+    stub({ '/api/buckets': [bucket({ events: everyKind })] });
     renderPage();
 
-    expect(await screen.findByText('5 years')).toBeInTheDocument();
-    expect(screen.getByText('30 years')).toBeInTheDocument();
+    const history = await screen.findByRole('region', { name: 'History' });
+
+    for (const kind of [
+      'contribution',
+      'override',
+      'yield',
+      'correction',
+      'withdrawal',
+    ]) {
+      expect(within(history).getByText(kind)).toBeInTheDocument();
+    }
   });
 
-  // UC-7.3 — an ongoing bucket has no finish line.
-  it('reads an ongoing bucket in its own terms', async () => {
-    stubApi({
-      '/api/buckets': [bucket()],
-      '/api/wealth': projection({ buckets: [ongoingProjection] }),
-    });
+  it('never lets a yield read as a deposit', async () => {
+    stub({ '/api/buckets': [bucket({ events: everyKind })] });
+    renderPage();
+
+    const history = await screen.findByRole('region', { name: 'History' });
+
+    expect(history).toHaveTextContent('growth from returns, not a deposit');
+    expect(history).toHaveTextContent('the rule applied for August 2026');
+  });
+
+  it('says what the rule would have contributed on an override', async () => {
+    stub({ '/api/buckets': [bucket({ events: everyKind })] });
+    renderPage();
+
+    const history = await screen.findByRole('region', { name: 'History' });
+
+    expect(history).toHaveTextContent('the rule would have said R$ 1.778,00');
+  });
+
+  it('carries the reason a correction and a withdrawal were made', async () => {
+    stub({ '/api/buckets': [bucket({ events: everyKind })] });
+    renderPage();
+
+    const history = await screen.findByRole('region', { name: 'History' });
+
+    expect(history).toHaveTextContent('statement differed after fees');
+    expect(history).toHaveTextContent('paid the deposit');
+  });
+
+  it('says nothing has moved when the log is empty', async () => {
+    stub({ '/api/buckets': [bucket()] });
     renderPage();
 
     expect(
-      await screen.findByText(/No target to hit — the question is only/),
+      await screen.findByText('Nothing has moved yet'),
     ).toBeInTheDocument();
-    expect(screen.getByText('ongoing')).toBeInTheDocument();
   });
 
-  it('flags a goal that is behind, with the contribution that fixes it', async () => {
-    stubApi({
+  // UC-6.6 — the gap between what the rules said and what is there.
+  it('compares what the rules said against what is actually there', async () => {
+    stub({
+      '/api/buckets': [
+        bucket({
+          balance: 300_000,
+          events: [
+            event({ id: 'c', amount: 177_800 }),
+            event({
+              id: 'o',
+              kind: 'OVERRIDE',
+              amount: 50_000,
+              ruleWouldHaveBeen: 177_800,
+            }),
+            event({
+              id: 'y',
+              kind: 'YIELD',
+              when: '2026-09-30',
+              amount: 5_000,
+            }),
+          ],
+        }),
+      ],
+    });
+    renderPage();
+
+    const planned = await screen.findByRole('region', {
+      name: 'Planned against real',
+    });
+
+    expect(planned).toHaveTextContent('R$ 3.556,00');
+    expect(planned).toHaveTextContent('R$ 3.000,00');
+    expect(planned).toHaveTextContent('R$ 556,00 behind what the rules said');
+  });
+});
+
+/** UC-6.3 and UC-6.4 — who is funded, in what order, and out of what. */
+describe('SavingsPage warns when the rules run past the money', () => {
+  it('shows what the priority order funds this cycle', async () => {
+    stub({
       '/api/buckets': [bucket()],
-      '/api/wealth': projection({
-        buckets: [
+      '/api/cycles/2026-08/allocation-preview': preview({
+        fundings: [
           {
-            bucketId: 'apartment',
-            name: 'Apartment',
-            isGoal: true,
-            contributionPerCycle: 177_800,
-            expectedYieldPercent: 8,
-            reachesTargetIn: null,
-            target: 15_000_000,
-            targetDate: '2031-03-31',
-            isOnTrack: false,
-            contributionToCatchUp: 250_000,
-            inFiveYears: null,
-            inTenYears: null,
+            bucketId: 'reserve',
+            name: 'Reserve',
+            requested: 177_800,
+            funded: 177_800,
+            isFullyFunded: true,
           },
         ],
       }),
     });
     renderPage();
 
-    expect(await screen.findByText('behind')).toBeInTheDocument();
-    expect(
-      screen.getByText(/per cycle would bring it back/),
-    ).toBeInTheDocument();
+    const allocation = await screen.findByRole('region', {
+      name: 'Allocation this cycle',
+    });
+
+    expect(allocation).toHaveTextContent(
+      'August 2026 has R$ 8.890,00 of Expected Surplus',
+    );
+    expect(allocation).toHaveTextContent('#1 of 1');
+    expect(allocation).toHaveTextContent('Reserve asks R$ 1.778,00');
   });
 
-  // Retirement is measured in monthly income, not in a lump sum.
-  it('states retirement as a monthly income', async () => {
-    stubApi({
+  it('names the cycle, the shortfall and who the order actually funds', async () => {
+    stub({
       '/api/buckets': [bucket()],
-      '/api/wealth': projection({
-        buckets: [ongoingProjection],
+      '/api/cycles/2026-08/allocation-preview': preview({
+        isOvercommitted: true,
+        shortfall: 212_000,
+        fundings: [
+          {
+            bucketId: 'reserve',
+            name: 'Reserve',
+            requested: 500_000,
+            funded: 288_000,
+            isFullyFunded: false,
+          },
+          {
+            bucketId: 'investments',
+            name: 'Investments',
+            requested: 212_000,
+            funded: 0,
+            isFullyFunded: false,
+          },
+        ],
+      }),
+    });
+    renderPage();
+
+    const alert = await screen.findByRole('alert');
+
+    expect(alert).toHaveTextContent('R$ 2.120,00 short in August 2026');
+    expect(alert).toHaveTextContent('Reserve gets R$ 2.880,00');
+    expect(alert).toHaveTextContent('Investments gets nothing');
+  });
+
+  // A negative Expected Surplus is said out loud, never turned into a
+  // negative contribution.
+  it('says plainly when there is nothing to allocate from', async () => {
+    stub({
+      '/api/buckets': [bucket()],
+      '/api/cycles/2026-08/allocation-preview': preview({
+        expectedSurplus: -120_000,
+        isOvercommitted: true,
+        shortfall: 120_000,
+      }),
+    });
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'August 2026 has no Expected Surplus to allocate from. Nothing is contributed',
+    );
+  });
+});
+
+/** UC-7 — where the rate lands, beneath the buckets that feed it. */
+describe('SavingsPage projects what the buckets grow into', () => {
+  it('stacks net worth at five, ten, twenty and thirty years', async () => {
+    stub({ '/api/buckets': [bucket()], '/api/wealth': wealth() });
+    renderPage();
+
+    const bars = await screen.findByRole('region', { name: 'Net worth' });
+
+    for (const years of ['5 years', '10 years', '20 years', '30 years']) {
+      expect(within(bars).getByText(years)).toBeInTheDocument();
+    }
+    expect(bars).toHaveTextContent('assumptions, not facts');
+  });
+
+  // UC-7.3 — an ongoing bucket has no finish line, only a rate.
+  it('reads an ongoing bucket in its own terms', async () => {
+    stub({ '/api/buckets': [bucket()], '/api/wealth': wealth() });
+    renderPage();
+
+    const perBucket = await screen.findByRole('region', { name: 'Per bucket' });
+
+    expect(perBucket).toHaveTextContent(
+      'At R$ 1.778,00 per cycle and 9% a year, Investments holds R$ 142,0k in 5 years and R$ 331,0k in 10. No target to hit — the question is only whether the rate is right.',
+    );
+  });
+
+  it('reads a goal as the month it arrives, against the month it was wanted', async () => {
+    stub({
+      '/api/buckets': [bucket()],
+      '/api/wealth': wealth({
+        buckets: [
+          projected({
+            bucketId: 'apartment',
+            name: 'Apartment',
+            isGoal: true,
+            expectedYieldPercent: 8,
+            target: 15_000_000,
+            targetDate: '2031-03-31',
+            reachesTargetIn: 55,
+            isOnTrack: true,
+            inFiveYears: null,
+            inTenYears: null,
+          }),
+        ],
+      }),
+    });
+    renderPage();
+
+    const perBucket = await screen.findByRole('region', { name: 'Per bucket' });
+
+    expect(perBucket).toHaveTextContent(
+      'At R$ 1.778,00 per cycle and 8% a year, Apartment reaches R$ 150.000,00 in March 2031. Target: March 2031.',
+    );
+    expect(within(perBucket).getByText('on track')).toBeInTheDocument();
+  });
+
+  it('flags a goal that is behind, with the contribution that fixes it', async () => {
+    stub({
+      '/api/buckets': [bucket()],
+      '/api/wealth': wealth({
+        buckets: [
+          projected({
+            bucketId: 'apartment',
+            name: 'Apartment',
+            isGoal: true,
+            target: 15_000_000,
+            targetDate: '2031-03-31',
+            reachesTargetIn: null,
+            isOnTrack: false,
+            contributionToCatchUp: 250_000,
+            inFiveYears: null,
+            inTenYears: null,
+          }),
+        ],
+      }),
+    });
+    renderPage();
+
+    expect(await screen.findByText('behind')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'R$ 2.500,00 per cycle would bring it back',
+    );
+  });
+
+  // UC-7.1 and UC-7.4 — an assumption, adjustable where it moves the number.
+  it('re-projects when a yield assumption is changed inline', async () => {
+    stub({ '/api/buckets': [bucket()], '/api/wealth': wealth() });
+    renderPage();
+
+    const field = await screen.findByLabelText(
+      'Expected annual yield for Investments',
+    );
+
+    expect(
+      screen.getByText(/An assumption. Adjusting it here moves the projection/),
+    ).toBeInTheDocument();
+
+    await userEvent.clear(field);
+    await userEvent.type(field, '12');
+
+    await waitFor(() => {
+      expect(requestedUrls()).toContain(
+        '/api/wealth?month=2026-08&yields=investments%3A12',
+      );
+    });
+  });
+
+  // Retirement is the one figure measured in monthly income, not in a lump sum.
+  it('states retirement as the monthly income it supports', async () => {
+    stub({
+      '/api/buckets': [bucket()],
+      '/api/wealth': wealth({
         retirement: {
           bucketId: 'retirement',
           name: 'Retirement',
@@ -268,9 +612,20 @@ describe('SavingsPage projects what the buckets grow into', () => {
     });
     renderPage();
 
-    expect(await screen.findByText(/a month/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/An assumption, like every yield here/),
-    ).toBeInTheDocument();
+    const retirement = await screen.findByRole('region', {
+      name: 'Retirement',
+    });
+
+    expect(retirement).toHaveTextContent('R$ 1.000,00 a month');
+    expect(retirement).toHaveTextContent(
+      'An assumption, like every yield here',
+    );
   });
 });
+
+function requestedUrls(): string[] {
+  const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+  const calls = fetchMock.mock.calls as unknown as [string][];
+
+  return calls.map((call) => call[0]);
+}

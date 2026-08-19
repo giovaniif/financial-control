@@ -8,7 +8,11 @@ import { useUpdateBucket } from '../api/use-manage-buckets.js';
  * UC-6.8 — an achieved-and-spent goal is archived rather than deleted. The
  * history is the point, and a bucket that reached its target is evidence.
  */
-export function ArchiveBucket({ bucket }: { bucket: BucketResponse }) {
+export function ArchiveBucket({
+  bucket,
+}: {
+  bucket: Pick<BucketResponse, 'id' | 'name' | 'status'>;
+}) {
   const update = useUpdateBucket(bucket.id);
 
   if (bucket.status === 'ARCHIVED') {
