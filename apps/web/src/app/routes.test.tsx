@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -24,8 +25,39 @@ function renderAt(path: string) {
   );
 }
 
+/** Enough of a dashboard for Main to render — its figures are Main's own test. */
+const dashboard = {
+  today: '2026-08-19',
+  currentCycleMonth: '2026-08',
+  estimates: 'included',
+  headline: {
+    cycleMonth: '2026-08',
+    cycleLabel: 'August 2026',
+    range: '5 Aug – 4 Sep',
+    incoming: 0,
+    outgoing: 0,
+    free: 0,
+    lowestPoint: 0,
+    lowestPointDate: '2026-08-19',
+    closing: 0,
+    closingWithoutEstimates: 0,
+  },
+  kpis: [],
+  progress: {
+    dayOfCycle: 1,
+    cycleLength: 30,
+    timePercent: 0,
+    spent: 0,
+    plannedOut: 0,
+    spentPercent: 0,
+  },
+  upcoming: [],
+  alerts: [],
+};
+
 beforeEach(() => {
-  stubApi({ '/api/setup': configured });
+  localStorage.clear();
+  stubApi({ '/api/setup': configured, '/api/dashboard': dashboard });
 });
 
 afterEach(() => {
@@ -70,6 +102,25 @@ describe('routes', () => {
           name: 'Page not found',
         }),
       ).toBeInTheDocument();
+    },
+  );
+
+  /**
+   * UC-8 — the assistant answers the questions the screens did not
+   * anticipate, so it is reachable from every screen rather than from Main.
+   */
+  it.each(['/', '/profile', '/savings'])(
+    'offers the assistant on %s',
+    async (path) => {
+      renderAt(path);
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Open the assistant' }),
+      );
+
+      expect(
+        screen.getByRole('log', { name: 'Assistant conversation' }),
+      ).toBeVisible();
     },
   );
 });

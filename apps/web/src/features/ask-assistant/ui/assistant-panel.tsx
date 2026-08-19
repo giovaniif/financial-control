@@ -2,6 +2,7 @@ import type { AssistantReadResponse } from '@fin/contracts';
 import { useEffect, useId, useRef, useState, type SyntheticEvent } from 'react';
 
 import { ApiError, useSetupState } from '@/shared/api';
+import { useAssistantRail } from '@/shared/model';
 import { Badge, Button, Card, CardTitle } from '@/shared/ui';
 
 import { useAskAssistant } from '../api/use-ask-assistant.js';
@@ -31,9 +32,10 @@ interface Streaming {
 export function AssistantPanel() {
   const questionId = useId();
   const setup = useSetupState();
+  const { pendingQuestion, takePendingQuestion } = useAssistantRail();
+  const composer = useRef<HTMLTextAreaElement>(null);
   const [conversation, setConversation] =
     useState<Conversation>(loadConversation);
-  const [question, setQuestion] = useState('');
   const [streaming, setStreaming] = useState<Streaming | null>(null);
   // The frames arrive from outside React's own scheduling, so what has been
   // written so far is held where a handler can read it as well as set it.
@@ -82,9 +84,30 @@ export function AssistantPanel() {
     saveConversation(conversation);
   }, [conversation]);
 
+  /**
+   * A question raised elsewhere in the app — an alert on Main — arrives as a
+   * draft, exactly as if it had been typed: offered, never sent on the user's
+   * behalf, and editable before it goes.
+   *
+   * The draft lives in the textarea rather than in state because the app
+   * writes into it as well as the user does, which is what an effect is for:
+   * pushing what React knows into something that is not React.
+   */
+  useEffect(() => {
+    const box = composer.current;
+    if (pendingQuestion === null || box === null) {
+      return;
+    }
+
+    box.value = pendingQuestion;
+    box.focus();
+    takePendingQuestion();
+  }, [pendingQuestion, takePendingQuestion]);
+
   const send = (event: SyntheticEvent) => {
     event.preventDefault();
-    const message = question.trim();
+    const box = composer.current;
+    const message = box?.value.trim() ?? '';
     if (message === '' || ask.isPending) {
       return;
     }
@@ -94,7 +117,9 @@ export function AssistantPanel() {
       ...current,
       entries: [...current.entries, { kind: 'question', text: message }],
     }));
-    setQuestion('');
+    if (box !== null) {
+      box.value = '';
+    }
     write({ text: '', reads: [] });
 
     ask.mutate(
@@ -133,17 +158,19 @@ export function AssistantPanel() {
     failure?.status === SWITCHED_OFF;
 
   return (
-    <Card className="flex flex-col gap-4" label="Assistant">
+    <Card className="flex h-full min-h-0 flex-col gap-3">
       <CardTitle>Ask</CardTitle>
       <p className="text-sm text-zinc-600">
         Ask about any figure, or say what changed. Every change is proposed
         first — nothing is written until you confirm it.
       </p>
 
+      {/* The transcript scrolls inside the rail so the composer below it is
+          always reachable, and streaming text never moves the layout. */}
       <div
         role="log"
         aria-label="Assistant conversation"
-        className="flex flex-col gap-3"
+        className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto"
       >
         {conversation.entries.length === 0 && streaming === null && (
           <p className="text-sm text-zinc-500">
@@ -201,7 +228,7 @@ export function AssistantPanel() {
           on this screen carries on working without it.
         </p>
       ) : (
-        <form onSubmit={send} className="flex flex-col gap-2">
+        <form onSubmit={send} className="flex shrink-0 flex-col gap-2">
           <label
             htmlFor={questionId}
             className="text-xs font-medium text-zinc-600"
@@ -210,11 +237,8 @@ export function AssistantPanel() {
           </label>
           <textarea
             id={questionId}
+            ref={composer}
             rows={2}
-            value={question}
-            onChange={(event) => {
-              setQuestion(event.target.value);
-            }}
             className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none"
           />
           <div>
