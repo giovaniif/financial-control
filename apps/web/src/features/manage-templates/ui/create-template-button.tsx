@@ -1,4 +1,4 @@
-import type { CreateTemplateRequest } from '@fin/contracts';
+import type { CreateTemplateRequest, Direction } from '@fin/contracts';
 import { useState } from 'react';
 
 import { parseBRL } from '@/shared/lib';
@@ -7,21 +7,42 @@ import { Button, Dialog, Field } from '@/shared/ui';
 import { useCreateTemplate } from '../api/use-manage-templates.js';
 import { DirectionSelect } from './direction-select.js';
 
+interface Props {
+  /** The cycle the new item starts generating from. */
+  currentMonth: string;
+  /** What the button says, and what the form is titled. */
+  label?: string;
+  /**
+   * Fixes the direction when the caller already knows it — a screen that asks
+   * for income and for bills separately has answered this question already,
+   * and asking it again makes the two forms the same form.
+   */
+  direction?: Direction;
+  /**
+   * A bill whose amount moves is an unconfirmed estimate unless the user says
+   * otherwise, so a forecast never quietly mixes a guess with a known bill.
+   */
+  isEstimateByDefault?: boolean;
+}
+
 /** UC-2.1, UC-2.2 — the engine that fills every future cycle. */
 export function CreateTemplateButton({
   currentMonth,
-}: {
-  currentMonth: string;
-}) {
+  label = 'Add a bill',
+  direction: fixedDirection,
+  isEstimateByDefault = false,
+}: Props) {
   const [open, setOpen] = useState(false);
   const create = useCreateTemplate();
 
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
-  const [direction, setDirection] = useState<'IN' | 'OUT'>('OUT');
+  const [chosenDirection, setDirection] = useState<Direction>('OUT');
   const [dueDay, setDueDay] = useState('5');
-  const [isEstimate, setIsEstimate] = useState(false);
+  const [isEstimate, setIsEstimate] = useState(isEstimateByDefault);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const direction = fixedDirection ?? chosenDirection;
 
   const submit = (event: { preventDefault: () => void }) => {
     event.preventDefault();
@@ -31,7 +52,7 @@ export function CreateTemplateButton({
     const found: Record<string, string> = {};
 
     if (name.trim() === '') {
-      found['name'] = 'Name the template.';
+      found['name'] = 'Give it a name.';
     }
     if (cents === null) {
       found['amount'] = 'Enter an amount like 1.234,56.';
@@ -69,11 +90,11 @@ export function CreateTemplateButton({
           setOpen(true);
         }}
       >
-        New template
+        {label}
       </Button>
       <Dialog
         open={open}
-        title="New recurring template"
+        title={label}
         onClose={() => {
           setOpen(false);
         }}
@@ -87,7 +108,9 @@ export function CreateTemplateButton({
             }}
             {...(errors['name'] === undefined ? {} : { error: errors['name'] })}
           />
-          <DirectionSelect value={direction} onChange={setDirection} />
+          {fixedDirection === undefined && (
+            <DirectionSelect value={direction} onChange={setDirection} />
+          )}
           <Field
             label="Amount"
             value={amount}

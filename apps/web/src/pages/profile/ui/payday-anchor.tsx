@@ -13,7 +13,7 @@ export function PaydayAnchor() {
   });
 
   return (
-    <Card className="flex flex-col gap-3">
+    <Card label="Payday anchor" className="flex flex-col gap-3">
       <CardTitle>Payday anchor</CardTitle>
       {isPending || data === undefined ? (
         <Skeleton className="h-10 w-40" />

@@ -18,7 +18,7 @@ export function SetupSummary() {
     },
     { label: 'Accounts', value: String(data?.accounts ?? 0) },
     { label: 'Credit cards', value: String(data?.cards ?? 0) },
-    { label: 'Recurring templates', value: String(data?.templates ?? 0) },
+    { label: 'Salary and bills', value: String(data?.templates ?? 0) },
     { label: 'Buckets', value: String(data?.buckets ?? 0) },
   ];
 
@@ -26,9 +26,9 @@ export function SetupSummary() {
     <div className="flex flex-col gap-6">
       <p className="text-zinc-600">
         That is everything the app needs to start answering. From here it fills
-        the next twelve cycles from your templates, assigns each card invoice to
-        the cycle containing its due date, and allocates the surplus by your
-        rules.
+        the next twelve cycles from your salary and bills, assigns each card
+        invoice to the cycle containing its due date, and allocates the surplus
+        by your rules.
       </p>
 
       <dl className="divide-y divide-zinc-100 text-sm">

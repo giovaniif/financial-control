@@ -151,9 +151,10 @@ describe('ChangeAnchor', () => {
       screen.getByRole('button', { name: 'Apply the change' }),
     );
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Two entries are orphaned.',
-    );
+    // The preview is an alert of its own, so this asserts the refusal itself.
+    expect(
+      await screen.findByText('Two entries are orphaned.'),
+    ).toHaveAttribute('role', 'alert');
   });
 
   it('changes the weekend rule too', async () => {

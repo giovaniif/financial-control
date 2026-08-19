@@ -115,7 +115,8 @@ function Form({
 
       {preview.data !== undefined && (
         <div className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 text-xs">
-          <span>
+          {/* What the change would do lands as it appears, not silently. */}
+          <span role="alert">
             {preview.data.totalEntriesMoving} entries would move out of their
             cycle.
           </span>

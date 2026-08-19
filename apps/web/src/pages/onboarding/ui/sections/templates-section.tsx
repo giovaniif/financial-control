@@ -55,7 +55,7 @@ export function TemplatesSection({ currentMonth }: Props) {
         </ul>
       ) : (
         <p className="text-sm text-zinc-500">
-          No templates yet. You can always add the rest later.
+          No bills yet. You can always add the rest later.
         </p>
       )}
 

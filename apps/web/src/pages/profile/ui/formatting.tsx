@@ -10,7 +10,7 @@ export function Formatting() {
   ];
 
   return (
-    <Card className="flex flex-col gap-3">
+    <Card label="Formatting" className="flex flex-col gap-3">
       <CardTitle>Formatting</CardTitle>
       <dl className="flex flex-col gap-1.5 text-sm">
         {rows.map(([label, value]) => (

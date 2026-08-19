@@ -15,7 +15,7 @@ export function BackupSection() {
   const cycles = useCycleWindow();
 
   return (
-    <Card className="flex flex-col gap-3">
+    <Card label="Backup" className="flex flex-col gap-3">
       <CardTitle>Backup</CardTitle>
       <BackupRestore
         counts={{
