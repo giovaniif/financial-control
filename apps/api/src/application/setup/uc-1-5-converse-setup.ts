@@ -83,6 +83,15 @@ export class ConverseSetup {
     private readonly clock: Clock,
   ) {}
 
+  /**
+   * Whether a conversation can be had at all. Read from the model itself so
+   * that what the app reports up front and what a turn would fail with are the
+   * same fact rather than two that can drift apart.
+   */
+  get isAvailable(): boolean {
+    return this.model.isAvailable;
+  }
+
   async execute(input: {
     conversationId?: string;
     message: string;

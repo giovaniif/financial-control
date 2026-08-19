@@ -5,6 +5,11 @@ import type {
   ModelStreamEvent,
 } from '../../domain/ports/language-model.js';
 
+import {
+  LanguageModelFailed,
+  LanguageModelUnavailable,
+} from '../../domain/ports/language-model.js';
+
 import { FakeLanguageModel, ScriptExhausted } from './fake-language-model.js';
 
 const ask = (text: string): ModelRequest => ({
@@ -136,5 +141,33 @@ describe('FakeLanguageModel', () => {
 
     expect(response.stopReason).toBe('refusal');
     expect(response.text).toBe('I cannot help with that.');
+  });
+
+  /**
+   * A refusal and a failed call are different outcomes with different answers,
+   * so a script that could only produce one of them would leave the other
+   * untestable.
+   */
+  it('replays a scripted failure as a rejection', async () => {
+    const model = new FakeLanguageModel([
+      { fails: new LanguageModelFailed('The model is overloaded.') },
+    ]);
+
+    await expect(model.complete(ask('hello'))).rejects.toBeInstanceOf(
+      LanguageModelFailed,
+    );
+  });
+
+  it('reports itself available by default', () => {
+    expect(new FakeLanguageModel([]).isAvailable).toBe(true);
+  });
+
+  it('stands in for a model with no key: switched off, every call rejecting', async () => {
+    const model = FakeLanguageModel.unavailable();
+
+    expect(model.isAvailable).toBe(false);
+    await expect(model.complete(ask('hello'))).rejects.toBeInstanceOf(
+      LanguageModelUnavailable,
+    );
   });
 });
