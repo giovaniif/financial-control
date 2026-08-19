@@ -7,6 +7,7 @@ import { Button } from './button.js';
 import { Card, CardTitle } from './card.js';
 import { EmptyState } from './empty-state.js';
 import { StatTile } from './stat-tile.js';
+import { Stepper } from './stepper.js';
 
 describe('Amount', () => {
   it('renders integer cents as BRL', () => {
@@ -87,6 +88,40 @@ describe('EmptyState', () => {
 
     expect(screen.getByText('No accounts yet')).toBeInTheDocument();
     expect(screen.getByText('Add one in Settings.')).toBeInTheDocument();
+  });
+});
+
+describe('Stepper', () => {
+  const steps = [
+    { id: 'why', label: 'Why' },
+    { id: 'cycle', label: 'The cycle' },
+    { id: 'accounts', label: 'Accounts' },
+  ];
+
+  it('lists the steps in order', () => {
+    render(<Stepper steps={steps} current={0} />);
+
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(
+      ['1Why', '2The cycle', '3Accounts'],
+    );
+  });
+
+  it('marks where the user is, so a screen reader can announce it', () => {
+    render(<Stepper steps={steps} current={1} />);
+
+    expect(screen.getByText('The cycle').closest('li')).toHaveAttribute(
+      'aria-current',
+      'step',
+    );
+  });
+
+  it('distinguishes the steps already done from the ones still ahead', () => {
+    render(<Stepper steps={steps} current={1} />);
+
+    const [done, , upcoming] = screen.getAllByRole('listitem');
+
+    expect(done).toHaveAttribute('data-state', 'done');
+    expect(upcoming).toHaveAttribute('data-state', 'upcoming');
   });
 });
 
