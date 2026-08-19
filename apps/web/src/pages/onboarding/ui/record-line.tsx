@@ -4,15 +4,12 @@ import type {
 } from '@fin/contracts';
 import { useState } from 'react';
 
-import { Badge, Button } from '@/shared/ui';
-
 import {
   useCorrectSetupRecord,
   useDropSetupRecord,
 } from '../api/use-setup-conversation.js';
 import { parseRecord, recordName } from '../model/record-fields.js';
 import { withLocalDates } from '../model/record-summary.js';
-import { SECTION_LABELS } from '../model/sections.js';
 
 import { RecordEditor } from './record-editor.js';
 
@@ -50,38 +47,47 @@ export function RecordLine({ record, conversationId, onTurn }: Props) {
   const refusal = correct.error?.message ?? drop.error?.message;
 
   return (
-    <div className="flex flex-col gap-1 rounded-lg bg-green-50 px-3 py-2 text-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone="positive">Recorded</Badge>
-        <span className="text-xs text-zinc-500">
-          {SECTION_LABELS[record.section]}
-        </span>
-        <span className="flex-1 text-zinc-900">
+    <div className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-3">
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="mt-0.5 size-3.5 shrink-0 text-zinc-400"
+        >
+          <path d="m5 13 4 4L19 7" />
+        </svg>
+        <span className="flex-1 text-sm text-zinc-900">
+          <span className="sr-only">Recorded: </span>
           {withLocalDates(record.summary)}
         </span>
 
         {ref !== null && !editing && (
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-3">
             {parsed !== null && (
-              <Button
-                aria-label={`Edit ${name}`}
+              <Quiet
+                label={`Edit ${name}`}
                 disabled={pending}
                 onClick={() => {
                   setEditing(true);
                 }}
               >
                 Edit
-              </Button>
+              </Quiet>
             )}
-            <Button
-              aria-label={`Drop ${name}`}
+            <Quiet
+              label={`Drop ${name}`}
               disabled={pending}
               onClick={() => {
                 drop.mutate(ref, { onSuccess: onTurn });
               }}
             >
               Drop
-            </Button>
+            </Quiet>
           </div>
         )}
       </div>
@@ -116,5 +122,30 @@ export function RecordLine({ record, conversationId, onTurn }: Props) {
         </p>
       )}
     </div>
+  );
+}
+
+/** An affordance on a record must not compete with the conversation. */
+function Quiet({
+  label,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  children: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="cursor-pointer text-xs text-zinc-500 underline-offset-2 transition-colors hover:text-zinc-900 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {children}
+    </button>
   );
 }

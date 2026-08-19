@@ -85,6 +85,104 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** The transcript item a line of the conversation sits in. */
+function itemOf(node: HTMLElement): HTMLElement {
+  const item = node.closest('li');
+  if (item === null) {
+    throw new Error('That line is not in the transcript.');
+  }
+
+  return item;
+}
+
+describe('the composer', () => {
+  it('sends the answer on Enter', async () => {
+    stubApi({
+      '/api/setup/conversation': conversation(
+        turn({ message: 'And where do you keep your money?' }),
+      ),
+    });
+    renderPage();
+
+    await userEvent.type(
+      await screen.findByLabelText('Your answer'),
+      'the 5th{Enter}',
+    );
+
+    expect(
+      await screen.findByText('And where do you keep your money?'),
+    ).toBeInTheDocument();
+  });
+
+  it('breaks a line on Shift+Enter instead of sending', async () => {
+    stubApi({ '/api/setup/conversation': conversation(turn()) });
+    renderPage();
+
+    const composer = await screen.findByLabelText('Your answer');
+    await userEvent.type(
+      composer,
+      'health plan 320 on the 8th{Shift>}{Enter}{/Shift}electricity 280 on the 15th',
+    );
+
+    expect(composer).toHaveValue(
+      'health plan 320 on the 8th\nelectricity 280 on the 15th',
+    );
+    expect(
+      requests().filter(({ url }) => url.includes('/setup/conversation')),
+    ).toHaveLength(0);
+  });
+
+  // The field is the whole composer, so the label it carries is the one a
+  // screen reader reads and not one more line of chrome on the page.
+  it('is labelled without a label on the page', async () => {
+    stubApi({});
+    renderPage();
+
+    expect(await screen.findByLabelText('Your answer')).toBeInTheDocument();
+    expect(screen.queryByText('Your answer')).toBeNull();
+  });
+});
+
+describe('the shape of the conversation', () => {
+  it('marks the section being asked about in the progress path', async () => {
+    stubApi({
+      '/api/setup/conversation': conversation(turn({ nextSection: 'CARDS' })),
+    });
+    renderPage();
+
+    await say('the 5th');
+
+    const path = within(
+      await screen.findByRole('navigation', { name: 'Setup progress' }),
+    );
+    expect(path.getAllByRole('listitem')).toHaveLength(7);
+    expect(path.getByRole('listitem', { current: true })).toHaveTextContent(
+      'Credit cards',
+    );
+  });
+
+  it('tells the two voices apart', async () => {
+    stubApi({
+      '/api/setup/conversation': conversation(
+        turn({ message: 'And where do you keep your money?' }),
+      ),
+    });
+    renderPage();
+
+    await say('the 5th, moving back off a weekend');
+
+    const answer = itemOf(
+      await screen.findByText('the 5th, moving back off a weekend'),
+    );
+    const question = itemOf(
+      await screen.findByText('And where do you keep your money?'),
+    );
+
+    expect(within(answer).getByText('You')).toBeInTheDocument();
+    expect(within(question).getByText('Claude')).toBeInTheDocument();
+  });
+});
+
 describe('the setup conversation', () => {
   it('opens by asking about the payday cycle', async () => {
     stubApi({});

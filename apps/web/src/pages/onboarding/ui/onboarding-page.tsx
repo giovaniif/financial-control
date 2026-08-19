@@ -4,7 +4,6 @@ import { useSetupState } from '@/shared/api';
 import { skipSetup } from '@/shared/model';
 import { Skeleton } from '@/shared/ui';
 
-import { RestoreBackup } from './restore-backup.js';
 import { SetupChat } from './setup-chat.js';
 import { SetupForm } from './setup-form.js';
 
@@ -37,24 +36,26 @@ export function OnboardingPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-8 px-6 py-10">
-      <header className="flex items-center justify-between">
-        <div>
+    <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-10 bg-white px-6 py-14 text-zinc-900">
+      <header className="flex items-start justify-between gap-6">
+        <div className="flex flex-col gap-1">
           <p className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
             First run
           </p>
-          <h1 className="text-2xl font-semibold">Setting up</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+            Setting up
+          </h1>
         </div>
         <button
           type="button"
           onClick={leave}
-          className="cursor-pointer text-sm text-zinc-500 underline-offset-2 hover:underline"
+          className="mt-1 shrink-0 cursor-pointer text-sm text-zinc-500 underline-offset-2 transition-colors hover:text-zinc-900 hover:underline"
         >
           Skip for now
         </button>
       </header>
 
-      <main className="flex flex-1 flex-col gap-8">
+      <main className="flex flex-1 flex-col">
         {isPending ? (
           <Skeleton className="h-64 w-full" />
         ) : data?.assistantAvailable === true ? (
@@ -62,10 +63,6 @@ export function OnboardingPage() {
         ) : (
           <SetupForm />
         )}
-        {/* Restoring replaces everything, so it is only offered while there
-            is nothing to lose. Profile carries the same thing with the counts
-            it would overwrite spelled out. */}
-        {data?.isPristine === true && <RestoreBackup />}
       </main>
     </div>
   );

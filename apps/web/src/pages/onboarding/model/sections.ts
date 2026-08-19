@@ -20,10 +20,3 @@ export const SECTION_LABELS: Record<SetupSection, string> = {
   CARDS: 'Credit cards',
   BUCKETS: 'Savings buckets',
 };
-
-/** `Section 6 of 7 — Credit cards`: the draft's own progress is the indicator. */
-export function describeProgress(section: SetupSection): string {
-  const position = SECTION_ORDER.indexOf(section) + 1;
-
-  return `Section ${String(position)} of ${String(SECTION_ORDER.length)} — ${SECTION_LABELS[section]}`;
-}
