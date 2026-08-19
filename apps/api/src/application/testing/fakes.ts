@@ -5,6 +5,11 @@ import type { Cycle } from '../../domain/budgeting/cycle.js';
 import type { RecurringTemplate } from '../../domain/budgeting/recurring-template.js';
 import type { Card } from '../../domain/cards/card.js';
 import type { Bucket } from '../../domain/goals/bucket.js';
+import type { IdSource } from '../../domain/ports/id-source.js';
+import type {
+  SetupConversationStore,
+  StoredSetupConversation,
+} from '../../domain/ports/setup-conversation-store.js';
 import type {
   AccountRepository,
   CycleRepository,
@@ -207,6 +212,48 @@ export class InMemoryBucketRepository implements BucketRepository {
 
   deleteAll(): Promise<void> {
     this.rows.clear();
+    return Promise.resolve();
+  }
+}
+
+/**
+ * Ids a test can name. A generated uuid inside an interactor is a value the
+ * test has to fish back out of the result before it can assert anything about
+ * it, which is the same reason time is injected.
+ */
+export class SequentialIdSource implements IdSource {
+  private issued = 0;
+
+  constructor(private readonly prefix = 'id') {}
+
+  next(): string {
+    this.issued += 1;
+    return `${this.prefix}-${String(this.issued)}`;
+  }
+}
+
+/**
+ * The conversation store as a map. The production implementation is the same
+ * map behind the same port; this one exists because a test in `application`
+ * may not import `infrastructure`.
+ */
+export class FakeSetupConversationStore<
+  TState,
+  TRecord,
+> implements SetupConversationStore<TState, TRecord> {
+  private readonly rows = new Map<
+    string,
+    StoredSetupConversation<TState, TRecord>
+  >();
+
+  load(
+    id: string,
+  ): Promise<StoredSetupConversation<TState, TRecord> | undefined> {
+    return Promise.resolve(this.rows.get(id));
+  }
+
+  save(conversation: StoredSetupConversation<TState, TRecord>): Promise<void> {
+    this.rows.set(conversation.id, conversation);
     return Promise.resolve();
   }
 }
