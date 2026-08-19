@@ -247,6 +247,61 @@ describe('ClaudeLanguageModel', () => {
     ]);
   });
 
+  /**
+   * A turn that only called tools has no prose. Sending an empty text block
+   * alongside the calls is rejected by the API, and it is the *second* turn of
+   * every tool-using conversation — the first replays nothing, so a one-shot
+   * smoke test never reaches it.
+   */
+  it('omits the text block from a tool-call-only assistant turn', async () => {
+    const stub = new StubMessages(reply());
+
+    await modelFor(stub).complete(
+      ask({
+        messages: [
+          { role: 'user', text: 'how much is left?' },
+          {
+            role: 'assistant',
+            text: '',
+            toolCalls: [{ id: 'toolu_1', name: 'read_cycle', arguments: {} }],
+          },
+        ],
+      }),
+    );
+
+    expect(stub.sent[0]?.messages[1]).toEqual({
+      role: 'assistant',
+      content: [
+        { type: 'tool_use', id: 'toolu_1', name: 'read_cycle', input: {} },
+      ],
+    });
+  });
+
+  it('keeps the text first when a turn has both prose and tool calls', async () => {
+    const stub = new StubMessages(reply());
+
+    await modelFor(stub).complete(
+      ask({
+        messages: [
+          { role: 'user', text: 'how much is left?' },
+          {
+            role: 'assistant',
+            text: 'Let me look.',
+            toolCalls: [{ id: 'toolu_1', name: 'read_cycle', arguments: {} }],
+          },
+        ],
+      }),
+    );
+
+    expect(stub.sent[0]?.messages[1]).toEqual({
+      role: 'assistant',
+      content: [
+        { type: 'text', text: 'Let me look.' },
+        { type: 'tool_use', id: 'toolu_1', name: 'read_cycle', input: {} },
+      ],
+    });
+  });
+
   it('sends the system prompt and the model it was given', async () => {
     const stub = new StubMessages(reply());
 
