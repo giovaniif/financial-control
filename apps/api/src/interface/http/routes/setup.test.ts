@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ReadSetupState } from '../../../application/projection/uc-1-5-read-setup-state.js';
 import { CompleteSetup } from '../../../application/setup/compose-setup.js';
+import { establishedOf } from '../../../application/setup/established-record.js';
 import { CorrectSetupRecord } from '../../../application/setup/uc-1-5-correct-record.js';
 import { SpendCeiling } from '../../../application/spend/spend-ceiling.js';
 import { SetupDraft } from '../../../application/setup/setup-draft.js';
@@ -41,6 +42,7 @@ import {
 import { noHolidays } from '../../../domain/ports/holiday-calendar.js';
 import { LanguageModelFailed } from '../../../domain/ports/language-model.js';
 import { Money } from '../../../domain/shared/money.js';
+import { Percentage } from '../../../domain/shared/percentage.js';
 import { Principal } from '../../../domain/shared/principal.js';
 import { LocalDate } from '../../../domain/shared/local-date.js';
 import { buildTestServer } from '../testing/test-server.js';
@@ -143,11 +145,7 @@ async function holding(
     id: 'conv-1',
     transcript: [],
     state,
-    records: state.draft.records.map((held) => ({
-      section: held.section,
-      id: held.record.id,
-      summary: held.record.name,
-    })),
+    records: state.draft.records.map(establishedOf),
   });
 }
 
@@ -255,6 +253,7 @@ describe('POST /setup/conversation', () => {
           section: 'ANCHOR',
           id: null,
           summary: expect.stringContaining('Paid on day 5') as string,
+          fields: null,
         },
       ],
       removed: [],
@@ -438,6 +437,12 @@ describe('PATCH /setup/conversation/:id/records/:recordId', () => {
           section: 'FIXED_BILLS',
           id: BILL_ID,
           summary: expect.stringContaining('350,00') as string,
+          fields: {
+            name: 'Health Plan',
+            amount: -35_000,
+            dueDayOfMonth: 8,
+            isEstimate: false,
+          },
         },
       ],
       removed: [],
@@ -748,6 +753,172 @@ describe('POST /setup/conversation — what one conversation may cost', () => {
 
     expect(corrected.statusCode).toBe(200);
     expect(removed.statusCode).toBe(200);
+  });
+});
+
+/**
+ * FIN-124 — a record crosses as data and as prose, and the two are the same
+ * record read twice. Asserting both halves per section is what stops a
+ * reworded sentence quietly changing what the client is handed.
+ */
+describe('what an established record carries across the wire', () => {
+  /** A draft holding one record of every section that has one. */
+  function everySection(): SetupState {
+    const draft = SetupDraft.empty(
+      '2026-09',
+      noHolidays,
+      new SequentialIdSource('rec'),
+    )
+      .withAnchor(PaydayAnchor.of(5, ShiftPolicy.Preceding))
+      .addAccount({
+        name: 'Checking',
+        type: 'CHECKING',
+        balance: Money.fromCents(216_000),
+      })
+      .withSalary(Money.fromCents(1_800_000))
+      .addFixedBill({
+        name: 'Health Plan',
+        amount: Money.fromCents(32_000),
+        dueDayOfMonth: 8,
+      })
+      .addVariableBill({
+        name: 'Electricity',
+        amount: Money.fromCents(28_000),
+        dueDayOfMonth: 15,
+      })
+      .addCard({
+        name: 'Inter',
+        limit: Money.fromCents(1_000_000),
+        closingDay: 28,
+        dueDay: 10,
+        paymentAccountName: 'Checking',
+      })
+      .addOngoingBucket({
+        name: 'Investments',
+        rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(20)),
+        priority: 1,
+      })
+      .addGoalBucket({
+        name: 'Apartment',
+        rule: Allocation.fixed(Money.fromCents(177_800)),
+        priority: 2,
+        target: {
+          amount: Money.fromCents(15_000_000),
+          date: LocalDate.parse('2031-03-05'),
+        },
+      });
+
+    return { draft, section: 'BUCKETS' };
+  }
+
+  it.each([
+    [
+      'an account',
+      'rec-1',
+      'Checking — a checking account holding R$ 2.160,00.',
+      { name: 'Checking', type: 'CHECKING', balance: 216_000 },
+    ],
+    [
+      'a fixed bill',
+      'rec-2',
+      'Health Plan — R$ 320,00 on day 8.',
+      {
+        name: 'Health Plan',
+        amount: -32_000,
+        dueDayOfMonth: 8,
+        isEstimate: false,
+      },
+    ],
+    [
+      'a variable bill',
+      'rec-3',
+      'Electricity — R$ 280,00 on day 15, an estimate.',
+      {
+        name: 'Electricity',
+        amount: -28_000,
+        dueDayOfMonth: 15,
+        isEstimate: true,
+      },
+    ],
+    [
+      'a card',
+      'rec-4',
+      'Inter — limit R$ 10.000,00, closing on day 28, due on day 10, paid from Checking.',
+      {
+        name: 'Inter',
+        limit: 1_000_000,
+        closingDay: 28,
+        dueDay: 10,
+        paymentAccountName: 'Checking',
+      },
+    ],
+    [
+      'an ongoing bucket',
+      'rec-5',
+      'Investments — 20 % of Expected Surplus each cycle, funded #1.',
+      {
+        mode: 'ONGOING',
+        name: 'Investments',
+        rule: { kind: 'PERCENT', percent: 20 },
+        priority: 1,
+      },
+    ],
+    [
+      'a goal bucket',
+      'rec-6',
+      'Apartment — R$ 1.778,00 each cycle toward R$ 150.000,00 by 2031-03-05, funded #2.',
+      {
+        mode: 'GOAL',
+        name: 'Apartment',
+        rule: { kind: 'FIXED', amount: 177_800 },
+        priority: 2,
+        target: 15_000_000,
+        targetDate: '2031-03-05',
+      },
+    ],
+  ])(
+    'states the same thing in its fields as in its sentence — %s',
+    async (_what, recordId, summary, fields) => {
+      const { app, conversations } = wire(new FakeLanguageModel([]));
+      await holding(conversations, everySection());
+
+      // A correction naming the record's own name changes nothing, so what
+      // comes back is the record exactly as the draft already holds it.
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/setup/conversation/conv-1/records/${recordId}`,
+        payload: { name: fields.name },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json<SetupTurnResponse>().established).toEqual([
+        {
+          section: expect.any(String) as string,
+          id: recordId,
+          summary,
+          fields,
+        },
+      ]);
+    },
+  );
+
+  it('carries no fields for a section holding a single value', async () => {
+    const { app } = wire(new FakeLanguageModel([anchorTurn]));
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/setup/conversation',
+      payload: { message: 'I am paid on the 5th.' },
+    });
+
+    expect(response.json<SetupTurnResponse>().established).toEqual([
+      {
+        section: 'ANCHOR',
+        id: null,
+        summary: expect.stringContaining('Paid on day 5') as string,
+        fields: null,
+      },
+    ]);
   });
 });
 

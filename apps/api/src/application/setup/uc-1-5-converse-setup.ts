@@ -26,8 +26,14 @@ import type { Principal } from '../../domain/shared/principal.js';
 import { calendarMonthOf, monthOf } from '../budgeting/month.js';
 import type { SpendCeiling } from '../spend/spend-ceiling.js';
 
+import type { EstablishedRecord } from './established-record.js';
+import {
+  establishedIn,
+  establishedOf,
+  establishedValue,
+} from './established-record.js';
 import type { RecordCorrection } from './record-correction.js';
-import { applyCorrection, describeRule } from './record-correction.js';
+import { applyCorrection } from './record-correction.js';
 import {
   DueDayOutsideCycle,
   SETUP_SECTIONS,
@@ -52,18 +58,6 @@ export interface SetupLimits {
   readonly maxMessageCharacters: number;
   /** Counted from the transcript the server holds, never from the client. */
   readonly maxTurnsPerConversation: number;
-}
-
-/** One thing the conversation established, in the user's own terms. */
-export interface EstablishedRecord {
-  readonly section: SetupSection;
-  /**
-   * What a correction names it by. Absent for the sections that hold a single
-   * value — the anchor and the salary are answered again rather than
-   * corrected, so there is never a second one to tell apart.
-   */
-  readonly id: string | undefined;
-  readonly summary: string;
 }
 
 /**
@@ -305,14 +299,10 @@ export class ConverseSetup {
             continue;
           }
 
-          established.push({
-            section: outcome.section,
-            id: outcome.id,
-            summary: outcome.summary,
-          });
+          established.push(outcome.established);
           results.push({
             callId: call.id,
-            content: `Corrected. ${outcome.summary}`,
+            content: `Corrected. ${outcome.established.summary}`,
             isError: false,
           });
         } catch (error) {
@@ -370,20 +360,26 @@ export class ConverseSetup {
           continue;
         }
 
-        const id = establishedId(current.draft, extraction.draft);
+        // Read off the draft rather than assembled here: the sentence the
+        // user sees and the fields the client edits are one record, so a
+        // reworded summary can never disagree with what was recorded.
+        const record =
+          extraction.kind === 'value'
+            ? extraction.established
+            : establishedIn(current.draft, extraction.draft);
         current = {
           draft: extraction.draft,
           section: SINGULAR.includes(section) ? after(section) : section,
         };
-        established.push({ section, id, summary: extraction.summary });
+        established.push(record);
         results.push({
           callId: call.id,
           // The id travels back so the model can name the record in a
           // correction: nothing else in the conversation carries one.
           content:
-            id === undefined
-              ? `Recorded. ${extraction.summary}`
-              : `Recorded as ${id}. ${extraction.summary}`,
+            record.id === undefined
+              ? `Recorded. ${record.summary}`
+              : `Recorded as ${record.id}. ${record.summary}`,
           isError: false,
         });
       } catch (error) {
@@ -506,10 +502,12 @@ function keyOf(record: EstablishedRecord): string {
  * typical: a defaulted due day is a bill dated into the wrong cycle.
  */
 type Extraction =
+  | { readonly kind: 'record'; readonly draft: SetupDraft }
+  /** A section holding one value, which has no record to correct later. */
   | {
-      readonly kind: 'record';
+      readonly kind: 'value';
       readonly draft: SetupDraft;
-      readonly summary: string;
+      readonly established: EstablishedRecord;
     }
   | { readonly kind: 'missing'; readonly question: string };
 
@@ -693,9 +691,12 @@ const TOOLS: readonly ToolSpec[] = [
       );
 
       return {
-        kind: 'record',
+        kind: 'value',
         draft: SetupDraft.empty(startMonth, holidays, ids).withAnchor(anchor),
-        summary: `Paid on day ${String(day)}, moving to the ${policy === ShiftPolicy.Preceding ? 'preceding' : 'following'} business day when that one is closed. Setup starts in the ${startMonth} cycle.`,
+        established: establishedValue(
+          SetupSection.Anchor,
+          `Paid on day ${String(day)}, moving to the ${policy === ShiftPolicy.Preceding ? 'preceding' : 'following'} business day when that one is closed. Setup starts in the ${startMonth} cycle.`,
+        ),
       };
     },
   },
@@ -740,7 +741,6 @@ const TOOLS: readonly ToolSpec[] = [
       return {
         kind: 'record',
         draft: draft.addAccount({ name, type, balance }),
-        summary: `${name} — a ${type.toLowerCase()} account holding R$ ${balance.toReais()}.`,
       };
     },
   },
@@ -762,9 +762,12 @@ const TOOLS: readonly ToolSpec[] = [
       if (amount === undefined) return missing(['what your salary is']);
 
       return {
-        kind: 'record',
+        kind: 'value',
         draft: draft.withSalary(amount),
-        summary: `Salary of R$ ${amount.toReais()} each cycle, dated by the payday anchor.`,
+        established: establishedValue(
+          SetupSection.Salary,
+          `Salary of R$ ${amount.toReais()} each cycle, dated by the payday anchor.`,
+        ),
       };
     },
   },
@@ -830,7 +833,6 @@ const TOOLS: readonly ToolSpec[] = [
           dueDay,
           paymentAccountName,
         }),
-        summary: `${name} — limit R$ ${limit.toReais()}, closing on day ${String(closingDay)}, due on day ${String(dueDay)}, paid from ${paymentAccountName}.`,
       };
     },
   },
@@ -860,7 +862,6 @@ const TOOLS: readonly ToolSpec[] = [
       return {
         kind: 'record',
         draft: draft.addOngoingBucket({ name, rule, priority }),
-        summary: `${name} — ${describeRule(rule)} each cycle, funded #${String(priority)}.`,
       };
     },
   },
@@ -910,7 +911,6 @@ const TOOLS: readonly ToolSpec[] = [
           priority,
           target: { amount: target, date },
         }),
-        summary: `${name} — ${describeRule(rule)} each cycle toward R$ ${target.toReais()} by ${date.toISO()}, funded #${String(priority)}.`,
       };
     },
   },
@@ -921,9 +921,7 @@ type Correction =
   | {
       readonly kind: 'corrected';
       readonly draft: SetupDraft;
-      readonly section: SetupSection;
-      readonly id: string;
-      readonly summary: string;
+      readonly established: EstablishedRecord;
     }
   | {
       readonly kind: 'dropped';
@@ -956,9 +954,7 @@ function correct(draft: SetupDraft, args: JsonObject): Correction {
   return {
     kind: 'corrected',
     draft: corrected.draft,
-    section: held.section,
-    id,
-    summary: corrected.summary,
+    established: establishedOf(corrected.record),
   };
 }
 
@@ -1016,20 +1012,6 @@ function notHolding(id: string): Correction {
     kind: 'missing',
     question: `I am holding nothing recorded as ${id}, so nothing changed.`,
   };
-}
-
-/**
- * The record the draft did not hold before. The specs hand the draft a record
- * without an id — the draft issues it — so this is where the turn learns what
- * a later correction has to name.
- */
-function establishedId(
-  before: SetupDraft,
-  after: SetupDraft,
-): string | undefined {
-  const known = new Set(before.records.map((held) => held.record.id));
-
-  return after.records.find((held) => !known.has(held.record.id))?.record.id;
 }
 
 /**
@@ -1094,23 +1076,12 @@ function billSpec(
         ...(isEstimate === undefined ? {} : { isEstimate }),
         ...(acceptCycleFallback === undefined ? {} : { acceptCycleFallback }),
       };
-      const updated =
-        section === SetupSection.FixedBills
-          ? draft.addFixedBill(proposed)
-          : draft.addVariableBill(proposed);
-      // Read back rather than recomputed: whether an unstated flag makes a
-      // bill an estimate is the draft's rule (UC-2.6), and a second copy of it
-      // here would be a summary that could disagree with what was recorded.
-      const recorded =
-        section === SetupSection.FixedBills
-          ? updated.fixedBills
-          : updated.variableBills;
-      const bill = recorded[recorded.length - 1];
-
       return {
         kind: 'record',
-        draft: updated,
-        summary: `${name} — R$ ${amount.abs().toReais()} on day ${String(dueDayOfMonth)}${bill?.isEstimate === true ? ', an estimate' : ''}.`,
+        draft:
+          section === SetupSection.FixedBills
+            ? draft.addFixedBill(proposed)
+            : draft.addVariableBill(proposed),
       };
     },
   };
