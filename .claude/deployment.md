@@ -58,6 +58,14 @@ and change every number in the app, so it must stay on the tailnet — never
 port-forwarded, never exposed to the public internet. If that ever changes,
 authentication has to come first, not after.
 
+That ordering matters more now that the app has an assistant. Rate-limiting
+the model-backed routes is worth doing and is not what makes the app safe to
+expose: anything that can reach it can already read and rewrite every figure
+without going near the assistant. The AI-specific work that authentication
+would require — rekeying rate limits, scoping every read tool, per-user spend
+— is tracked on `FIN-116`, and `docs/DOMAIN_MODEL.md` §6 records the one rule
+that has to hold from the first tool so that day stays a contained change.
+
 ## Checks
 
 There is no CI either. Lint, typecheck, tests with coverage, build and the
