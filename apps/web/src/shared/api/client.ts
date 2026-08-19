@@ -47,7 +47,9 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
  * settled, an anchor change that would orphan entries. Every route answers
  * with `{ error }`, so the message reaches the user instead of a status code.
  */
-async function explanationOf(response: Response): Promise<string | undefined> {
+export async function explanationOf(
+  response: Response,
+): Promise<string | undefined> {
   try {
     const body: unknown = await response.json();
 
