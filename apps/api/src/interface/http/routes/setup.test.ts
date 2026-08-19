@@ -1,5 +1,6 @@
 import type {
   SetupAppliedResponse,
+  SetupDueDayRefusalResponse,
   SetupStateResponse,
   SetupTurnResponse,
 } from '@fin/contracts';
@@ -480,7 +481,67 @@ describe('PATCH /setup/conversation/:id/records/:recordId', () => {
     });
 
     expect(response.statusCode).toBe(400);
-    expect(response.json<{ error: string }>().error).toContain('never reaches');
+    expect(response.json<{ error: string }>().error).toContain('never reach');
+  });
+
+  /**
+   * FIN-117 — the refusal carries the cycles it cannot place the day in and
+   * the day each offers instead, so the form can make the offer rather than
+   * leave the user inventing a different day.
+   */
+  it('answers a due day in a gap with the cycles and what they offer', async () => {
+    const { app, conversations } = wire(new FakeLanguageModel([]));
+    await holding(conversations);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/setup/conversation/conv-1/records/${BILL_ID}`,
+      payload: { dueDayOfMonth: 4 },
+    });
+
+    expect(response.statusCode).toBe(400);
+    const refusal = response.json<SetupDueDayRefusalResponse>();
+    expect(refusal.dueDayOfMonth).toBe(4);
+    expect(refusal.cycles).toEqual([
+      {
+        month: '2026-09',
+        label: 'September 2026',
+        range: '2026-08-05 – 2026-09-03',
+        fallbackDate: '2026-09-03',
+        fallbackDayOfMonth: 3,
+      },
+      {
+        month: '2026-12',
+        label: 'December 2026',
+        range: '2026-11-05 – 2026-12-03',
+        fallbackDate: '2026-12-03',
+        fallbackDayOfMonth: 3,
+      },
+      {
+        month: '2027-06',
+        label: 'June 2027',
+        range: '2027-05-05 – 2027-06-03',
+        fallbackDate: '2027-06-03',
+        fallbackDayOfMonth: 3,
+      },
+    ]);
+  });
+
+  it('takes the offer when the correction says it was accepted', async () => {
+    const { app, conversations } = wire(new FakeLanguageModel([]));
+    await holding(conversations);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/setup/conversation/conv-1/records/${BILL_ID}`,
+      payload: { dueDayOfMonth: 4, acceptCycleFallback: true },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const stored = await conversations.load('conv-1');
+    const [bill] = stored?.state.draft.fixedBills ?? [];
+    expect(bill?.dueDayOfMonth).toBe(4);
+    expect(bill?.dueDateOverrides).toHaveLength(3);
   });
 
   it('answers a correction stating nothing that applies with 400', async () => {

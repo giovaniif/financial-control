@@ -85,11 +85,13 @@ export type {
 export type {
   EstablishedRecordResponse,
   SetupAppliedResponse,
+  SetupDueDayRefusalResponse,
   SetupRecordCorrectionRequest,
   SetupSection,
   SetupStateResponse,
   SetupTurnRequest,
   SetupTurnResponse,
+  SetupUnreachableCycleResponse,
 } from './setup.js';
 export type {
   AssistantMessageRequest,

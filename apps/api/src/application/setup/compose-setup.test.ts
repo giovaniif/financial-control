@@ -65,6 +65,15 @@ const complete = (): SetupDraft =>
       priority: 1,
     });
 
+/** A draft whose Gym on the 4th took the cycle's last day where it must. */
+const withGym = (): SetupDraft =>
+  complete().addFixedBill({
+    name: 'Gym',
+    amount: Money.fromCents(-12_000),
+    dueDayOfMonth: 4,
+    acceptCycleFallback: true,
+  });
+
 describe('composeSetup', () => {
   it('refuses a draft with a section still unanswered', () => {
     const draft = SetupDraft.empty(
@@ -199,6 +208,53 @@ describe('composeSetup', () => {
     });
   });
 
+  /**
+   * FIN-117 — the bill really is on the 4th, and nine of the twelve cycles
+   * say so. Only the cycles that cannot reach it are materialised, each with
+   * the entry the generator could never produce there. An accepted fallback
+   * that did not survive composition would be worse than the refusal: the
+   * user would believe it had been handled.
+   */
+  it('materialises an accepted fallback in the cycles that need it', () => {
+    const document = composeSetup(withGym(), NOW);
+    const gym = document.templates.find((template) => template.name === 'Gym');
+
+    expect(gym?.dueDayOfMonth).toBe(4);
+    expect(
+      document.cycles.map((cycle) => [
+        cycle.month,
+        cycle.entries.map((entry) => entry.dueDate),
+      ]),
+    ).toEqual([
+      ['2026-09', ['2026-09-03']],
+      ['2026-12', ['2026-12-03']],
+      ['2027-06', ['2027-06-03']],
+    ]);
+  });
+
+  /**
+   * The entry stands as the template's own, not as an override: an override
+   * (UC-3.7) offers a revert to the projected *amount*, and there is no
+   * different amount here. Keyed by the template, regeneration leaves it be.
+   */
+  it('writes the fallback as the entry that template would have produced', () => {
+    const [september] = composeSetup(withGym(), NOW).cycles;
+
+    expect(september).toMatchObject({
+      status: 'OPEN',
+      openingBalance: 0,
+    });
+    expect(september?.entries[0]).toMatchObject({
+      description: 'Gym',
+      kind: 'FIXED',
+      planned: -12_000,
+      actual: null,
+      status: 'PENDING',
+      isEstimate: false,
+      origin: { kind: 'FROM_TEMPLATE', ref: 'tpl-3' },
+    });
+  });
+
   it('leaves out the salary template when the section was skipped', () => {
     const draft = SetupDraft.empty(
       '2026-09',
@@ -229,9 +285,10 @@ describe('CompleteSetup', () => {
     const buckets = new InMemoryBucketRepository();
     const settings = new InMemorySettingsRepository();
     const conversations: SetupConversations = new FakeSetupConversationStore();
+    const cycles = new InMemoryCycleRepository();
 
     const restore = new BackupRestore(
-      new InMemoryCycleRepository(),
+      cycles,
       accounts,
       templates,
       cards,
@@ -247,6 +304,7 @@ describe('CompleteSetup', () => {
       cards,
       buckets,
       settings,
+      cycles,
       conversations,
       complete: new CompleteSetup(conversations, restore, FixedClock.at(NOW)),
     };
@@ -269,6 +327,24 @@ describe('CompleteSetup', () => {
     expect(await wired.cards.findAll()).toHaveLength(1);
     expect(await wired.buckets.findAll()).toHaveLength(1);
     expect((await wired.settings.load()).dayOfMonth).toBe(5);
+  });
+
+  it('restores the cycles an accepted fallback materialised', async () => {
+    const wired = wire();
+    await wired.conversations.save({
+      id: 'conv-1',
+      transcript: [],
+      state: { draft: withGym(), section: undefined },
+      records: [],
+    });
+
+    await wired.complete.execute('conv-1');
+
+    expect(await wired.cycles.allMonths()).toEqual([
+      '2026-09',
+      '2026-12',
+      '2027-06',
+    ]);
   });
 
   it('refuses a conversation it is not holding', async () => {

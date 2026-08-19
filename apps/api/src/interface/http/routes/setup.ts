@@ -2,6 +2,7 @@ import type {
   AccountType,
   BackupDocument,
   SetupAppliedResponse,
+  SetupDueDayRefusalResponse,
   SetupRecordCorrectionRequest,
   SetupStateResponse,
   SetupTurnRequest,
@@ -185,6 +186,7 @@ function readCorrection(body: unknown): RecordCorrection | undefined {
     amount: readCents(record, 'amount'),
     dueDayOfMonth: readInteger(record, 'dueDayOfMonth'),
     isEstimate: readFlag(record, 'isEstimate'),
+    acceptCycleFallback: readFlag(record, 'acceptCycleFallback'),
     limit: readCents(record, 'limit'),
     closingDay: readInteger(record, 'closingDay'),
     dueDay: readInteger(record, 'dueDay'),
@@ -208,6 +210,7 @@ const FIELDS = {
   amount: 'amount',
   dueDayOfMonth: 'dueDayOfMonth',
   isEstimate: 'isEstimate',
+  acceptCycleFallback: 'acceptCycleFallback',
   limit: 'limit',
   closingDay: 'closingDay',
   dueDay: 'dueDay',
@@ -358,10 +361,25 @@ function handle(error: unknown, reply: FastifyReply) {
   // What the draft refuses is a rule the caller broke, named in full: the
   // structured path and the conversational one turn down the same records,
   // and only the way they say so differs.
+  // The refusal travels whole: which cycles could not place the day, and the
+  // day each offers instead, so the client can put the offer rather than a
+  // dead end — FIN-117.
+  if (error instanceof DueDayOutsideCycle) {
+    return reply.status(400).send({
+      error: error.message,
+      dueDayOfMonth: error.dueDayOfMonth,
+      cycles: error.cycles.map((cycle) => ({
+        month: cycle.month,
+        label: cycle.label,
+        range: cycle.range,
+        fallbackDate: cycle.fallbackDate.toISO(),
+        fallbackDayOfMonth: cycle.fallbackDayOfMonth,
+      })),
+    } satisfies SetupDueDayRefusalResponse);
+  }
   if (
     error instanceof NothingToCorrect ||
     error instanceof InvalidSetupRecord ||
-    error instanceof DueDayOutsideCycle ||
     error instanceof AnchorNotChosen
   ) {
     return badRequest(reply, error.message);

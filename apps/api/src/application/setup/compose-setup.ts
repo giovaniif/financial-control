@@ -1,7 +1,9 @@
 import type {
   BackupBucket,
   BackupCard,
+  BackupCycle,
   BackupDocument,
+  BackupEntry,
   BackupTemplate,
 } from '@fin/contracts';
 import { BACKUP_VERSION } from '@fin/contracts';
@@ -23,7 +25,9 @@ const SALARY = 'Salary';
  *
  * **Templates rather than materialised cycles.** The app generates a cycle
  * from its templates, lazily and idempotently, so writing cycles here would
- * duplicate the engine and hand-chain every opening balance.
+ * duplicate the engine and hand-chain every opening balance. The one
+ * exception is a cycle that cannot reach a bill's due day, which generates
+ * nothing at all there: see {@link composeCycles}.
  *
  * Nothing arithmetic happens on the way through: the draft has already
  * validated every record and normalised every sign. What is left is a
@@ -48,43 +52,101 @@ export function composeSetup(
     balance: account.balance.cents,
   }));
 
+  const generated = composeTemplates(draft);
+
   return {
     version: BACKUP_VERSION,
     exportedAt,
     anchor: { anchorDay: anchor.dayOfMonth, shiftPolicy: anchor.shiftPolicy },
     accounts,
-    cycles: [],
-    templates: composeTemplates(draft),
+    cycles: composeCycles(generated),
+    templates: generated.map((composed) => composed.template),
     cards: composeCards(draft, accounts),
     buckets: draft.buckets.map(composeBucket),
   };
 }
 
-function composeTemplates(draft: SetupDraft): BackupTemplate[] {
+/** A template, and the bill it came from where one did — never the salary. */
+interface ComposedTemplate {
+  readonly template: BackupTemplate;
+  readonly bill: DraftBill | undefined;
+}
+
+/**
+ * The cycles that cannot reach a bill's due day, each carrying the entry the
+ * generator could never produce there — UC-1.7, FIN-117.
+ *
+ * Materialising the entry is the whole of the mechanism: generation is keyed
+ * by the template that produced an entry, so a cycle already holding one is
+ * left exactly as it is, and every other cycle still generates the bill on
+ * its real due day. Nothing about the generator changes.
+ *
+ * The entry is the template's own rather than an `OVERRIDE`: an override
+ * carries the amount that was projected and offers a revert to it (UC-3.7),
+ * and no amount was overridden here — only the one date the cycle cannot
+ * reach.
+ */
+function composeCycles(generated: readonly ComposedTemplate[]): BackupCycle[] {
+  const byMonth = new Map<string, BackupEntry[]>();
+
+  for (const { template, bill } of generated) {
+    for (const override of bill?.dueDateOverrides ?? []) {
+      const entries = byMonth.get(override.month) ?? [];
+      entries.push({
+        id: `${template.id}-${override.month}`,
+        description: template.name,
+        kind: 'FIXED',
+        dueDate: override.date.toISO(),
+        planned: template.amount,
+        actual: null,
+        status: 'PENDING',
+        isEstimate: template.isEstimate,
+        origin: { kind: 'FROM_TEMPLATE', ref: template.id },
+      });
+      byMonth.set(override.month, entries);
+    }
+  }
+
+  return [...byMonth.entries()]
+    .sort(([month], [other]) => month.localeCompare(other))
+    .map(([month, entries]) => ({
+      month,
+      status: 'OPEN',
+      // Nothing has been closed, so no cycle carries anything forward yet —
+      // the same zero an unmaterialised cycle opens on.
+      openingBalance: 0,
+      entries,
+    }));
+}
+
+function composeTemplates(draft: SetupDraft): ComposedTemplate[] {
   const salary = draft.salary;
   const bills = [...draft.fixedBills, ...draft.variableBills];
 
   // The salary is dated by the payday anchor and never by an answer of its
   // own: a second answer could only disagree with the cycle boundary. UC-2.2.
-  const salaryTemplate =
+  const salaryTemplate: ComposedTemplate[] =
     salary === undefined || draft.salaryDueDayOfMonth === undefined
       ? []
       : [
-          template({
-            index: 0,
-            name: SALARY,
-            direction: 'IN' as const,
-            amount: salary.cents,
-            dueDayOfMonth: draft.salaryDueDayOfMonth,
-            isEstimate: false,
-            startMonth: draft.startMonth,
-          }),
+          {
+            template: template({
+              index: 0,
+              name: SALARY,
+              direction: 'IN' as const,
+              amount: salary.cents,
+              dueDayOfMonth: draft.salaryDueDayOfMonth,
+              isEstimate: false,
+              startMonth: draft.startMonth,
+            }),
+            bill: undefined,
+          },
         ];
 
   return [
     ...salaryTemplate,
-    ...bills.map((bill: DraftBill, index) =>
-      template({
+    ...bills.map((bill: DraftBill, index): ComposedTemplate => ({
+      template: template({
         index: salaryTemplate.length + index,
         name: bill.name,
         direction: 'OUT' as const,
@@ -93,7 +155,8 @@ function composeTemplates(draft: SetupDraft): BackupTemplate[] {
         isEstimate: bill.isEstimate,
         startMonth: draft.startMonth,
       }),
-    ),
+      bill,
+    })),
   ];
 }
 
