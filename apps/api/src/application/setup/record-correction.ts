@@ -6,12 +6,7 @@ import type {
 import type { LocalDate } from '../../domain/shared/local-date.js';
 import type { Money } from '../../domain/shared/money.js';
 
-import type {
-  DraftRecord,
-  ProposedBucket,
-  ProposedGoalBucket,
-  SetupDraft,
-} from './setup-draft.js';
+import type { DraftRecord, SetupDraft } from './setup-draft.js';
 import { SetupSection } from './setup-draft.js';
 
 /**
@@ -49,7 +44,12 @@ export interface RecordCorrection {
 
 export interface CorrectedRecord {
   readonly draft: SetupDraft;
-  readonly summary: string;
+  /**
+   * Read back off the draft rather than assembled from what was sent: the
+   * draft normalises what it accepts — a trimmed name, an outgoing sign — and
+   * what the user is shown has to be what it actually holds.
+   */
+  readonly record: DraftRecord;
 }
 
 /**
@@ -83,10 +83,7 @@ export function applyCorrection(
         balance: balance ?? held.record.balance,
       };
 
-      return {
-        draft: draft.replaceAccount(id, account),
-        summary: summariseAccount(account),
-      };
+      return corrected(draft.replaceAccount(id, account), id);
     }
     case 'FIXED_BILLS':
     case 'VARIABLE_BILLS': {
@@ -113,13 +110,12 @@ export function applyCorrection(
           acceptCycleFallback ?? held.record.acceptsCycleFallback,
       };
 
-      return {
-        draft:
-          held.section === SetupSection.FixedBills
-            ? draft.replaceFixedBill(id, bill)
-            : draft.replaceVariableBill(id, bill),
-        summary: summariseBill(bill),
-      };
+      return corrected(
+        held.section === SetupSection.FixedBills
+          ? draft.replaceFixedBill(id, bill)
+          : draft.replaceVariableBill(id, bill),
+        id,
+      );
     }
     case 'CARDS': {
       const { limit, closingDay, dueDay, paymentAccountName } = correction;
@@ -142,10 +138,7 @@ export function applyCorrection(
           paymentAccountName ?? held.record.paymentAccountName,
       };
 
-      return {
-        draft: draft.replaceCard(id, card),
-        summary: summariseCard(card),
-      };
+      return corrected(draft.replaceCard(id, card), id);
     }
     case 'BUCKETS': {
       const { rule, targetAmount, targetDate } = correction;
@@ -161,10 +154,7 @@ export function applyCorrection(
       if (bucket.mode === 'ONGOING') {
         if (name === undefined && rule === undefined) return undefined;
 
-        return {
-          draft: draft.replaceOngoingBucket(id, base),
-          summary: summariseBucket({ mode: 'ONGOING', ...base }),
-        };
+        return corrected(draft.replaceOngoingBucket(id, base), id);
       }
 
       if (
@@ -184,10 +174,7 @@ export function applyCorrection(
         } satisfies BucketTarget,
       };
 
-      return {
-        draft: draft.replaceGoalBucket(id, goal),
-        summary: summariseBucket({ mode: 'GOAL', ...goal }),
-      };
+      return corrected(draft.replaceGoalBucket(id, goal), id);
     }
     default: {
       const unreachable: never = held;
@@ -196,49 +183,6 @@ export function applyCorrection(
   }
 }
 
-export function summariseAccount(account: {
-  name: string;
-  type: AccountType;
-  balance: Money;
-}): string {
-  return `${account.name} — a ${account.type.toLowerCase()} account holding R$ ${account.balance.toReais()}.`;
-}
-
-export function summariseBill(bill: {
-  name: string;
-  amount: Money;
-  dueDayOfMonth: number;
-  isEstimate: boolean;
-}): string {
-  return `${bill.name} — R$ ${bill.amount.abs().toReais()} on day ${String(bill.dueDayOfMonth)}${bill.isEstimate ? ', an estimate' : ''}.`;
-}
-
-export function summariseCard(card: {
-  name: string;
-  limit: Money;
-  closingDay: number;
-  dueDay: number;
-  paymentAccountName: string;
-}): string {
-  return `${card.name} — limit R$ ${card.limit.toReais()}, closing on day ${String(card.closingDay)}, due on day ${String(card.dueDay)}, paid from ${card.paymentAccountName}.`;
-}
-
-/** The two shapes a bucket has, with the id the draft has yet to give it. */
-export type SummarisedBucket =
-  | ({ readonly mode: 'GOAL' } & ProposedGoalBucket)
-  | ({ readonly mode: 'ONGOING' } & ProposedBucket);
-
-export function summariseBucket(bucket: SummarisedBucket): string {
-  const opening = `${bucket.name} — ${describeRule(bucket.rule)} each cycle`;
-  const order = `funded #${String(bucket.priority)}.`;
-
-  return bucket.mode === 'GOAL'
-    ? `${opening} toward R$ ${bucket.target.amount.toReais()} by ${bucket.target.date.toISO()}, ${order}`
-    : `${opening}, ${order}`;
-}
-
-export function describeRule(rule: AllocationRule): string {
-  return rule.kind === 'PERCENT'
-    ? `${rule.percentage.toString()} of Expected Surplus`
-    : `R$ ${rule.amount.toReais()}`;
+function corrected(draft: SetupDraft, id: string): CorrectedRecord {
+  return { draft, record: draft.record(id) };
 }

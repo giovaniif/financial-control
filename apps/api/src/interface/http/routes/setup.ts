@@ -1,6 +1,9 @@
 import type {
   AccountType,
+  AllocationRuleRequest,
   BackupDocument,
+  EstablishedBucketFields,
+  EstablishedRecordResponse,
   SetupAppliedResponse,
   SetupDueDayRefusalResponse,
   SetupRecordCorrectionRequest,
@@ -13,7 +16,9 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { ReadSetupState } from '../../../application/projection/uc-1-5-read-setup-state.js';
 import type { CompleteSetup } from '../../../application/setup/compose-setup.js';
 import { SetupNotComplete } from '../../../application/setup/compose-setup.js';
+import type { EstablishedRecord } from '../../../application/setup/established-record.js';
 import type { RecordCorrection } from '../../../application/setup/record-correction.js';
+import type { DraftBucket } from '../../../application/setup/setup-draft.js';
 import {
   AnchorNotChosen,
   DueDayOutsideCycle,
@@ -318,15 +323,93 @@ function readRule(record: Record<string, unknown>): AllocationRule | undefined {
     : undefined;
 }
 
+/**
+ * The record as data beside the sentence it is shown as — FIN-124. Both come
+ * off the same draft record, so a client never has to read one out of the
+ * other.
+ */
+function toEstablished(record: EstablishedRecord): EstablishedRecordResponse {
+  const shown = { id: record.id ?? null, summary: record.summary };
+
+  switch (record.section) {
+    case 'ANCHOR':
+    case 'SALARY':
+      return { ...shown, section: record.section, fields: null };
+    case 'ACCOUNTS':
+      return {
+        ...shown,
+        section: record.section,
+        fields: {
+          name: record.record.name,
+          type: record.record.type,
+          balance: record.record.balance.cents,
+        },
+      };
+    case 'FIXED_BILLS':
+    case 'VARIABLE_BILLS':
+      return {
+        ...shown,
+        section: record.section,
+        fields: {
+          name: record.record.name,
+          amount: record.record.amount.cents,
+          dueDayOfMonth: record.record.dueDayOfMonth,
+          isEstimate: record.record.isEstimate,
+        },
+      };
+    case 'CARDS':
+      return {
+        ...shown,
+        section: record.section,
+        fields: {
+          name: record.record.name,
+          limit: record.record.limit.cents,
+          closingDay: record.record.closingDay,
+          dueDay: record.record.dueDay,
+          paymentAccountName: record.record.paymentAccountName,
+        },
+      };
+    case 'BUCKETS':
+      return {
+        ...shown,
+        section: record.section,
+        fields: toBucket(record.record),
+      };
+    default: {
+      const unreachable: never = record;
+      return unreachable;
+    }
+  }
+}
+
+function toBucket(bucket: DraftBucket): EstablishedBucketFields {
+  const common = {
+    name: bucket.name,
+    rule: toRule(bucket.rule),
+    priority: bucket.priority,
+  };
+
+  return bucket.mode === 'GOAL'
+    ? {
+        mode: 'GOAL',
+        ...common,
+        target: bucket.target.amount.cents,
+        targetDate: bucket.target.date.toISO(),
+      }
+    : { mode: 'ONGOING', ...common };
+}
+
+function toRule(rule: AllocationRule): AllocationRuleRequest {
+  return rule.kind === 'PERCENT'
+    ? { kind: 'PERCENT', percent: rule.percentage.percent }
+    : { kind: 'FIXED', amount: rule.amount.cents };
+}
+
 function toTurn(turn: SetupTurn): SetupTurnResponse {
   return {
     conversationId: turn.conversationId,
     message: turn.message,
-    established: turn.established.map((record) => ({
-      section: record.section,
-      id: record.id ?? null,
-      summary: record.summary,
-    })),
+    established: turn.established.map(toEstablished),
     removed: [...turn.removed],
     corrections: [...turn.corrections],
     nextSection: turn.nextSection ?? null,

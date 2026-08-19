@@ -38,7 +38,7 @@ export function RecordLine({ record, conversationId, onTurn }: Props) {
   const drop = useDropSetupRecord();
 
   const parsed = parseRecord(record);
-  const name = recordName(record.summary);
+  const name = recordName(record);
   // Both routes name a record inside a conversation. Without either there is
   // nothing to act on — which is the anchor and the salary, said again rather
   // than corrected.

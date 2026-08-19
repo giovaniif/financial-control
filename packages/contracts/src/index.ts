@@ -83,6 +83,10 @@ export type {
   WealthProjectionResponse,
 } from './projection.js';
 export type {
+  EstablishedAccountFields,
+  EstablishedBillFields,
+  EstablishedBucketFields,
+  EstablishedCardFields,
   EstablishedRecordResponse,
   SetupAppliedResponse,
   SetupDueDayRefusalResponse,

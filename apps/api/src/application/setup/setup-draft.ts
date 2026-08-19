@@ -315,6 +315,17 @@ export class SetupDraft {
     return this.records.find((held) => held.record.id === id);
   }
 
+  /** The record under that id, for a caller that knows there has to be one. */
+  record(id: string): DraftRecord {
+    const held = this.find(id);
+    if (held === undefined) {
+      throw new SetupRecordNotFound(
+        `The setup holds nothing recorded as "${id}".`,
+      );
+    }
+    return held;
+  }
+
   /** What the conversation still has to ask about, in the order it asks. */
   get remainingSections(): readonly SetupSection[] {
     return SETUP_SECTIONS.filter(
@@ -470,7 +481,7 @@ export class SetupDraft {
    * about again; a skipped one is settled.
    */
   remove(id: string): SetupDraft {
-    const held = this.locate(id);
+    const held = this.record(id);
 
     switch (held.section) {
       case 'ACCOUNTS':
@@ -516,16 +527,6 @@ export class SetupDraft {
     };
 
     return answered[section];
-  }
-
-  private locate(id: string): DraftRecord {
-    const held = this.find(id);
-    if (held === undefined) {
-      throw new SetupRecordNotFound(
-        `The setup holds nothing recorded as "${id}".`,
-      );
-    }
-    return held;
   }
 
   private assertNoCardIsPaidFrom(account: DraftAccount): void {

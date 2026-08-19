@@ -44,16 +44,95 @@ export interface SetupTurnRequest {
   conversationId?: string;
 }
 
-/** One thing the turn established, in the user's own terms. */
-export interface EstablishedRecordResponse {
-  section: SetupSection;
+/** One account the setup established. */
+export interface EstablishedAccountFields {
+  name: string;
+  type: AccountType;
+  balance: Cents;
+}
+
+/** One bill the setup established, fixed or variable. */
+export interface EstablishedBillFields {
+  name: string;
+  /** Outgoing, so negative — the sign the ledger and the templates use. */
+  amount: Cents;
+  dueDayOfMonth: number;
+  isEstimate: boolean;
+}
+
+export interface EstablishedCardFields {
+  name: string;
+  limit: Cents;
+  closingDay: number;
+  dueDay: number;
+  paymentAccountName: string;
+}
+
+/**
+ * A goal carries its target and an ongoing bucket carries none, so asking an
+ * ongoing bucket what it is aiming at does not compile — UC-6.1.
+ */
+export type EstablishedBucketFields =
+  | {
+      mode: 'GOAL';
+      name: string;
+      rule: AllocationRuleRequest;
+      priority: number;
+      target: Cents;
+      /** `YYYY-MM-DD`. */
+      targetDate: string;
+    }
+  | {
+      mode: 'ONGOING';
+      name: string;
+      rule: AllocationRuleRequest;
+      priority: number;
+    };
+
+interface EstablishedRecordBase {
   /**
    * What a correction names it by — `null` for the sections holding a single
    * value, which are answered again rather than corrected.
    */
   id: string | null;
+  /** The record as a sentence, for a person to read. */
   summary: string;
 }
+
+/**
+ * One thing the turn established: the sentence it is shown as, and the fields
+ * behind it.
+ *
+ * The summary is what the user reads; it is never what the client reads. A
+ * client that took the fields back out of the prose would break silently the
+ * day the wording changed, with the test that would have caught it on the
+ * other side of the wire — FIN-124.
+ *
+ * The section is the tag, as it is on the draft itself, so a card's fields
+ * cannot be read off a bucket record.
+ */
+export type EstablishedRecordResponse =
+  | (EstablishedRecordBase & {
+      section: 'ANCHOR' | 'SALARY';
+      /** A single value, answered again rather than corrected. */
+      fields: null;
+    })
+  | (EstablishedRecordBase & {
+      section: 'ACCOUNTS';
+      fields: EstablishedAccountFields;
+    })
+  | (EstablishedRecordBase & {
+      section: 'FIXED_BILLS' | 'VARIABLE_BILLS';
+      fields: EstablishedBillFields;
+    })
+  | (EstablishedRecordBase & {
+      section: 'CARDS';
+      fields: EstablishedCardFields;
+    })
+  | (EstablishedRecordBase & {
+      section: 'BUCKETS';
+      fields: EstablishedBucketFields;
+    });
 
 export interface SetupTurnResponse {
   conversationId: string;
