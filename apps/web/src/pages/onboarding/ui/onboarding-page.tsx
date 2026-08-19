@@ -1,15 +1,13 @@
-import type { AnchorChangeRequest, SpreadsheetReading } from '@fin/contracts';
+import type { AnchorChangeRequest } from '@fin/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
 import { useChangeAnchor } from '@/features/configure-anchor';
-import { useReadSpreadsheet } from '@/features/import-spreadsheet';
 import { useSelectedCycle } from '@/features/navigate-cycle';
 import { skipSetup } from '@/shared/model';
 import { Button, Stepper } from '@/shared/ui';
 
 import { STEPS, type StepId } from '../model/steps.js';
-import { useImportDraft } from '../model/use-import-draft.js';
 import { useWizard } from '../model/use-wizard.js';
 import { AccountsStep } from './steps/accounts-step.js';
 import { BucketsStep } from './steps/buckets-step.js';
@@ -18,11 +16,6 @@ import { CycleStep } from './steps/cycle-step.js';
 import { DoneStep } from './steps/done-step.js';
 import { TemplatesStep } from './steps/templates-step.js';
 import { WhyStep, type StartMode } from './steps/why-step.js';
-import { ImportAccounts } from './steps/import/import-accounts.js';
-import { ImportBuckets } from './steps/import/import-buckets.js';
-import { ImportCards } from './steps/import/import-cards.js';
-import { ImportFinish } from './steps/import/import-finish.js';
-import { ImportTemplates } from './steps/import/import-templates.js';
 
 /** Salary on the 5th, moving back off a closed bank — the app's default. */
 const DEFAULT_ANCHOR: AnchorChangeRequest = {
@@ -50,10 +43,6 @@ export function OnboardingPage() {
   const location = useLocation();
   const [anchor, setAnchor] = useState(DEFAULT_ANCHOR);
   const [startMode, setStartMode] = useState<StartMode>();
-  const [reading, setReading] = useState<SpreadsheetReading>();
-  const [sheetFile, setSheetFile] = useState<File>();
-  const reread = useReadSpreadsheet();
-  const importing = useImportDraft();
   const changeAnchor = useChangeAnchor();
   const { selectedMonth } = useSelectedCycle();
 
@@ -69,22 +58,18 @@ export function OnboardingPage() {
    * is what makes this a setup rather than a tour. A step that writes nothing
    * simply advances.
    */
-  const commit: Partial<Record<StepId, () => Promise<unknown>>> =
-    reading === undefined
-      ? { cycle: () => changeAnchor.mutateAsync(anchor) }
-      : {};
+  const commit: Partial<Record<StepId, () => Promise<unknown>>> = {
+    cycle: () => changeAnchor.mutateAsync(anchor),
+  };
 
   /**
-   * Why the wizard will not move on yet. Choosing to start from a file and
+   * Why the wizard will not move on yet. Choosing to start from a backup and
    * then walking past it lands the user in the from-scratch flow having been
-   * told their data would be imported.
+   * told their data would be restored.
    */
   const blockedReason = (): string | undefined => {
     if (wizard.stepId !== 'why') {
       return undefined;
-    }
-    if (startMode === 'spreadsheet' && reading === undefined) {
-      return 'Choose your spreadsheet to go on.';
     }
     if (startMode === 'backup') {
       return 'Restore the backup to go on, or pick another way to start.';
@@ -143,61 +128,19 @@ export function OnboardingPage() {
           <WhyStep
             mode={startMode}
             onChooseMode={setStartMode}
-            reading={reading}
-            onRead={(read, file) => {
-              setReading(read);
-              setSheetFile(file);
-            }}
-            isRereading={reread.isPending}
-            onCorrectYear={(firstColumnYear) => {
-              if (sheetFile === undefined) {
-                return;
-              }
-              reread.mutate(
-                { file: sheetFile, firstColumnYear },
-                { onSuccess: setReading },
-              );
-            }}
             onRestored={wizard.toEnd}
           />
         )}
         {wizard.stepId === 'cycle' && (
           <CycleStep anchor={anchor} onChange={setAnchor} />
         )}
-        {wizard.stepId === 'accounts' &&
-          (reading === undefined ? (
-            <AccountsStep />
-          ) : (
-            <ImportAccounts {...importing} />
-          ))}
-        {wizard.stepId === 'cards' &&
-          (reading === undefined ? (
-            <CardsStep />
-          ) : (
-            <ImportCards reading={reading} {...importing} />
-          ))}
-        {wizard.stepId === 'templates' &&
-          (reading === undefined ? (
-            <TemplatesStep currentMonth={selectedMonth ?? ''} />
-          ) : (
-            <ImportTemplates reading={reading} {...importing} />
-          ))}
-        {wizard.stepId === 'buckets' &&
-          (reading === undefined ? (
-            <BucketsStep />
-          ) : (
-            <ImportBuckets reading={reading} {...importing} />
-          ))}
-        {wizard.stepId === 'done' &&
-          (reading === undefined ? (
-            <DoneStep />
-          ) : (
-            <ImportFinish
-              reading={reading}
-              draft={importing.draft}
-              anchor={anchor}
-            />
-          ))}
+        {wizard.stepId === 'accounts' && <AccountsStep />}
+        {wizard.stepId === 'cards' && <CardsStep />}
+        {wizard.stepId === 'templates' && (
+          <TemplatesStep currentMonth={selectedMonth ?? ''} />
+        )}
+        {wizard.stepId === 'buckets' && <BucketsStep />}
+        {wizard.stepId === 'done' && <DoneStep />}
       </main>
 
       <footer className="flex items-center justify-between border-t border-zinc-200 pt-4">
