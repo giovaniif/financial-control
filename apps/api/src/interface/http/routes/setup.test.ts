@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { ReadSetupState } from '../../../application/projection/uc-1-5-read-setup-state.js';
 import { CompleteSetup } from '../../../application/setup/compose-setup.js';
 import { CorrectSetupRecord } from '../../../application/setup/uc-1-5-correct-record.js';
+import { SpendCeiling } from '../../../application/spend/spend-ceiling.js';
 import { SetupDraft } from '../../../application/setup/setup-draft.js';
 import type {
   SetupConversations,
@@ -19,6 +20,7 @@ import type { ScriptedTurn } from '../../../application/testing/fake-language-mo
 import { FakeLanguageModel } from '../../../application/testing/fake-language-model.js';
 import {
   FakeSetupConversationStore,
+  FakeSpendLedger,
   InMemoryAccountRepository,
   InMemoryBucketRepository,
   InMemoryCardRepository,
@@ -37,6 +39,8 @@ import {
 import { noHolidays } from '../../../domain/ports/holiday-calendar.js';
 import { LanguageModelFailed } from '../../../domain/ports/language-model.js';
 import { Money } from '../../../domain/shared/money.js';
+import { Principal } from '../../../domain/shared/principal.js';
+import { LocalDate } from '../../../domain/shared/local-date.js';
 import { buildTestServer } from '../testing/test-server.js';
 
 const NOW = '2026-08-10T12:00:00Z';
@@ -55,9 +59,14 @@ function readSetupState(accounts: InMemoryAccountRepository): ReadSetupState {
  * A server whose setup routes share one conversation store, so a turn and the
  * apply that follows it are talking about the same conversation.
  */
-function wire(model: FakeLanguageModel) {
+/** Far above anything this suite spends, unless a test says otherwise. */
+const NO_CEILING = 1_000_000;
+
+function wire(model: FakeLanguageModel, maxTokensPerDay = NO_CEILING) {
   const clock = FixedClock.at(NOW);
   const conversations: SetupConversations = new FakeSetupConversationStore();
+  const ledger = new FakeSpendLedger();
+  const spend = new SpendCeiling(ledger, clock, maxTokensPerDay);
   const backup = new BackupRestore(
     new InMemoryCycleRepository(),
     new InMemoryAccountRepository(),
@@ -71,10 +80,12 @@ function wire(model: FakeLanguageModel) {
 
   return {
     conversations,
+    ledger,
     app: buildTestServer({
       converseSetup: new ConverseSetup(
         model,
         conversations,
+        spend,
         new SequentialIdSource('conv'),
         noHolidays,
         clock,
@@ -571,5 +582,32 @@ describe('DELETE /setup/conversation/:id/records/:recordId', () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json<{ error: string }>().error).toContain('Inter');
+  });
+});
+
+describe('POST /setup/conversation — the spend ceiling', () => {
+  /**
+   * 503 is what the missing key already answers with: nothing is wrong, the
+   * assistant is switched off, and the client falls back to the plain form.
+   */
+  it('answers 503 past the day’s ceiling, without calling the model', async () => {
+    const model = new FakeLanguageModel([{ text: 'never asked for' }]);
+    const { app, ledger } = wire(model, 1_000);
+    await ledger.record(Principal.sole(), LocalDate.parse('2026-08-10'), {
+      inputTokens: 1_000,
+      outputTokens: 0,
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/setup/conversation',
+      payload: { message: 'I am paid on the 5th' },
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json<{ error: string }>().error).toContain(
+      'switched off until tomorrow',
+    );
+    expect(model.requests).toHaveLength(0);
   });
 });

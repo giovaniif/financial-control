@@ -68,6 +68,20 @@ export interface ModelResponse {
   readonly text: string;
   readonly toolCalls: readonly ToolCall[];
   readonly stopReason: ModelStopReason;
+  readonly usage: ModelUsage;
+}
+
+/**
+ * What one call cost, in tokens.
+ *
+ * Tokens rather than money, and the port's own names rather than a provider's:
+ * what a token is worth is a price list that changes, and it belongs to
+ * whatever is counting rather than to the model. A caller adds these up; the
+ * adapter is the only thing that knows which vendor field each came from.
+ */
+export interface ModelUsage {
+  readonly inputTokens: number;
+  readonly outputTokens: number;
 }
 
 /**

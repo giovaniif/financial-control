@@ -78,3 +78,30 @@ export const SPEND_RATE_LIMITS = {
   burst: { max: 10, windowMs: 60_000 },
   daily: { max: 200, windowMs: 24 * 60 * 60 * 1_000 },
 } as const;
+
+/**
+ * What the app may spend on the model in one day, in tokens — FIN-115.
+ *
+ * A constant, not an env var. One machine and one user, and a limit that can
+ * be raised by editing an unversioned file is not a limit: raising this one is
+ * a commit somebody can read.
+ *
+ * Prepaid credits with auto-reload off are the real backstop — nothing can
+ * spend more than the balance — but that backstop has no granularity, and a
+ * runaway loop that burns the whole balance in an afternoon shows up as the
+ * app going dead with no explanation. This turns that into a bounded daily
+ * loss with a legible message.
+ *
+ * The figure. A question with a full transcript behind it costs on the order
+ * of 25k tokens across its calls, so a million is roughly forty of them in a
+ * day — far more than one person asks by hand, and comfortably above the two
+ * hundred requests {@link SPEND_RATE_LIMITS} already allows. At Sonnet 5's
+ * rates a day that actually reached the ceiling costs at most about USD 15,
+ * and in practice far less: input dominates, and input is a fifth the price
+ * of output.
+ *
+ * Input and output are counted together on purpose. They are priced
+ * differently, but a ceiling is only useful if it is one number a person can
+ * state, and the cheaper half is the larger one here.
+ */
+export const DAILY_TOKEN_CEILING = 1_000_000;

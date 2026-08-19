@@ -19,6 +19,7 @@ import {
   InvalidSetupRecord,
   SetupRecordNotFound,
 } from '../../../application/setup/setup-draft.js';
+import { SpendCeilingReached } from '../../../application/spend/spend-ceiling.js';
 import type { CorrectSetupRecord } from '../../../application/setup/uc-1-5-correct-record.js';
 import { NothingToCorrect } from '../../../application/setup/uc-1-5-correct-record.js';
 import type {
@@ -35,6 +36,7 @@ import {
 import { LocalDate } from '../../../domain/shared/local-date.js';
 import { Money } from '../../../domain/shared/money.js';
 import { Percentage } from '../../../domain/shared/percentage.js';
+import { principalOf } from '../principal.js';
 import type { SpendGuard } from '../rate-limit.js';
 
 interface Dependencies {
@@ -76,7 +78,7 @@ export function registerSetupRoutes(
       }
 
       try {
-        return toTurn(await converseSetup.execute(input));
+        return toTurn(await converseSetup.execute(principalOf(), input));
       } catch (error) {
         return handle(error, reply);
       }
@@ -371,7 +373,13 @@ function handle(error: unknown, reply: FastifyReply) {
   // nothing is wrong, there is simply no model configured, and the client
   // falls back to the plain form. A model that was reached and failed is a
   // different situation and must not collapse into the same code.
-  if (error instanceof LanguageModelUnavailable) {
+  // The day's ceiling reads exactly as the missing key does: nothing is
+  // wrong, the assistant is switched off, and the client falls back to the
+  // plain form. Both are a state the app is expected to be in.
+  if (
+    error instanceof LanguageModelUnavailable ||
+    error instanceof SpendCeilingReached
+  ) {
     return reply.status(503).send({ error: error.message });
   }
   if (error instanceof LanguageModelFailed) {

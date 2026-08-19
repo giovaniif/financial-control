@@ -34,6 +34,7 @@ import type {
   ProposalOffer,
 } from '../../../application/assistant/uc-8-ask-assistant.js';
 import { EmptyQuestion } from '../../../application/assistant/uc-8-ask-assistant.js';
+import { SpendCeilingReached } from '../../../application/spend/spend-ceiling.js';
 import {
   LanguageModelFailed,
   LanguageModelUnavailable,
@@ -292,7 +293,14 @@ function statusOf(error: unknown): number | undefined {
   ) {
     return 409;
   }
-  if (error instanceof LanguageModelUnavailable) return 503;
+  // The day's ceiling reads exactly as the missing key does: nothing is
+  // wrong, the assistant is switched off, and the chat says why it is quiet.
+  if (
+    error instanceof LanguageModelUnavailable ||
+    error instanceof SpendCeilingReached
+  ) {
+    return 503;
+  }
   if (error instanceof LanguageModelFailed) return 502;
 
   // Applying routes into the interactor that owns the change, so anything
