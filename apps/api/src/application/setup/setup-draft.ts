@@ -8,6 +8,7 @@ import type {
 import type { HolidayCalendar } from '../../domain/ports/holiday-calendar.js';
 import type { IdSource } from '../../domain/ports/id-source.js';
 import { DomainError } from '../../domain/shared/domain-error.js';
+import type { LocalDate } from '../../domain/shared/local-date.js';
 import type { Money } from '../../domain/shared/money.js';
 
 /** A record arrived before the payday anchor every date it carries depends on. */
@@ -16,8 +17,35 @@ export class AnchorNotChosen extends DomainError {}
 /** A proposed record the draft will not hold: a name, an amount, a day. */
 export class InvalidSetupRecord extends DomainError {}
 
-/** A due day the generator would silently drop from one of its cycles. */
-export class DueDayOutsideCycle extends DomainError {}
+/**
+ * One cycle in the rolling window that cannot reach a due day, and the day it
+ * offers in its place — its own last day, which every cycle has.
+ */
+export interface UnreachableCycle {
+  readonly month: string;
+  readonly label: string;
+  /** The cycle's bounds, as the refusal states them. */
+  readonly range: string;
+  readonly fallbackDate: LocalDate;
+  readonly fallbackDayOfMonth: number;
+}
+
+/**
+ * A due day the generator would silently drop from one of its cycles.
+ *
+ * It carries the cycles rather than only a sentence, so the caller can make
+ * the offer the refusal describes instead of leaving the user to invent a
+ * different day — FIN-117.
+ */
+export class DueDayOutsideCycle extends DomainError {
+  constructor(
+    message: string,
+    readonly dueDayOfMonth: number,
+    readonly cycles: readonly UnreachableCycle[],
+  ) {
+    super(message);
+  }
+}
 
 export class SectionCannotBeSkipped extends DomainError {}
 
@@ -54,6 +82,12 @@ export interface DraftAccount {
   readonly balance: Money;
 }
 
+/** The date one cycle uses for a bill whose due day it cannot reach. */
+export interface DueDateOverride {
+  readonly month: string;
+  readonly date: LocalDate;
+}
+
 export interface DraftBill {
   readonly id: string;
   readonly name: string;
@@ -61,6 +95,14 @@ export interface DraftBill {
   readonly amount: Money;
   readonly dueDayOfMonth: number;
   readonly isEstimate: boolean;
+  /** The user took the cycle's last day where the due day cannot be placed. */
+  readonly acceptsCycleFallback: boolean;
+  /**
+   * Only the cycles that cannot reach {@link dueDayOfMonth}; empty when every
+   * one can. The due day itself is never rewritten — the bill really is on
+   * the 4th, and the other eleven cycles say so.
+   */
+  readonly dueDateOverrides: readonly DueDateOverride[];
 }
 
 export interface DraftCard {
@@ -101,6 +143,12 @@ export interface ProposedBill {
   readonly amount: Money;
   readonly dueDayOfMonth: number;
   readonly isEstimate?: boolean;
+  /**
+   * The offer the refusal made, taken: the cycles that cannot reach the due
+   * day use their own last day, and the day stands everywhere else. Only ever
+   * set once the user has agreed — FIN-117.
+   */
+  readonly acceptCycleFallback?: boolean;
 }
 
 export interface ProposedCard {
@@ -289,14 +337,14 @@ export class SetupDraft {
    * the new one leaves.
    */
   withAnchor(anchor: PaydayAnchor): SetupDraft {
-    for (const bill of [
-      ...this.state.fixedBills,
-      ...this.state.variableBills,
-    ]) {
-      this.assertPlaceable(bill.name, bill.dueDayOfMonth, anchor);
-    }
+    const revised = (bills: readonly DraftBill[]): DraftBill[] =>
+      bills.map((bill) => this.reviseBill(bill, anchor));
 
-    return this.with({ anchor });
+    return this.with({
+      anchor,
+      fixedBills: revised(this.state.fixedBills),
+      variableBills: revised(this.state.variableBills),
+    });
   }
 
   addAccount(proposed: {
@@ -530,7 +578,14 @@ export class SetupDraft {
     if (proposed.amount.isZero()) {
       throw new InvalidSetupRecord(`${name} cannot be a bill for nothing.`);
     }
-    this.assertPlaceable(name, proposed.dueDayOfMonth, anchor);
+
+    const acceptsCycleFallback = proposed.acceptCycleFallback ?? false;
+    const dueDateOverrides = this.placeOrOffer(
+      name,
+      proposed.dueDayOfMonth,
+      anchor,
+      acceptsCycleFallback,
+    );
 
     // The sign is normalised rather than demanded: "320" and "-320" are the
     // same statement about a bill, and a correction prompt about which one the
@@ -541,6 +596,26 @@ export class SetupDraft {
       amount: proposed.amount.abs().negate(),
       dueDayOfMonth: proposed.dueDayOfMonth,
       isEstimate: proposed.isEstimate ?? isEstimateByDefault,
+      acceptsCycleFallback,
+      dueDateOverrides,
+    };
+  }
+
+  /**
+   * A bill the draft already holds, under a different anchor. The user agreed
+   * to the cycle's last day for this bill rather than to three particular
+   * dates, so a re-sliced window works the fallbacks out again; one that never
+   * had the offer put to it is refused exactly as it was on the way in.
+   */
+  private reviseBill(bill: DraftBill, anchor: PaydayAnchor): DraftBill {
+    return {
+      ...bill,
+      dueDateOverrides: this.placeOrOffer(
+        bill.name,
+        bill.dueDayOfMonth,
+        anchor,
+        bill.acceptsCycleFallback,
+      ),
     };
   }
 
@@ -615,12 +690,18 @@ export class SetupDraft {
    * question is put to `CycleRef` rather than answered again here: the
    * generator clamps a day onto a short month's last day, and a second,
    * stricter rule in this file is exactly the bug FIN-93 fixed.
+   *
+   * The draft still refuses; validation belongs here and a value object does
+   * not negotiate. What it does not do is refuse blind — the offer travels
+   * with the refusal, and a caller that comes back having had it accepted
+   * gets the fallback dates for those cycles alone (FIN-117).
    */
-  private assertPlaceable(
+  private placeOrOffer(
     name: string,
     dueDayOfMonth: number,
     anchor: PaydayAnchor,
-  ): void {
+    accepted: boolean,
+  ): DueDateOverride[] {
     const window = CycleRef.rolling(
       this.state.startMonth,
       ROLLING_CYCLES,
@@ -628,13 +709,29 @@ export class SetupDraft {
       this.state.holidays,
     );
 
-    for (const ref of window) {
-      if (ref.dateForDayOfMonth(dueDayOfMonth) === undefined) {
-        throw new DueDayOutsideCycle(
-          `${name} falls due on day ${String(dueDayOfMonth)}, which the ${ref.label} cycle (${ref.range.toString()}) never reaches. Pick another day, or the cycle's last day.`,
-        );
-      }
+    const unreachable = window
+      .filter((ref) => ref.dateForDayOfMonth(dueDayOfMonth) === undefined)
+      .map((ref): UnreachableCycle => ({
+        month: ref.month,
+        label: ref.label,
+        range: ref.range.toString(),
+        fallbackDate: ref.end,
+        fallbackDayOfMonth: ref.end.day,
+      }));
+
+    const [first, ...rest] = unreachable;
+    if (first !== undefined && !accepted) {
+      throw new DueDayOutsideCycle(
+        offerFallback(name, dueDayOfMonth, first, rest.length),
+        dueDayOfMonth,
+        unreachable,
+      );
     }
+
+    return unreachable.map((cycle) => ({
+      month: cycle.month,
+      date: cycle.fallbackDate,
+    }));
   }
 
   private readBucketName(id: string, proposed: ProposedBucket): string {
@@ -672,6 +769,30 @@ export class SetupDraft {
   private with(changes: Partial<DraftState>): SetupDraft {
     return new SetupDraft({ ...this.state, ...changes });
   }
+}
+
+/**
+ * The refusal as an offer: what cannot be placed, and the cycle's own last day
+ * standing in for it — never a different due day, which would be a lie about
+ * the bill (UC-1.7, FIN-117).
+ */
+function offerFallback(
+  name: string,
+  dueDayOfMonth: number,
+  first: UnreachableCycle,
+  others: number,
+): string {
+  const day = String(dueDayOfMonth);
+  const cycles =
+    others === 0
+      ? `the ${first.label} cycle (${first.range}) never reaches`
+      : `the ${first.label} cycle (${first.range}) and ${String(others)} other cycles never reach`;
+  const offer =
+    others === 0
+      ? `I can use that cycle's last day, ${first.fallbackDate.toISO()}`
+      : `I can use each of those cycles' last day, starting ${first.fallbackDate.toISO()}`;
+
+  return `${name} falls due on day ${day}, which ${cycles}. ${offer}, and keep day ${day} everywhere else.`;
 }
 
 /** What everything but the record being written holds, so a correction may

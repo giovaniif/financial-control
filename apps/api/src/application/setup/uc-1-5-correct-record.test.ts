@@ -12,7 +12,11 @@ import {
 } from '../testing/fakes.js';
 
 import type { SetupSection } from './setup-draft.js';
-import { SetupDraft, SetupRecordNotFound } from './setup-draft.js';
+import {
+  DueDayOutsideCycle,
+  SetupDraft,
+  SetupRecordNotFound,
+} from './setup-draft.js';
 import type { SetupConversations } from './uc-1-5-converse-setup.js';
 import { SetupConversationNotFound } from './uc-1-5-converse-setup.js';
 import {
@@ -158,10 +162,80 @@ describe('CorrectSetupRecord.correct', () => {
         recordId: 'rec-1',
         correction: { dueDayOfMonth: 30 },
       }),
-    ).rejects.toThrow(/never reaches/);
+    ).rejects.toThrow(/never reach.*last day/);
 
     const [bill] = (await open(conversations)).state.draft.fixedBills;
     expect(bill?.dueDayOfMonth).toBe(31);
+  });
+
+  /**
+   * FIN-117 — the structured path answers exactly as the conversation does:
+   * the refusal names the cycles it cannot place the day in and what it can
+   * use there, so a form can put the offer rather than a dead end.
+   */
+  it('offers the cycle last day the form can put to the user', async () => {
+    const { conversations, stored, correctRecord } = wire();
+    await conversations.save(stored);
+
+    const refused = await correctRecord
+      .correct({
+        conversationId: 'conv-1',
+        recordId: BILL_ID,
+        correction: { dueDayOfMonth: 4 },
+      })
+      .catch((error: unknown) => error);
+
+    expect(refused).toBeInstanceOf(DueDayOutsideCycle);
+    expect((refused as DueDayOutsideCycle).cycles.map((c) => c.month)).toEqual([
+      '2026-09',
+      '2026-12',
+      '2027-06',
+    ]);
+    const [bill] = (await open(conversations)).state.draft.fixedBills;
+    expect(bill?.dueDayOfMonth).toBe(8);
+  });
+
+  it('takes the offer, overriding only the cycles that need it', async () => {
+    const { conversations, stored, correctRecord } = wire();
+    await conversations.save(stored);
+
+    await correctRecord.correct({
+      conversationId: 'conv-1',
+      recordId: BILL_ID,
+      correction: { dueDayOfMonth: 4, acceptCycleFallback: true },
+    });
+
+    const [bill] = (await open(conversations)).state.draft.fixedBills;
+    expect(bill?.dueDayOfMonth).toBe(4);
+    expect(
+      bill?.dueDateOverrides.map((override) => override.date.toISO()),
+    ).toEqual(['2026-09-03', '2026-12-03', '2027-06-03']);
+  });
+
+  /**
+   * A correction states only what changes, so one that says nothing about the
+   * day must not quietly withdraw an offer the user already accepted.
+   */
+  it('keeps an accepted fallback through a correction of something else', async () => {
+    const { conversations, stored, correctRecord } = wire(
+      establishedDraft().addFixedBill({
+        name: 'Gym',
+        amount: Money.fromCents(12_000),
+        dueDayOfMonth: 4,
+        acceptCycleFallback: true,
+      }),
+    );
+    await conversations.save(stored);
+
+    await correctRecord.correct({
+      conversationId: 'conv-1',
+      recordId: 'rec-4',
+      correction: { amount: Money.fromCents(15_000) },
+    });
+
+    const gym = (await open(conversations)).state.draft.fixedBills[1];
+    expect(gym?.amount.cents).toBe(-15_000);
+    expect(gym?.dueDateOverrides).toHaveLength(3);
   });
 
   it('refuses a name another bill already holds', async () => {

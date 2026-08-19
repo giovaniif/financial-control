@@ -81,6 +81,32 @@ export interface SetupAppliedResponse {
 }
 
 /**
+ * One cycle in the rolling window that cannot reach a due day, and the day it
+ * offers instead — its own last day. UC-1.7, FIN-117.
+ */
+export interface SetupUnreachableCycleResponse {
+  /** `YYYY-MM`, the month the cycle is named for. */
+  month: string;
+  /** "September 2026" — never a bare month name without its bounds. */
+  label: string;
+  range: string;
+  /** `YYYY-MM-DD`. */
+  fallbackDate: string;
+  fallbackDayOfMonth: number;
+}
+
+/**
+ * A refused due day, as an offer rather than a dead end: the day that could
+ * not be placed, and the cycles that could not place it. A bill on the 4th is
+ * a real bill, and roughly twice a year a cycle ends on the 3rd.
+ */
+export interface SetupDueDayRefusalResponse {
+  error: string;
+  dueDayOfMonth: number;
+  cycles: SetupUnreachableCycleResponse[];
+}
+
+/**
  * UC-1.5 — an inline edit of a record the conversation established: the
  * fields that change, and nothing else. Anything left out keeps whatever the
  * record already holds, and a field belonging to another kind of record is
@@ -100,6 +126,11 @@ export interface SetupRecordCorrectionRequest {
   amount?: Cents;
   dueDayOfMonth?: number;
   isEstimate?: boolean;
+  /**
+   * The offer a refused due day came back with, taken: the cycles that cannot
+   * reach the day use their own last day, and the day stands everywhere else.
+   */
+  acceptCycleFallback?: boolean;
   /** A card: the limit, the two days, and the account that pays it. */
   limit?: Cents;
   closingDay?: number;

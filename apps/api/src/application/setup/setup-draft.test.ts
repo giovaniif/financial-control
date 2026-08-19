@@ -387,6 +387,118 @@ describe('SetupDraft bills', () => {
   });
 });
 
+/**
+ * FIN-117 — a bill on the 4th is a real bill. With pay on the 5th and the
+ * preceding-business-day rule, a cycle whose next payday moves back to the 3rd
+ * runs 5 Aug – 3 Sep and never reaches a 4th, roughly twice a year. Refusing
+ * the whole bill leaves the user inventing a day; the refusal has to carry
+ * enough for a caller to offer the cycle's last day instead.
+ */
+describe('SetupDraft due days a cycle cannot reach', () => {
+  const refusal = (attempt: () => SetupDraft): DueDayOutsideCycle => {
+    try {
+      attempt();
+    } catch (error) {
+      if (error instanceof DueDayOutsideCycle) return error;
+      throw error;
+    }
+    throw new Error('The draft placed a due day it should have refused.');
+  };
+
+  const gym = (dueDayOfMonth = 4) => bill('Gym', dueDayOfMonth);
+
+  it('names every cycle that cannot place the day, and what it offers there', () => {
+    const refused = refusal(() => withAnchor(5).addFixedBill(gym()));
+
+    expect(refused.dueDayOfMonth).toBe(4);
+    expect(
+      refused.cycles.map((cycle) => [
+        cycle.month,
+        cycle.label,
+        cycle.range,
+        cycle.fallbackDayOfMonth,
+        cycle.fallbackDate.toISO(),
+      ]),
+    ).toEqual([
+      ['2026-09', 'September 2026', '2026-08-05 – 2026-09-03', 3, '2026-09-03'],
+      ['2026-12', 'December 2026', '2026-11-05 – 2026-12-03', 3, '2026-12-03'],
+      ['2027-06', 'June 2027', '2027-05-05 – 2027-06-03', 3, '2027-06-03'],
+    ]);
+  });
+
+  it('offers the one cycle its own last day, and the day everywhere else', () => {
+    const refused = refusal(() => withAnchor(7).addFixedBill(gym(5)));
+
+    expect(refused.message).toMatch(
+      /Gym.*day 5.*February 2027 cycle \(2027-01-07 – 2027-02-04\).*2027-02-04.*day 5 everywhere else/,
+    );
+  });
+
+  it('leaves the draft holding nothing when the offer is declined', () => {
+    const draft = withAnchor(5);
+
+    expect(() => draft.addFixedBill(gym())).toThrow(DueDayOutsideCycle);
+    expect(draft.fixedBills).toEqual([]);
+  });
+
+  /**
+   * The bill really is on the 4th and nine of the twelve cycles say so — only
+   * the three that cannot reach it take the fallback. Changing the due day
+   * itself would be a lie about the bill.
+   */
+  it('overrides only the cycles that cannot place the day', () => {
+    const [accepted] = withAnchor(5).addFixedBill({
+      ...gym(),
+      acceptCycleFallback: true,
+    }).fixedBills;
+
+    expect(accepted?.dueDayOfMonth).toBe(4);
+    expect(
+      accepted?.dueDateOverrides.map((override) => [
+        override.month,
+        override.date.toISO(),
+      ]),
+    ).toEqual([
+      ['2026-09', '2026-09-03'],
+      ['2026-12', '2026-12-03'],
+      ['2027-06', '2027-06-03'],
+    ]);
+  });
+
+  it('overrides nothing when every cycle already reaches the day', () => {
+    const [accepted] = withAnchor(5).addFixedBill({
+      ...gym(8),
+      acceptCycleFallback: true,
+    }).fixedBills;
+
+    expect(accepted?.dueDateOverrides).toEqual([]);
+  });
+
+  it('takes the offer on a variable bill too', () => {
+    const [accepted] = withAnchor(5).addVariableBill({
+      ...gym(),
+      acceptCycleFallback: true,
+    }).variableBills;
+
+    expect(accepted?.dueDateOverrides).toHaveLength(3);
+  });
+
+  /**
+   * The user agreed to the cycle's last day for this bill, not to three
+   * particular dates: a corrected anchor re-slices every cycle, so the
+   * fallbacks are worked out again rather than carried over.
+   */
+  it('works the fallbacks out again when the anchor changes', () => {
+    const draft = withAnchor(5)
+      .addFixedBill({ ...gym(), acceptCycleFallback: true })
+      .withAnchor(anchor(7));
+
+    const [accepted] = draft.fixedBills;
+    expect(accepted?.dueDayOfMonth).toBe(4);
+    expect(accepted?.dueDateOverrides).toEqual([]);
+  });
+});
+
 describe('SetupDraft cards', () => {
   it('keeps the card and the account it is paid from', () => {
     const draft = withAnchor().addAccount(account()).addCard(card());

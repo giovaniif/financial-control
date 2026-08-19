@@ -33,6 +33,11 @@ export interface RecordCorrection {
   readonly amount?: Money | undefined;
   readonly dueDayOfMonth?: number | undefined;
   readonly isEstimate?: boolean | undefined;
+  /**
+   * The offer a refused due day came back with, taken: the cycles that cannot
+   * reach the day use their own last day — FIN-117.
+   */
+  readonly acceptCycleFallback?: boolean | undefined;
   readonly limit?: Money | undefined;
   readonly closingDay?: number | undefined;
   readonly dueDay?: number | undefined;
@@ -85,12 +90,14 @@ export function applyCorrection(
     }
     case 'FIXED_BILLS':
     case 'VARIABLE_BILLS': {
-      const { amount, dueDayOfMonth, isEstimate } = correction;
+      const { amount, dueDayOfMonth, isEstimate, acceptCycleFallback } =
+        correction;
       if (
         name === undefined &&
         amount === undefined &&
         dueDayOfMonth === undefined &&
-        isEstimate === undefined
+        isEstimate === undefined &&
+        acceptCycleFallback === undefined
       ) {
         return undefined;
       }
@@ -100,6 +107,10 @@ export function applyCorrection(
         amount: amount ?? held.record.amount,
         dueDayOfMonth: dueDayOfMonth ?? held.record.dueDayOfMonth,
         isEstimate: isEstimate ?? held.record.isEstimate,
+        // A correction states only what changes, so an offer already accepted
+        // is not withdrawn by one that says nothing about the day.
+        acceptCycleFallback:
+          acceptCycleFallback ?? held.record.acceptsCycleFallback,
       };
 
       return {
