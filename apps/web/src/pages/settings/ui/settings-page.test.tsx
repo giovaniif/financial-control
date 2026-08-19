@@ -101,6 +101,15 @@ describe('SettingsPage', () => {
     expect(await screen.findByText('configured')).toBeInTheDocument();
   });
 
+  it('offers to run the wizard again whatever the setup state', async () => {
+    stubApi({ '/api/settings/anchor': anchor });
+    renderPage();
+
+    expect(
+      await screen.findByRole('link', { name: 'Run setup again' }),
+    ).toHaveAttribute('href', '/onboarding');
+  });
+
   it('states the formatting conventions explicitly', async () => {
     stubApi({ '/api/settings/anchor': anchor });
     renderPage();
