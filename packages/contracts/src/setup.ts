@@ -1,3 +1,6 @@
+import type { AccountType } from './accounts.js';
+import type { AllocationRuleRequest } from './buckets.js';
+import type { Cents } from './money.js';
 import type { ShiftPolicy } from './settings.js';
 
 /**
@@ -75,4 +78,35 @@ export interface SetupAppliedResponse {
   templates: number;
   cards: number;
   buckets: number;
+}
+
+/**
+ * UC-1.5 — an inline edit of a record the conversation established: the
+ * fields that change, and nothing else. Anything left out keeps whatever the
+ * record already holds, and a field belonging to another kind of record is
+ * not read.
+ *
+ * There is no model in this path. The prose case — *"actually the health plan
+ * is 350"* — is a language problem and stays on the conversation route; a
+ * form the user has already filled in is not, and paying for a model call to
+ * read back what was typed would be spend with no ambiguity to resolve.
+ */
+export interface SetupRecordCorrectionRequest {
+  name?: string;
+  /** An account: what kind it is, and what is in it. */
+  type?: AccountType;
+  balance?: Cents;
+  /** A bill: what it costs, the day it falls due, whether it is a guess. */
+  amount?: Cents;
+  dueDayOfMonth?: number;
+  isEstimate?: boolean;
+  /** A card: the limit, the two days, and the account that pays it. */
+  limit?: Cents;
+  closingDay?: number;
+  dueDay?: number;
+  paymentAccountName?: string;
+  /** A bucket: how much goes in each cycle, and a goal's target. */
+  rule?: AllocationRuleRequest;
+  target?: Cents;
+  targetDate?: string;
 }

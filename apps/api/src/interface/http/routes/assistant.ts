@@ -40,54 +40,61 @@ import {
 } from '../../../domain/ports/language-model.js';
 import { DomainError } from '../../../domain/shared/domain-error.js';
 import { principalOf } from '../principal.js';
+import type { SpendGuard } from '../rate-limit.js';
 
 interface Dependencies {
   converseAssistant: AssistantConversation;
   applyProposal: ApplyProposal;
+  /** Applying a proposal writes to the database; asking costs a model call. */
+  spendGuard: SpendGuard;
 }
 
 /** UC-8 — the assistant: one message in, and the answer as it is written. */
 export function registerAssistantRoutes(
   app: FastifyInstance,
-  { converseAssistant, applyProposal }: Dependencies,
+  { converseAssistant, applyProposal, spendGuard }: Dependencies,
 ): void {
-  app.post('/assistant/messages', async (request, reply) => {
-    const input = readMessage(request.body);
-    if (input === undefined) {
-      return badRequest(
-        reply,
-        'message is required, and conversationId must be a string when it is present.',
-      );
-    }
+  app.post(
+    '/assistant/messages',
+    { onRequest: spendGuard },
+    async (request, reply) => {
+      const input = readMessage(request.body);
+      if (input === undefined) {
+        return badRequest(
+          reply,
+          'message is required, and conversationId must be a string when it is present.',
+        );
+      }
 
-    const turn = converseAssistant.converse(principalOf(), input);
+      const turn = converseAssistant.converse(principalOf(), input);
 
-    // Pulled before the headers go out: everything that can fail before the
-    // first token — no model configured, an unknown conversation, a question
-    // past its cap — still answers with a status code rather than a 200 with
-    // a failure buried inside it.
-    let opening;
-    try {
-      opening = await turn.next();
-    } catch (error) {
-      return handle(error, reply);
-    }
+      // Pulled before the headers go out: everything that can fail before the
+      // first token — no model configured, an unknown conversation, a question
+      // past its cap — still answers with a status code rather than a 200 with
+      // a failure buried inside it.
+      let opening;
+      try {
+        opening = await turn.next();
+      } catch (error) {
+        return handle(error, reply);
+      }
 
-    const body = Readable.from(frames(opening, turn));
-    // The client hung up: closing the stream closes the generator behind it,
-    // and with it the model call, rather than paying for output nobody will
-    // read. Said here rather than left to Fastify's own teardown of a payload
-    // stream, because it is the point of the route and not an implementation
-    // detail of the framework.
-    reply.raw.on('close', () => {
-      body.destroy();
-    });
+      const body = Readable.from(frames(opening, turn));
+      // The client hung up: closing the stream closes the generator behind it,
+      // and with it the model call, rather than paying for output nobody will
+      // read. Said here rather than left to Fastify's own teardown of a payload
+      // stream, because it is the point of the route and not an implementation
+      // detail of the framework.
+      reply.raw.on('close', () => {
+        body.destroy();
+      });
 
-    return reply
-      .header('content-type', 'text/event-stream')
-      .header('cache-control', 'no-cache')
-      .send(body);
-  });
+      return reply
+        .header('content-type', 'text/event-stream')
+        .header('cache-control', 'no-cache')
+        .send(body);
+    },
+  );
 
   app.post<{ Params: { id: string } }>(
     '/assistant/proposals/:id/apply',

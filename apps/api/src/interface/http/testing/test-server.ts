@@ -17,6 +17,7 @@ import { ManageBuckets } from '../../../application/goals/uc-6-manage-buckets.js
 import { BuildDashboard } from '../../../application/projection/uc-4-build-dashboard.js';
 import { ReadSetupState } from '../../../application/projection/uc-1-5-read-setup-state.js';
 import { CompleteSetup } from '../../../application/setup/compose-setup.js';
+import { CorrectSetupRecord } from '../../../application/setup/uc-1-5-correct-record.js';
 import type { SetupConversations } from '../../../application/setup/uc-1-5-converse-setup.js';
 import { ConverseSetup } from '../../../application/setup/uc-1-5-converse-setup.js';
 import { FakeLanguageModel } from '../../../application/testing/fake-language-model.js';
@@ -148,6 +149,7 @@ export function buildTestServer(
       noHolidays,
       clock,
     ),
+    correctSetupRecord: new CorrectSetupRecord(conversations),
     completeSetup: new CompleteSetup(conversations, backup, clock),
     converseAssistant: new AssistantConversation(
       new AskAssistant(
@@ -177,6 +179,13 @@ export function buildTestServer(
       manageBuckets,
       clock,
     ),
+    // Wide enough that no route test trips it by accident; a test about the
+    // limit itself passes its own. These numbers are this double's, not the
+    // app's tuning — see SPEND_RATE_LIMITS for those.
+    spendLimits: {
+      burst: { max: 1_000, windowMs: 60_000 },
+      daily: { max: 1_000, windowMs: 24 * 60 * 60 * 1_000 },
+    },
     ...overrides,
   });
 }

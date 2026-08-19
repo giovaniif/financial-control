@@ -85,6 +85,7 @@ export type {
 export type {
   EstablishedRecordResponse,
   SetupAppliedResponse,
+  SetupRecordCorrectionRequest,
   SetupSection,
   SetupStateResponse,
   SetupTurnRequest,
