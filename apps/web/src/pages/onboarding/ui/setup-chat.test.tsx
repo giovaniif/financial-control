@@ -3,7 +3,7 @@ import type {
   SetupAppliedResponse,
   SetupTurnResponse,
 } from '@fin/contracts';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -760,5 +760,90 @@ describe('the fields an edit opens on', () => {
 
     expect(screen.queryByLabelText('Amount')).toBeNull();
     expect(sentBy('PATCH')).toEqual([]);
+  });
+});
+
+/**
+ * The frame, not the conversation: first run is a chat application — a top
+ * bar that stays put, a transcript that scrolls under it, and a composer
+ * pinned beneath. Layout itself is not assertable in jsdom, so what is
+ * asserted here is which element scrolls, what is mounted and what is focused.
+ */
+describe('the chat frame', () => {
+  const EXAMPLE = '18k, always on the 5th';
+
+  it('opens on example answers rather than on an empty transcript', async () => {
+    stubApi({});
+    renderPage();
+
+    const examples = within(
+      await screen.findByRole('list', { name: 'Example answers' }),
+    );
+    expect(examples.getByRole('button', { name: EXAMPLE })).toBeInTheDocument();
+    expect(examples.getAllByRole('button').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('fills the composer with an example instead of sending it', async () => {
+    stubApi({ '/api/setup/conversation': conversation(turn()) });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: EXAMPLE }));
+
+    expect(screen.getByLabelText('Your answer')).toHaveValue(EXAMPLE);
+    expect(
+      requests().filter(({ url }) => url.includes('/setup/conversation')),
+    ).toHaveLength(0);
+  });
+
+  it('leaves the opening behind once the conversation has started', async () => {
+    stubApi({ '/api/setup/conversation': conversation(turn()) });
+    renderPage();
+
+    await say('the 5th');
+    await screen.findByText('And where do you keep your money?');
+
+    expect(screen.queryByRole('list', { name: 'Example answers' })).toBeNull();
+  });
+
+  it('keeps the focus in the composer after sending', async () => {
+    stubApi({ '/api/setup/conversation': conversation(turn()) });
+    renderPage();
+
+    await say('the 5th');
+    await screen.findByText('And where do you keep your money?');
+
+    expect(screen.getByLabelText('Your answer')).toHaveFocus();
+  });
+
+  it('scrolls the transcript to the newest turn, and reaches it by keyboard', async () => {
+    stubApi({
+      '/api/setup/conversation': conversation(
+        turn(),
+        turn({ message: 'And your bills?' }),
+      ),
+    });
+    renderPage();
+
+    await say('the 5th');
+    const log = await screen.findByRole('log', { name: 'Setup conversation' });
+    expect(log).toHaveAttribute('tabindex', '0');
+
+    // jsdom lays nothing out, so the transcript is given a height to scroll.
+    Object.defineProperty(log, 'scrollHeight', {
+      value: 1200,
+      configurable: true,
+    });
+    Object.defineProperty(log, 'scrollTop', {
+      value: 0,
+      writable: true,
+      configurable: true,
+    });
+
+    await say('checking, 2160');
+    await screen.findByText('And your bills?');
+
+    await waitFor(() => {
+      expect(log.scrollTop).toBe(1200);
+    });
   });
 });

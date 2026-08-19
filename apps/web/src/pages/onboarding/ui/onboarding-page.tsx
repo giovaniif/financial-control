@@ -1,3 +1,5 @@
+import type { SetupSection } from '@fin/contracts';
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
 import { useSetupState } from '@/shared/api';
@@ -6,6 +8,8 @@ import { Skeleton } from '@/shared/ui';
 
 import { SetupChat } from './setup-chat.js';
 import { SetupForm } from './setup-form.js';
+import { SetupFrame } from './setup-frame.js';
+import { SetupProgress } from './setup-progress.js';
 
 /** The gate records where the user was sent from; nothing else sets it. */
 function redirectedFrom(state: unknown): string | undefined {
@@ -22,11 +26,18 @@ function redirectedFrom(state: unknown): string | undefined {
  * Which way it asks is decided before the user types anything. Learning that
  * the assistant is unreachable from a first turn coming back refused would
  * mean asking someone to start over in a different form.
+ *
+ * The frame is owned here rather than by either way of asking, so the bar
+ * carrying it is one element for the whole of first run — it neither moves nor
+ * is rebuilt when the conversation loads under it.
  */
 export function OnboardingPage() {
   const { data, isPending } = useSetupState();
   const navigate = useNavigate();
   const location = useLocation();
+  // Where the conversation has got to. Held here because the path reading it
+  // lives in the bar, and the conversation lives under the bar.
+  const [asking, setAsking] = useState<SetupSection | null>('ANCHOR');
 
   // Leaving lands on whatever the user originally asked for, not on the
   // dashboard they never chose.
@@ -35,35 +46,24 @@ export function OnboardingPage() {
     void navigate(redirectedFrom(location.state) ?? '/', { replace: true });
   };
 
-  return (
-    <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-10 bg-white px-6 py-14 text-zinc-900">
-      <header className="flex items-start justify-between gap-6">
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
-            First run
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-            Setting up
-          </h1>
-        </div>
-        <button
-          type="button"
-          onClick={leave}
-          className="mt-1 shrink-0 cursor-pointer text-sm text-zinc-500 underline-offset-2 transition-colors hover:text-zinc-900 hover:underline"
-        >
-          Skip for now
-        </button>
-      </header>
+  const isConversation = data?.assistantAvailable === true;
 
-      <main className="flex flex-1 flex-col">
-        {isPending ? (
-          <Skeleton className="h-64 w-full" />
-        ) : data?.assistantAvailable === true ? (
-          <SetupChat />
-        ) : (
-          <SetupForm />
-        )}
-      </main>
-    </div>
+  return (
+    <SetupFrame
+      onSkip={leave}
+      progress={isConversation ? <SetupProgress next={asking} /> : undefined}
+    >
+      {isConversation ? (
+        <SetupChat onAsking={setAsking} />
+      ) : (
+        // The form is a document, and a document scrolls — but inside the
+        // frame, so the bar above it stays where it was put.
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-8">
+          <div className="mx-auto w-full max-w-3xl">
+            {isPending ? <Skeleton className="h-64 w-full" /> : <SetupForm />}
+          </div>
+        </div>
+      )}
+    </SetupFrame>
   );
 }
