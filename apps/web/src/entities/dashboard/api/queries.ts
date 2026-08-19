@@ -2,7 +2,7 @@ import type {
   DashboardResponse,
   WealthProjectionResponse,
 } from '@fin/contracts';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { api, queryKeys } from '@/shared/api';
 
@@ -29,5 +29,8 @@ export function useWealth(month: string | undefined, yields?: string) {
   return useQuery({
     queryKey: queryKeys.wealth(month, yields),
     queryFn: () => api<WealthProjectionResponse>(`/wealth?${query.toString()}`),
+    // An assumption is adjusted to watch the projection move (UC-7.4), and a
+    // screen that blanks to a skeleton on every keystroke shows no movement.
+    placeholderData: keepPreviousData,
   });
 }

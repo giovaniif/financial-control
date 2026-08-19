@@ -205,7 +205,7 @@ describe('AdjustRule', () => {
     await open();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      /R\$ 2\.120,00 short in 2026-08/,
+      /R\$ 2\.120,00 short in August 2026/,
     );
     expect(
       screen.getByText(/Apartment gets R\$ 2\.880,00/),
