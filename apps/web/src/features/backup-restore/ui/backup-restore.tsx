@@ -30,9 +30,8 @@ export function BackupRestore({ counts }: { counts: Counts }) {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-zinc-500">
-        A full export and re-import. There is no import from a bank or a
-        spreadsheet, and nothing else taking snapshots, so this is the only way
-        back from a mistake.
+        A full export and re-import. Nothing takes snapshots behind you, so this
+        is the only way back from a mistake.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">

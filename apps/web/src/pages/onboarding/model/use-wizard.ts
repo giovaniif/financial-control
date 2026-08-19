@@ -9,6 +9,8 @@ export interface Wizard {
   isLast: boolean;
   next: () => void;
   back: () => void;
+  /** A restored backup is already complete, so the rest is skipped. */
+  toEnd: () => void;
 }
 
 /**
@@ -27,6 +29,10 @@ export function useWizard(): Wizard {
     setIndex((current) => Math.max(current - 1, 0));
   }, []);
 
+  const toEnd = useCallback(() => {
+    setIndex(STEPS.length - 1);
+  }, []);
+
   const step = STEPS[index] ?? STEPS[0];
 
   return {
@@ -36,5 +42,6 @@ export function useWizard(): Wizard {
     isLast: index === STEPS.length - 1,
     next,
     back,
+    toEnd,
   };
 }
