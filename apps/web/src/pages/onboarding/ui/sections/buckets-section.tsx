@@ -4,7 +4,7 @@ import { formatBRL } from '@/shared/lib';
 import { Amount, Badge, Skeleton } from '@/shared/ui';
 
 /** UC-6.1 / UC-6.2 — where the Expected Surplus goes each cycle. */
-export function BucketsStep() {
+export function BucketsSection() {
   const { data, isPending } = useBuckets();
   const buckets = data ?? [];
 

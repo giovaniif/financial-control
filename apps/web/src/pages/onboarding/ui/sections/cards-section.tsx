@@ -8,7 +8,7 @@ import { Amount, Badge, Skeleton } from '@/shared/ui';
  * a purchase is actually paid from, and it is the app's one genuinely
  * counter-intuitive rule.
  */
-export function CardsStep() {
+export function CardsSection() {
   const accounts = useAccounts();
   const { data: cards, isPending } = useCards();
 
