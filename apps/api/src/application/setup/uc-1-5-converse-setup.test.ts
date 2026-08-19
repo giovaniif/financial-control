@@ -6,11 +6,15 @@ import type {
   JsonObject,
   ToolCall,
 } from '../../domain/ports/language-model.js';
+import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
+import { Principal } from '../../domain/shared/principal.js';
 import type { ScriptedTurn } from '../testing/fake-language-model.js';
 import { FakeLanguageModel } from '../testing/fake-language-model.js';
+import { SpendCeiling, SpendCeilingReached } from '../spend/spend-ceiling.js';
 import {
   FakeSetupConversationStore,
+  FakeSpendLedger,
   SequentialIdSource,
 } from '../testing/fakes.js';
 import { FixedClock } from '../testing/fixed-clock.js';
@@ -34,19 +38,40 @@ const call = (name: string, args: JsonObject = {}): ToolCall => {
 
 const done = () => call('finish_section');
 
-const wire = (script: readonly ScriptedTurn[]) => {
+/** The one user this app has, supplied by the caller as identity always is. */
+const me = Principal.sole();
+
+/** The day the fixed clock stands on, which is the day the ledger counts. */
+const today = LocalDate.parse('2026-08-19');
+
+/** Far above anything a test spends, unless the test is about the ceiling. */
+const NO_CEILING = 1_000_000;
+
+const wire = (
+  script: readonly ScriptedTurn[],
+  budget: { ledger?: FakeSpendLedger; maxTokensPerDay?: number } = {},
+) => {
   const model = new FakeLanguageModel(script);
   const conversations: SetupConversations = new FakeSetupConversationStore();
+  const ledger = budget.ledger ?? new FakeSpendLedger();
+  const clock = FixedClock.at(NOW);
+  const spend = new SpendCeiling(
+    ledger,
+    clock,
+    budget.maxTokensPerDay ?? NO_CEILING,
+  );
 
   return {
     model,
     conversations,
+    ledger,
     converse: new ConverseSetup(
       model,
       conversations,
+      spend,
       new SequentialIdSource('conv'),
       noHolidays,
-      FixedClock.at(NOW),
+      clock,
     ),
   };
 };
@@ -258,7 +283,7 @@ describe('ConverseSetup', () => {
     expect(rejected.corrections[0]).toContain('Health Plan');
     expect(rejected.message).toContain('Health Plan');
 
-    const next = await converse.execute({
+    const next = await converse.execute(me, {
       conversationId: rejected.conversationId,
       message: 'internet is 120 on the 20th',
     });
@@ -294,7 +319,7 @@ describe('ConverseSetup', () => {
       { text: 'I cannot help with that.', stopReason: 'refusal' },
     ]);
 
-    const turn = await converse.execute({ message: 'do something else' });
+    const turn = await converse.execute(me, { message: 'do something else' });
 
     expect(turn.wasRefused).toBe(true);
     expect(turn.message).toBe('I cannot help with that.');
@@ -337,7 +362,7 @@ describe('ConverseSetup', () => {
     const { converse } = wire([]);
 
     await expect(
-      converse.execute({ conversationId: 'conv-9', message: 'hello' }),
+      converse.execute(me, { conversationId: 'conv-9', message: 'hello' }),
     ).rejects.toBeInstanceOf(SetupConversationNotFound);
   });
   it('asks for the shift policy nobody stated only as the default', async () => {
@@ -565,7 +590,7 @@ describe('ConverseSetup', () => {
     ]);
 
     const complete = await runThrough(converse, WHOLE_SETUP.length);
-    const turn = await converse.execute({
+    const turn = await converse.execute(me, {
       conversationId: complete.conversationId,
       message: 'one more bill',
     });
@@ -709,7 +734,7 @@ describe('ConverseSetup', () => {
     const complete = await runThrough(converse, WHOLE_SETUP.length);
     expect(complete.isComplete).toBe(true);
 
-    const turn = await converse.execute({
+    const turn = await converse.execute(me, {
       conversationId: complete.conversationId,
       message: 'electricity is on the card, drop it',
     });
@@ -949,7 +974,7 @@ describe('ConverseSetup', () => {
   it('falls back to the section question when the model says nothing', async () => {
     const { converse } = wire([{ text: '', toolCalls: [] }]);
 
-    const turn = await converse.execute({ message: 'hello' });
+    const turn = await converse.execute(me, { message: 'hello' });
 
     expect(turn.message).toBe('Which day of the month does your salary land?');
   });
@@ -967,10 +992,10 @@ const ANSWERS = [
 
 /** Runs `turns` answers through one conversation and hands back the last. */
 async function runThrough(converse: ConverseSetup, turns: number) {
-  let turn = await converse.execute({ message: ANSWERS[0] ?? '' });
+  let turn = await converse.execute(me, { message: ANSWERS[0] ?? '' });
 
   for (let index = 1; index < turns; index += 1) {
-    turn = await converse.execute({
+    turn = await converse.execute(me, {
       conversationId: turn.conversationId,
       message: ANSWERS[index] ?? 'go on',
     });
@@ -978,3 +1003,30 @@ async function runThrough(converse: ConverseSetup, turns: number) {
 
   return turn;
 }
+
+describe('ConverseSetup — the spend ceiling', () => {
+  /**
+   * Refusing after the call has been paid for would bound nothing, so the
+   * ledger is asked before the request goes out.
+   */
+  it('refuses a turn past the day’s ceiling without calling the model', async () => {
+    const ledger = new FakeSpendLedger();
+    await ledger.record(me, today, { inputTokens: 900, outputTokens: 100 });
+    const { converse, model } = wire([], { ledger, maxTokensPerDay: 1_000 });
+
+    await expect(
+      converse.execute(me, { message: 'I earn 18k' }),
+    ).rejects.toBeInstanceOf(SpendCeilingReached);
+    expect(model.requests).toHaveLength(0);
+  });
+
+  it('records what the turn cost', async () => {
+    const { converse, ledger } = wire([
+      { ...anchorTurn, usage: { inputTokens: 1_400, outputTokens: 120 } },
+    ]);
+
+    await converse.execute(me, { message: 'I am paid on the 5th' });
+
+    expect(await ledger.spentOn(me, today)).toBe(1_520);
+  });
+});

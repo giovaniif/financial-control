@@ -29,8 +29,10 @@ import { BuildDashboard } from '../projection/uc-4-build-dashboard.js';
 import { ProjectWealth } from '../projection/uc-7-project-wealth.js';
 import type { ScriptedTurn } from '../testing/fake-language-model.js';
 import { FakeLanguageModel } from '../testing/fake-language-model.js';
+import { SpendCeiling, SpendCeilingReached } from '../spend/spend-ceiling.js';
 import {
   FakeProposalStore,
+  FakeSpendLedger,
   InMemoryAccountRepository,
   InMemoryBucketRepository,
   InMemoryCycleRepository,
@@ -103,7 +105,20 @@ const call = (name: string, args: JsonObject = {}): ToolCall => {
 /** The one user this app has, supplied by the caller as identity always is. */
 const me = Principal.sole();
 
-const wire = (script: readonly ScriptedTurn[], bill?: string) => {
+/** Far above anything a test spends, unless the test is about the ceiling. */
+const NO_CEILING = 1_000_000;
+
+const wire = (
+  script: readonly ScriptedTurn[],
+  bill?: string,
+  budget: { ledger?: FakeSpendLedger; maxTokensPerDay?: number } = {},
+) => {
+  const ledger = budget.ledger ?? new FakeSpendLedger();
+  const spend = new SpendCeiling(
+    ledger,
+    clock,
+    budget.maxTokensPerDay ?? NO_CEILING,
+  );
   const cycles = new InMemoryCycleRepository([october(bill)]);
   const buckets = new InMemoryBucketRepository([reserve()]);
   const settings = new InMemorySettingsRepository(anchor);
@@ -134,15 +149,21 @@ const wire = (script: readonly ScriptedTurn[], bill?: string) => {
     buckets,
     templates,
     proposals,
+    ledger,
+    spend,
     assistant: new AskAssistant(
       model,
       reads,
       proposals,
+      spend,
       new SequentialIdSource('proposal'),
       clock,
     ),
   };
 };
+
+/** The day the fixed clock stands on, which is the day the ledger counts. */
+const today = LocalDate.parse('2026-08-10');
 
 /**
  * The finished answer, folded out of the stream. A turn is a stream and only
@@ -245,6 +266,7 @@ describe('AskAssistant — answering from the app’s own figures', () => {
       FakeLanguageModel.unavailable(),
       wire([]).reads,
       new FakeProposalStore<ProposedChange>(),
+      wire([]).spend,
       new SequentialIdSource('proposal'),
       clock,
     );
@@ -537,6 +559,7 @@ describe('AskAssistant — outcomes that are not failures', () => {
         ),
       },
       new FakeProposalStore<ProposedChange>(),
+      wire([]).spend,
       new SequentialIdSource('proposal'),
       clock,
     );
@@ -912,7 +935,12 @@ class AbandonableModel implements LanguageModel {
         yield { kind: 'text', delta: 'two ' };
         yield {
           kind: 'done',
-          response: { text: 'One two ', toolCalls: [], stopReason: 'end' },
+          response: {
+            text: 'One two ',
+            toolCalls: [],
+            stopReason: 'end',
+            usage: { inputTokens: 0, outputTokens: 0 },
+          },
         };
         finished = true;
       } finally {
@@ -979,6 +1007,7 @@ describe('AskAssistant — the answer as it is written', () => {
       model,
       wire([]).reads,
       new FakeProposalStore<ProposedChange>(),
+      wire([]).spend,
       new SequentialIdSource('proposal'),
       clock,
     );
@@ -989,5 +1018,79 @@ describe('AskAssistant — the answer as it is written', () => {
 
     expect(first.value).toEqual({ kind: 'text', delta: 'One ' });
     expect(model.wasAbandoned).toBe(true);
+  });
+});
+
+describe('AskAssistant — the spend ceiling', () => {
+  /**
+   * The whole point of the ceiling: refusing after the call has been paid for
+   * would bound nothing at all.
+   */
+  it('refuses a question past the day’s ceiling without calling the model', async () => {
+    const ledger = new FakeSpendLedger();
+    await ledger.record(me, today, { inputTokens: 900, outputTokens: 100 });
+    const { assistant, model } = wire([], undefined, {
+      ledger,
+      maxTokensPerDay: 1_000,
+    });
+
+    await expect(
+      ask(assistant, me, { question: 'How much is left?' }),
+    ).rejects.toBeInstanceOf(SpendCeilingReached);
+    expect(model.requests).toHaveLength(0);
+  });
+
+  it('records what every call of a turn cost', async () => {
+    const { assistant, ledger } = wire([
+      {
+        toolCalls: [call('read_dashboard')],
+        usage: { inputTokens: 1_200, outputTokens: 90 },
+      },
+      { text: 'Done.', usage: { inputTokens: 2_400, outputTokens: 150 } },
+    ]);
+
+    await ask(assistant, me, { question: 'How much is left?' });
+
+    expect(await ledger.spentOn(me, today)).toBe(3_840);
+  });
+
+  /**
+   * One question may make several calls, so the ceiling is asked before each
+   * of them rather than once per turn — a runaway loop is exactly the case
+   * this exists for.
+   */
+  it('stops a turn that reaches the ceiling before the next call', async () => {
+    const { assistant, model } = wire(
+      [
+        {
+          toolCalls: [call('read_dashboard')],
+          usage: { inputTokens: 1_000, outputTokens: 0 },
+        },
+        { text: 'This turn is never asked for.' },
+      ],
+      undefined,
+      { maxTokensPerDay: 1_000 },
+    );
+
+    await expect(
+      ask(assistant, me, { question: 'How much is left?' }),
+    ).rejects.toBeInstanceOf(SpendCeilingReached);
+    expect(model.requests).toHaveLength(1);
+  });
+
+  it('leaves another principal’s budget alone', async () => {
+    const ledger = new FakeSpendLedger();
+    await ledger.record(Principal.of('someone-else'), today, {
+      inputTokens: 5_000,
+      outputTokens: 0,
+    });
+    const { assistant } = wire([{ text: 'Still answering.' }], undefined, {
+      ledger,
+      maxTokensPerDay: 1_000,
+    });
+
+    const answer = await ask(assistant, me, { question: 'How much is left?' });
+
+    expect(answer.message).toBe('Still answering.');
   });
 });

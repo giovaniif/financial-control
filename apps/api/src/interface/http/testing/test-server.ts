@@ -23,10 +23,12 @@ import { ConverseSetup } from '../../../application/setup/uc-1-5-converse-setup.
 import { FakeLanguageModel } from '../../../application/testing/fake-language-model.js';
 import { ProjectWealth } from '../../../application/projection/uc-7-project-wealth.js';
 import { ListCycles } from '../../../application/budgeting/uc-3-3-list-cycles.js';
+import { SpendCeiling } from '../../../application/spend/spend-ceiling.js';
 import {
   FakeAssistantConversationStore,
   FakeProposalStore,
   FakeSetupConversationStore,
+  FakeSpendLedger,
   InMemoryAccountRepository,
   InMemoryBucketRepository,
   InMemoryCardRepository,
@@ -110,6 +112,10 @@ export function buildTestServer(
   );
   const projectWealth = new ProjectWealth(buckets);
 
+  // Far above anything a route test spends, so the ceiling only ever refuses
+  // in the test that is about it — which passes its own.
+  const spend = new SpendCeiling(new FakeSpendLedger(), clock, 1_000_000);
+
   // A route test that means to hold a conversation passes its own assistant;
   // these numbers are this double's, not the app's tuning.
   const limits: AssistantLimits = {
@@ -145,6 +151,7 @@ export function buildTestServer(
     converseSetup: new ConverseSetup(
       new FakeLanguageModel([]),
       conversations,
+      spend,
       new SequentialIdSource('conv'),
       noHolidays,
       clock,
@@ -162,6 +169,7 @@ export function buildTestServer(
           wealth: projectWealth,
         },
         proposals,
+        spend,
         new SequentialIdSource('proposal'),
         clock,
         limits.maxToolRoundTrips,

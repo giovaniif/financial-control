@@ -21,11 +21,13 @@ import { ManageCards } from '../../../application/cards/uc-5-manage-cards.js';
 import { ManageBuckets } from '../../../application/goals/uc-6-manage-buckets.js';
 import { BuildDashboard } from '../../../application/projection/uc-4-build-dashboard.js';
 import { ProjectWealth } from '../../../application/projection/uc-7-project-wealth.js';
+import { SpendCeiling } from '../../../application/spend/spend-ceiling.js';
 import type { ScriptedTurn } from '../../../application/testing/fake-language-model.js';
 import { FakeLanguageModel } from '../../../application/testing/fake-language-model.js';
 import {
   FakeAssistantConversationStore,
   FakeProposalStore,
+  FakeSpendLedger,
   InMemoryAccountRepository,
   InMemoryBucketRepository,
   InMemoryCardRepository,
@@ -83,9 +85,18 @@ const october = () =>
     ],
   });
 
+/** Far above anything this suite spends, unless a test says otherwise. */
+const NO_CEILING = 1_000_000;
+
 /** Everything UC-8 needs behind one model, so a test states only the model. */
-function assistantWith(model: LanguageModel, limits: AssistantLimits) {
+function assistantWith(
+  model: LanguageModel,
+  limits: AssistantLimits,
+  maxTokensPerDay = NO_CEILING,
+) {
   const clock = FixedClock.at(NOW);
+  const ledger = new FakeSpendLedger();
+  const spend = new SpendCeiling(ledger, clock, maxTokensPerDay);
   const cycles = new InMemoryCycleRepository([october()]);
   const settings = new InMemorySettingsRepository(anchor);
   const accounts = new InMemoryAccountRepository();
@@ -124,6 +135,7 @@ function assistantWith(model: LanguageModel, limits: AssistantLimits) {
       wealth: new ProjectWealth(buckets),
     },
     proposals,
+    spend,
     new SequentialIdSource('proposal'),
     clock,
     limits.maxToolRoundTrips,
@@ -132,6 +144,7 @@ function assistantWith(model: LanguageModel, limits: AssistantLimits) {
   return {
     clock,
     cycles,
+    ledger,
     proposals,
     ledgerActions,
     manageBuckets,
@@ -156,18 +169,26 @@ function assistantWith(model: LanguageModel, limits: AssistantLimits) {
 function wire(
   script: readonly ScriptedTurn[] | FakeLanguageModel,
   limits: AssistantLimits = LIMITS,
+  maxTokensPerDay = NO_CEILING,
 ) {
   const model =
     script instanceof FakeLanguageModel
       ? script
       : new FakeLanguageModel(script);
-  const { cycles, proposals, ledgerActions, manageBuckets, ...assistant } =
-    assistantWith(model, limits);
+  const {
+    cycles,
+    ledger,
+    proposals,
+    ledgerActions,
+    manageBuckets,
+    ...assistant
+  } = assistantWith(model, limits, maxTokensPerDay);
 
   return {
     model,
     proposals,
     cycles,
+    ledger,
     app: buildTestServer({
       ledgerActions,
       manageBuckets,
@@ -593,5 +614,31 @@ describe('POST /assistant/messages — a client that hangs up', () => {
 
     await expect(model.abandoned).resolves.toBeUndefined();
     await server.close();
+  });
+});
+
+describe('POST /assistant/messages — the spend ceiling', () => {
+  /**
+   * 503 is what the missing key already answers with: nothing is wrong, the
+   * assistant is switched off, and the chat says why it is quiet.
+   */
+  it('answers 503 past the day’s ceiling, without calling the model', async () => {
+    const { app, model, ledger } = wire(
+      [{ text: 'never asked for' }],
+      LIMITS,
+      1_000,
+    );
+    await ledger.record(Principal.sole(), LocalDate.parse('2026-08-10'), {
+      inputTokens: 1_000,
+      outputTokens: 0,
+    });
+
+    const response = await ask(app, { message: 'How much is left?' });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json<{ error: string }>().error).toContain(
+      'switched off until tomorrow',
+    );
+    expect(model.requests).toHaveLength(0);
   });
 });

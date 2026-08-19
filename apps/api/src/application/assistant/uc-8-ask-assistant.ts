@@ -20,6 +20,8 @@ import type { ManageBuckets } from '../goals/uc-6-manage-buckets.js';
 import type { BuildDashboard } from '../projection/uc-4-build-dashboard.js';
 import type { ProjectWealth } from '../projection/uc-7-project-wealth.js';
 
+import type { SpendCeiling } from '../spend/spend-ceiling.js';
+
 import { PROPOSAL_TOOLS } from './proposal-tools.js';
 import type { ProposedChange } from './proposed-change.js';
 import { summarise } from './proposed-change.js';
@@ -122,6 +124,7 @@ export class AskAssistant {
     private readonly model: LanguageModel,
     private readonly reads: AssistantReadModels,
     private readonly proposals: AssistantProposals,
+    private readonly spend: SpendCeiling,
     private readonly ids: IdSource,
     private readonly clock: Clock,
     private readonly maxToolRoundTrips = MAX_TOOL_ROUND_TRIPS,
@@ -159,6 +162,12 @@ export class AskAssistant {
     const proposals: ProposalOffer[] = [];
 
     for (let round = 0; round < this.maxToolRoundTrips; round += 1) {
+      // Before the request, never after: refusing a call already paid for
+      // would bound nothing. Asked once per round rather than once per turn,
+      // because one question may make several calls and a runaway loop is
+      // what this exists for.
+      await this.spend.check(principal);
+
       // Sent as a copy: what the model was shown is finished before it is
       // asked, so nothing this loop appends afterwards reaches back into a
       // request that has already gone out.
@@ -194,6 +203,8 @@ export class AskAssistant {
           'The model stopped before it had answered.',
         );
       }
+
+      await this.spend.record(principal, response.usage);
 
       transcript.push({
         role: 'assistant',
