@@ -15,6 +15,7 @@ describes how the system is structured so it stays true to it.
 | **Cards** | Cards, invoices, purchases, instalment plans | UC-5 |
 | **Allocation & Goals** | Buckets, allocation rules, contributions, yields, corrections | UC-6 |
 | **Projection** *(read models)* | Dashboard, alerts, wealth projection | UC-4, UC-7 |
+| **Assistant** *(read models + intent)* | Answering from the app's own figures; proposing changes for the user to confirm | UC-1.5, UC-8 |
 
 Contexts communicate through application services and domain events, never by reaching into each other's
 aggregates. **Cards** publishes `InvoiceClosed` carrying a due date and a total; **Budgeting** consumes it and
@@ -23,6 +24,11 @@ materialises a ledger entry. Budgeting knows nothing about purchases.
 **Projection is read-only.** It never mutates. Every view it produces is derived from the other three
 contexts, which keeps the numbers honest by construction — there is no separate "forecast data" that can drift
 from reality.
+
+**Assistant reads the same way, and writes nothing.** It answers out of the read models rather than out of
+figures of its own, so an answer and the screen behind it cannot disagree. What it cannot do is act: a change
+it suggests stays a `ProposedChange` until the user confirms it, and is then applied by the interactor that
+already implements that use case. It owns no aggregate and stores nothing of its own — §6 is why.
 
 ---
 
@@ -198,10 +204,10 @@ an `ONGOING` bucket must have neither. Progress, percent-complete and projected-
 `ONGOING` and the type system should make asking for them impossible — reporting progress toward a target that
 does not exist is the specific bug UC-6.1 prevents.
 
-Making the event log the source of truth answers the spreadsheet's weakest point: it hard-coded balances over
-its own running total whenever reality drifted, leaving no trace of why, and could not distinguish accrued
-interest from a deposit. Here a correction carries a mandatory reason and sits alongside the contributions it
-supersedes.
+Making the event log the source of truth answers the weakest point of the spreadsheet this app replaced: it
+hard-coded balances over its own running total whenever reality drifted, leaving no trace of why, and could
+not distinguish accrued interest from a deposit. Here a correction carries a mandatory reason and sits
+alongside the contributions it supersedes.
 
 **Invariants**
 - `BalanceCorrection.reason` and `Withdrawal.reason` are non-empty.
@@ -224,7 +230,7 @@ Their sum is the app's starting cash and the sidebar total (UC-1.2).
 
 | Type | Notes |
 |---|---|
-| `Money` | **Integer cents, BRL.** Never a float, never `number` arithmetic on reais. Prisma column `BigInt` or `Decimal(19,4)`. Accumulated float drift is the specific failure the spreadsheet had |
+| `Money` | **Integer cents, BRL.** Never a float, never `number` arithmetic on reais. Prisma column `BigInt` or `Decimal(19,4)`. Accumulated float drift is the specific failure the spreadsheet this app replaced had |
 | `CycleRef` | Anchor day, resolved start/end, label. Owns the weekend and short-month rules and `contains(date)` |
 | `PlannedActual` | `{ planned: Money, actual: Money?, status: PENDING \| PAID \| RECEIVED \| SKIPPED \| OVERDUE }`. Variance is derived; a projected entry has no actual |
 | `Percentage` | Basis points internally, so `33,33 %` is exact |
@@ -235,8 +241,8 @@ Their sum is the app's starting cash and the sidebar total (UC-1.2).
 
 ## 5. The calculation chain
 
-Domain rules, not spreadsheet formulas. Names match §3 of the use-case document exactly. Implemented on
-`Cycle` as pure derivations with no persisted duplicates:
+Domain rules, not the spreadsheet formulas they replaced. Names match §3 of the use-case document exactly.
+Implemented on `Cycle` as pure derivations with no persisted duplicates:
 
 ```
 totalIncome     = Σ entries where kind = INCOME
@@ -264,7 +270,32 @@ toggle needs no second code path.
 
 ---
 
-## 6. Ports
+## 6. The trust boundary
+
+The assistant is the first part of the system whose output is not the system's own. Everything in §1–§5 holds
+because the code that produced a value is the code that validated it. A model's output carries no such
+guarantee and cannot be made to.
+
+> **The model produces intent. The domain enforces every invariant.**
+
+A `ProposedChange` is a discriminated union — settle this entry, add this bill, split this purchase across ten
+invoices — and it is a statement of intent, not a change. It is rendered for the user in the app's own
+vocabulary, confirmed explicitly, and only then handed to the interactor that already implements that use
+case. No path exists from a model response to a repository write that does not pass through a confirmation.
+
+**Validation happens at apply time, not at produce time.** A proposal is built against the figures of the
+moment it was produced, and may be confirmed a minute or an hour later. Checking it as it is produced proves
+nothing about the state it will land in, so the interactor validates it as it would any other caller's
+request: a proposal against data that has since moved fails cleanly rather than writing something wrong.
+
+What follows from that is the rule worth stating outright — **no invariant moves into the assistant.**
+Re-checking a closed cycle, a withdrawal below zero or an instalment plan's arithmetic at the point the
+proposal is built would leave two places to keep correct, and the second unreachable by the domain tests that
+defend the first. The assistant may explain an invariant. It never enforces one.
+
+---
+
+## 7. Ports
 
 Declared in the domain, implemented in infrastructure. The domain never imports a driver.
 
@@ -273,11 +304,20 @@ Declared in the domain, implemented in infrastructure. The domain never imports 
 | `CycleRepository`, `RecurringTemplateRepository`, `CardRepository`, `BucketRepository`, `AccountRepository` | Prisma |
 | `Clock` | Real clock in production, fixed clock in tests. Nothing in the domain calls `new Date()` |
 | `HolidayCalendar` | Brazilian public holidays, for the payday resolution rule |
-| `SpreadsheetReader` | An xlsx reader, for UC-1.7. Returns cells **and their formulas** — `=AJ26*0.2` is what says an allocation rule is 20% of Expected Surplus, and the computed number alone has lost that |
+| `LanguageModel` | The conversation of UC-1.5 and the assistant of UC-8. Declared in the domain's own vocabulary — a turn, the tools it may call, the result — so nothing above it knows Anthropic exists. Implemented in `infrastructure/anthropic/`, faked in tests, so no test needs a key or a network |
+
+`eslint-plugin-boundaries` confines `@anthropic-ai/sdk` to `infrastructure/anthropic/` exactly as it confines
+`@prisma/client` to `infrastructure/prisma/`. One adapter file knows the vendor; everything else knows the
+port.
+
+**A missing `ANTHROPIC_API_KEY` is a state, not a crash.** The composition root then wires an implementation
+that fails every call with a typed domain error, which the interface layer maps and the UI explains. First run
+falls back to a plain form and every screen that is not the chat is unaffected — an app that refused to start
+without a key would make the key a precondition for reading your own numbers.
 
 ---
 
-## 7. Layer layout
+## 8. Layer layout
 
 ### Backend
 
@@ -288,7 +328,7 @@ src/
     cards/            card.ts, invoice.ts, installment-plan.ts
     goals/            bucket.ts, bucket-event.ts, allocation-rule.ts
     shared/           money.ts, percentage.ts, planned-actual.ts, date-range.ts
-    ports/            clock.ts, holiday-calendar.ts, repositories.ts
+    ports/            clock.ts, holiday-calendar.ts, language-model.ts, repositories.ts
 
   application/        one interactor per use case, named for its id
     budgeting/        uc-3-5-settle-entry.ts, uc-3-8-close-cycle.ts, …
@@ -296,10 +336,12 @@ src/
     goals/            uc-6-5-override-contribution.ts, uc-6-7-correct-balance.ts, …
     projection/       uc-4-build-dashboard.ts, uc-4-7-build-alerts.ts,
                       uc-7-project-wealth.ts
+    setup/            uc-1-5-converse-setup.ts, setup-draft.ts, compose-backup.ts
+    assistant/        uc-8-ask-assistant.ts, uc-8-apply-proposal.ts
 
   infrastructure/
     prisma/           schema.prisma, migrations/, repositories/, mappers/
-    clock/  holidays/  spreadsheet/
+    clock/  holidays/  anthropic/
 
   interface/
     http/             controllers/, routes/, dto/
@@ -316,12 +358,11 @@ are enforced by `eslint-plugin-boundaries` — see `.claude/architecture.md`.
 ```
 src/
   app/         providers, router, global styles, the persistent shell
-  pages/       dashboard/ ledger/ cards/ buckets/ wealth/ templates/ settings/
-               onboarding/
+  pages/       main/ profile/ savings/ onboarding/
   widgets/     chain-strip/ upcoming-list/ alert-list/ bucket-event-log/ wealth-bars/
-  features/    settle-entry/ register-purchase/ override-contribution/
-               adjust-allocation-rule/ toggle-estimates/ navigate-cycle/
-               create-bucket/ import-spreadsheet/
+  features/    ask-assistant/ settle-entry/ toggle-estimates/ navigate-cycle/
+               configure-anchor/ configure-card/ manage-accounts/ manage-templates/
+               manage-buckets/ create-bucket/ backup-restore/
   entities/    cycle/ ledger-entry/ card/ invoice/ bucket/ template/ account/
   shared/      ui/ api/ lib/ config/
 ```

@@ -9,6 +9,13 @@ they should be created as stacked branches, each PR green on its own.
 
 `UC` references point at [`USE_CASES.md`](./USE_CASES.md).
 
+> **This is the record of the original build, not the current plan.** Phases 0–8 are delivered. The app has
+> since been rebuilt around a conversational assistant — three screens instead of seven, and a first run that
+> asks its questions instead of importing a file — which is tracked in Linear under `FIN-90` rather than here.
+> Rows below that describe the spreadsheet import (8.18) describe work that was built and then removed; they
+> are left as written because a roadmap edited to match what happened stops being a record of what was
+> planned.
+
 ---
 
 ## Phase 0 — Foundation
