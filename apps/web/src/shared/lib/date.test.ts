@@ -23,11 +23,11 @@ describe('formatDate', () => {
 
 describe('formatRange', () => {
   it('states a cycle by its bounds, never as a bare month name', () => {
-    expect(formatRange('2026-08-05', '2026-09-04')).toBe('5 Aug – 4 Sep');
+    expect(formatRange('2026-08-05', '2026-09-04')).toBe('5 ago – 4 set');
   });
 
   it('formats a single day as day and short month', () => {
-    expect(formatDayMonth('2026-02-28')).toBe('28 Feb');
+    expect(formatDayMonth('2026-02-28')).toBe('28 fev');
   });
 });
 
@@ -35,25 +35,25 @@ describe('formatMonthLabel', () => {
   // A cycle is named for the month it is spent in, so `2026-10` has to read
   // back as the name the rest of the app calls that cycle by.
   it('names a cycle month in full', () => {
-    expect(formatMonthLabel('2026-10')).toBe('October 2026');
+    expect(formatMonthLabel('2026-10')).toBe('Outubro de 2026');
   });
 
   it('does not shift the month across a timezone', () => {
-    expect(formatMonthLabel('2026-01')).toBe('January 2026');
-    expect(formatMonthLabel('2026-12')).toBe('December 2026');
+    expect(formatMonthLabel('2026-01')).toBe('Janeiro de 2026');
+    expect(formatMonthLabel('2026-12')).toBe('Dezembro de 2026');
   });
 });
 
 describe('formatMonthOf', () => {
   // A target date is a day, but a goal is answered in months: "reaches it in
-  // March 2031" is the sentence UC-7.3 asks for.
+  // Março de 2031" is the sentence UC-7.3 asks for.
   it('names the month a date falls in', () => {
-    expect(formatMonthOf('2031-03-31')).toBe('March 2031');
+    expect(formatMonthOf('2031-03-31')).toBe('Março de 2031');
   });
 
   it('does not shift the month across a timezone', () => {
-    expect(formatMonthOf('2026-01-01')).toBe('January 2026');
-    expect(formatMonthOf('2026-12-31')).toBe('December 2026');
+    expect(formatMonthOf('2026-01-01')).toBe('Janeiro de 2026');
+    expect(formatMonthOf('2026-12-31')).toBe('Dezembro de 2026');
   });
 });
 

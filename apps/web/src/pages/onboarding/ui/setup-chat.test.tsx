@@ -286,7 +286,7 @@ describe('the setup conversation', () => {
     });
     renderPage();
 
-    await say('20% to the apartment, 150k by March 2031');
+    await say('20% to the apartment, 150k by Março de 2031');
 
     expect(await screen.findByText(/05\/03\/2031/)).toBeInTheDocument();
   });

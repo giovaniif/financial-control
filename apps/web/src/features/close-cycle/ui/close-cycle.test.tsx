@@ -21,7 +21,7 @@ function renderCycle(
   return renderWithProviders(
     <CloseCycle
       month="2026-06"
-      label="June 2026"
+      label="Junho de 2026"
       status={options.status ?? 'OPEN'}
       hasEnded
       unsettled={options.unsettled ?? 0}
@@ -43,7 +43,7 @@ describe('CloseCycle', () => {
     );
 
     expect(
-      screen.getByRole('dialog', { name: 'Fechar June 2026' }),
+      screen.getByRole('dialog', { name: 'Fechar Junho de 2026' }),
     ).toBeInTheDocument();
   });
 
@@ -52,7 +52,7 @@ describe('CloseCycle', () => {
     renderWithProviders(
       <CloseCycle
         month="2026-08"
-        label="August 2026"
+        label="Agosto de 2026"
         status="OPEN"
         hasEnded={false}
         unsettled={0}
@@ -78,7 +78,7 @@ describe('CloseCycle', () => {
       screen.getByText(/3 lançamentos ainda estão sem baixa/),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Fechar June 2026' }),
+      screen.getByRole('button', { name: 'Fechar Junho de 2026' }),
     ).toBeDisabled();
   });
 
@@ -93,7 +93,7 @@ describe('CloseCycle', () => {
       screen.getByRole('button', { name: 'Fechar o ciclo' }),
     );
     await userEvent.click(
-      screen.getByRole('button', { name: 'Fechar June 2026' }),
+      screen.getByRole('button', { name: 'Fechar Junho de 2026' }),
     );
 
     await waitFor(() => {
@@ -131,8 +131,8 @@ describe('CloseCycle', () => {
         /2 ciclos posteriores abririam com um saldo diferente/,
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText('July 2026')).toBeInTheDocument();
-    expect(screen.getByText('August 2026')).toBeInTheDocument();
+    expect(screen.getByText('Julho de 2026')).toBeInTheDocument();
+    expect(screen.getByText('Agosto de 2026')).toBeInTheDocument();
   });
 
   it('does not reopen until the preview has been confirmed', async () => {

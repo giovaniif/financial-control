@@ -1,6 +1,7 @@
 /**
- * Dates render as `dd/MM/yyyy` and cycle ranges as `5 Aug – 3 Sep`. Formatting
- * is locale, not language: the app is English, the conventions are Brazilian.
+ * Dates render as `dd/MM/yyyy` and cycle ranges as `5 ago – 3 set`. Both the
+ * conventions and the words are Brazilian: a month name is copy, so it is
+ * pt-BR like the rest of what a person reads.
  */
 const full = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
@@ -9,10 +10,9 @@ const full = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'UTC',
 });
 
-// `en-GB` renders September as "Sept" and every other month with three
-// letters. Cycle ranges sit in tight header space and read as a set, so the
-// months are cut to three characters for a uniform width.
-const short = new Intl.DateTimeFormat('en-GB', {
+// pt-BR abbreviates a month as "out." — the trailing point and the "de" are
+// dropped below, since a range sits in tight header space and reads as a set.
+const short = new Intl.DateTimeFormat('pt-BR', {
   day: 'numeric',
   month: 'short',
   timeZone: 'UTC',
@@ -20,7 +20,7 @@ const short = new Intl.DateTimeFormat('en-GB', {
 
 // A cycle month is written `2026-10` and read back as the name the rest of
 // the app calls that cycle by.
-const monthName = new Intl.DateTimeFormat('en-GB', {
+const monthName = new Intl.DateTimeFormat('pt-BR', {
   month: 'long',
   year: 'numeric',
   timeZone: 'UTC',
@@ -36,9 +36,13 @@ export function formatDate(iso: string): string {
 }
 
 export function formatDayMonth(iso: string): string {
-  const [day, month] = short.format(parse(iso)).split(' ');
+  // Read from the parts rather than the formatted string: pt-BR writes
+  // "5 de out.", so splitting on spaces would take "de" for the month.
+  const parts = short.formatToParts(parse(iso));
+  const day = parts.find((part) => part.type === 'day')?.value ?? '';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '';
 
-  return `${String(day)} ${String(month).slice(0, 3)}`;
+  return `${day} ${month.replace('.', '').slice(0, 3)}`;
 }
 
 /**
@@ -49,9 +53,15 @@ export function formatRange(startIso: string, endIso: string): string {
   return `${formatDayMonth(startIso)} – ${formatDayMonth(endIso)}`;
 }
 
-/** `2026-10` → `October 2026`. A cycle is named for the month it is spent in. */
+/**
+ * `2026-10` → `Outubro de 2026`. A cycle is named for the month it is spent
+ * in. Capitalised to match the label the server writes for the same cycle;
+ * pt-BR lowercases month names and the two must not disagree.
+ */
 export function formatMonthLabel(month: string): string {
-  return monthName.format(parse(`${month}-01`));
+  const label = monthName.format(parse(`${month}-01`));
+
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 /**

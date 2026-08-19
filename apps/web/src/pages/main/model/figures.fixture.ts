@@ -6,8 +6,8 @@ export const dashboard = (): DashboardResponse => ({
   estimates: 'included',
   headline: {
     cycleMonth: '2026-09',
-    cycleLabel: 'September 2026',
-    range: '4 Sep – 4 Oct',
+    cycleLabel: 'Setembro de 2026',
+    range: '4 set – 4 out',
     incoming: 1_800_000,
     outgoing: 911_000,
     free: 355_600,

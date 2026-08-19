@@ -26,8 +26,8 @@ describe('Field', () => {
   });
 
   it('carries a hint when the input needs explaining', () => {
-    render(<Field label="Due date" type="date" hint="Inside 5 Aug – 4 Sep" />);
+    render(<Field label="Due date" type="date" hint="Inside 5 ago – 4 set" />);
 
-    expect(screen.getByText('Inside 5 Aug – 4 Sep')).toBeInTheDocument();
+    expect(screen.getByText('Inside 5 ago – 4 set')).toBeInTheDocument();
   });
 });

@@ -20,7 +20,7 @@ const window_: CycleWindowResponse = {
   cycles: [
     {
       month: '2026-08',
-      label: 'August 2026',
+      label: 'Agosto de 2026',
       start: '2026-07-03',
       end: '2026-08-04',
       status: 'OPEN',
@@ -345,7 +345,7 @@ describe('SavingsPage reads the event log', () => {
     expect(history).toHaveTextContent(
       'crescimento por rendimento, não um aporte',
     );
-    expect(history).toHaveTextContent('a regra aplicada em August 2026');
+    expect(history).toHaveTextContent('a regra aplicada em Agosto de 2026');
   });
 
   it('says what the rule would have contributed on an override', async () => {
@@ -436,7 +436,7 @@ describe('SavingsPage warns when the rules run past the money', () => {
     });
 
     expect(allocation).toHaveTextContent(
-      'August 2026 tem R$ 8.890,00 de Sobra Esperada',
+      'Agosto de 2026 tem R$ 8.890,00 de Sobra Esperada',
     );
     expect(allocation).toHaveTextContent('#1 de 1');
     expect(allocation).toHaveTextContent('Reserve pede R$ 1.778,00');
@@ -471,7 +471,7 @@ describe('SavingsPage warns when the rules run past the money', () => {
     const alert = await screen.findByRole('alert');
 
     expect(alert).toHaveTextContent(
-      'Falta R$ 2.120,00 para cobrir as regras em August 2026',
+      'Falta R$ 2.120,00 para cobrir as regras em Agosto de 2026',
     );
     expect(alert).toHaveTextContent('Reserve recebe R$ 2.880,00');
     expect(alert).toHaveTextContent('Investments não recebe nada');
@@ -491,7 +491,7 @@ describe('SavingsPage warns when the rules run past the money', () => {
     renderPage();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'August 2026 não tem Sobra Esperada para alocar. Nada é aportado',
+      'Agosto de 2026 não tem Sobra Esperada para alocar. Nada é aportado',
     );
   });
 });
@@ -551,7 +551,7 @@ describe('SavingsPage projects what the buckets grow into', () => {
     });
 
     expect(perBucket).toHaveTextContent(
-      'Com R$ 1.778,00 por ciclo e 8% ao ano, Apartment alcança R$ 150.000,00 em March 2031. Objetivo: March 2031.',
+      'Com R$ 1.778,00 por ciclo e 8% ao ano, Apartment alcança R$ 150.000,00 em Março de 2031. Objetivo: Março de 2031.',
     );
     expect(within(perBucket).getByText('no prazo')).toBeInTheDocument();
   });
