@@ -252,7 +252,7 @@ describe('ConfigurePaydayAnchor.change', () => {
 
     await expect(
       useCase.change({ anchorDay: 10, shiftPolicy: ShiftPolicy.Preceding }),
-    ).rejects.toThrow(/2 entries/);
+    ).rejects.toThrow(/2 lançamentos/);
   });
 
   it('leaves everything untouched when it refuses', async () => {
@@ -303,7 +303,7 @@ describe('ConfigurePaydayAnchor.change', () => {
       expect(window).toEqual([
         {
           month: '2026-09',
-          label: 'September 2026',
+          label: 'Setembro de 2026',
           start: '2026-08-05',
           end: '2026-09-03',
           shifted: false,
@@ -312,7 +312,7 @@ describe('ConfigurePaydayAnchor.change', () => {
         // 5 Sep 2026 is a Saturday, so October opens on Friday the 4th.
         {
           month: '2026-10',
-          label: 'October 2026',
+          label: 'Outubro de 2026',
           start: '2026-09-04',
           end: '2026-10-04',
           shifted: true,

@@ -245,7 +245,7 @@ describe('ConverseSetup', () => {
 
     expect(turn.established).toEqual([]);
     expect(turn.message).toContain('Health Plan');
-    expect(turn.message).toContain('day of the month');
+    expect(turn.message).toContain('dia do mês');
     expect(turn.nextSection).toBe(SetupSection.FixedBills);
     expect((await draftOf(conversations, 'conv-1')).fixedBills).toEqual([]);
   });
@@ -334,7 +334,7 @@ describe('ConverseSetup', () => {
     const turn = await runThrough(converse, 4);
 
     expect(turn.corrections[0]).toMatch(
-      /Gym.*day 4.*last day.*everywhere else/,
+      /Gym.*dia 4.*último dia.*todos os outros/,
     );
     expect((await draftOf(conversations, 'conv-1')).fixedBills).toEqual([]);
   });
@@ -406,7 +406,7 @@ describe('ConverseSetup', () => {
     const turn = await runThrough(converse, 4);
 
     expect(turn.established).toEqual([]);
-    expect(turn.corrections[0]).toContain('already');
+    expect(turn.corrections[0]).toContain('já está resolvido');
     expect((await draftOf(conversations, 'conv-1')).salary?.cents).toBe(
       1_800_000,
     );
@@ -478,7 +478,7 @@ describe('ConverseSetup', () => {
 
     const turn = await runThrough(converse, 1);
 
-    expect(turn.established[0]?.summary).toContain('following');
+    expect(turn.established[0]?.summary).toContain('seguinte');
     expect((await draftOf(conversations, 'conv-1')).anchor?.shiftPolicy).toBe(
       'FOLLOWING',
     );
@@ -495,7 +495,7 @@ describe('ConverseSetup', () => {
     const turn = await runThrough(converse, 1);
 
     expect(turn.established).toEqual([]);
-    expect(turn.message).toContain('day of the month your salary lands');
+    expect(turn.message).toContain('dia do mês em que o seu salário cai');
   });
 
   it('asks what is in an account, and never what kind it is', async () => {
@@ -510,7 +510,7 @@ describe('ConverseSetup', () => {
     const turn = await runThrough(converse, 2);
 
     expect(turn.message).toBe(
-      'I still need what is in it right now for Nubank.',
+      'Ainda preciso saber quanto tem nela agora para Nubank.',
     );
   });
 
@@ -536,7 +536,7 @@ describe('ConverseSetup', () => {
     const turn = await runThrough(converse, 2);
 
     expect(turn.corrections).toEqual([
-      'I still need what is in it right now for Nubank, Inter and Itau.',
+      'Ainda preciso saber quanto tem nela agora para Nubank, Inter e Itau.',
     ]);
     expect(turn.message).toBe(turn.corrections[0]);
   });
@@ -563,7 +563,9 @@ describe('ConverseSetup', () => {
     const turn = await runThrough(converse, 3);
 
     expect(turn.established).toHaveLength(2);
-    expect(turn.message).toBe('I still need what is in it right now for Itau.');
+    expect(turn.message).toBe(
+      'Ainda preciso saber quanto tem nela agora para Itau.',
+    );
     expect((await draftOf(conversations, 'conv-1')).accounts).toHaveLength(2);
   });
 
@@ -582,7 +584,7 @@ describe('ConverseSetup', () => {
     const turn = await runThrough(converse, 2);
 
     expect(turn.message).toBe(
-      "I still need the account's name, and what is in it right now for Itau.",
+      'Ainda preciso saber o nome da conta, e quanto tem nela agora para Itau.',
     );
   });
 
@@ -605,7 +607,7 @@ describe('ConverseSetup', () => {
 
     const turn = await runThrough(converse, 2);
 
-    expect(turn.established[0]?.summary).toContain('a checking account');
+    expect(turn.established[0]?.summary).toContain('uma conta corrente');
     expect((await draftOf(conversations, 'conv-1')).accounts[0]?.type).toBe(
       'CHECKING',
     );
@@ -637,7 +639,7 @@ describe('ConverseSetup', () => {
     expect(draft.accounts[0]?.type).toBe('CHECKING');
     expect(draft.fixedBills).toEqual([]);
     expect(turn.message).toBe(
-      'I still need the day of the month it falls due for Health Plan.',
+      'Ainda preciso saber o dia do mês do vencimento para Health Plan.',
     );
   });
 
@@ -653,7 +655,7 @@ describe('ConverseSetup', () => {
     const turn = await runThrough(converse, 3);
 
     expect(turn.established).toEqual([]);
-    expect(turn.message).toContain('what your salary is');
+    expect(turn.message).toContain('qual é o seu salário');
   });
 
   it('records a bill the user called a guess as an estimate', async () => {
@@ -667,7 +669,7 @@ describe('ConverseSetup', () => {
 
     const turn = await runThrough(converse, 4);
 
-    expect(turn.established[0]?.summary).toContain('an estimate');
+    expect(turn.established[0]?.summary).toContain('uma estimativa');
     expect(
       (await draftOf(conversations, 'conv-1')).fixedBills[0]?.isEstimate,
     ).toBe(true);
@@ -681,10 +683,10 @@ describe('ConverseSetup', () => {
 
     const turn = await runThrough(converse, TO_CARDS.length + 1);
 
-    expect(turn.message).toContain('the credit limit');
-    expect(turn.message).toContain('the day the invoice closes');
-    expect(turn.message).toContain('the day the invoice falls due');
-    expect(turn.message).toContain('which account pays it');
+    expect(turn.message).toContain('o limite do cartão');
+    expect(turn.message).toContain('o dia em que a fatura fecha');
+    expect(turn.message).toContain('o dia em que a fatura vence');
+    expect(turn.message).toContain('qual conta paga a fatura');
   });
 
   it('records a goal bucket with its target and the date to reach it', async () => {
@@ -727,9 +729,9 @@ describe('ConverseSetup', () => {
 
     const turn = await runThrough(converse, TO_BUCKETS.length + 1);
 
-    expect(turn.message).toContain('a percentage of Expected Surplus');
-    expect(turn.message).toContain('the amount to reach');
-    expect(turn.message).toContain('the date to reach it by');
+    expect(turn.message).toContain('um percentual da Sobra Esperada');
+    expect(turn.message).toContain('o valor a alcançar');
+    expect(turn.message).toContain('a data para alcançá-lo');
   });
 
   it('asks an ongoing bucket how much goes in each cycle', async () => {
@@ -786,7 +788,7 @@ describe('ConverseSetup', () => {
 
     const turn = await runThrough(converse, TO_BUCKETS.length + 1);
 
-    expect(turn.corrections[0]).toContain('allocation rule');
+    expect(turn.corrections[0]).toContain('regra de alocação');
   });
 
   it('declines a tool it never offered', async () => {
@@ -804,7 +806,7 @@ describe('ConverseSetup', () => {
 
     const turn = await runThrough(converse, 1);
 
-    expect(turn.message).toContain('cannot be skipped');
+    expect(turn.message).toContain('não pode ser pulado');
     expect(turn.nextSection).toBe(SetupSection.Anchor);
   });
 
@@ -820,7 +822,7 @@ describe('ConverseSetup', () => {
       message: 'one more bill',
     });
 
-    expect(turn.corrections[0]).toContain('already recorded');
+    expect(turn.corrections[0]).toContain('já está registrado');
     // Nothing left to record, but everything recorded is still correctable.
     expect(
       model.requests[WHOLE_SETUP.length]?.tools.map((tool) => tool.name),
@@ -1031,7 +1033,7 @@ describe('ConverseSetup', () => {
 
     expect(card?.closingDay).toBe(25);
     expect(card?.dueDay).toBe(10);
-    expect(turn.established[0]?.summary).toContain('paid from Checking');
+    expect(turn.established[0]?.summary).toContain('pago por Checking');
   });
 
   it('corrects what an ongoing bucket puts away, keeping its funding order', async () => {
@@ -1053,7 +1055,7 @@ describe('ConverseSetup', () => {
 
     expect(bucket?.rule).toEqual(Allocation.fixed(Money.fromCents(177_800)));
     expect(bucket?.priority).toBe(1);
-    expect(turn.established[0]?.summary).toContain('funded #1');
+    expect(turn.established[0]?.summary).toContain('prioridade #1');
   });
 
   const goalSetup: ScriptedTurn[] = [
@@ -1128,7 +1130,7 @@ describe('ConverseSetup', () => {
       const turn = await runThrough(converse, WHOLE_SETUP.length + 1);
 
       expect(turn.established).toEqual([]);
-      expect(turn.message).toContain('what to change');
+      expect(turn.message).toContain('o que mudar');
     },
   );
 
@@ -1144,7 +1146,7 @@ describe('ConverseSetup', () => {
     const turn = await runThrough(converse, WHOLE_SETUP.length + 1);
 
     expect(turn.corrections).toHaveLength(2);
-    expect(turn.message).toContain('which record');
+    expect(turn.message).toContain('qual registro');
   });
 
   it('refuses to drop a record it never recorded', async () => {
@@ -1201,7 +1203,7 @@ describe('ConverseSetup', () => {
 
     const turn = await converse.execute(me, { message: 'hello' });
 
-    expect(turn.message).toBe('Which day of the month does your salary land?');
+    expect(turn.message).toBe('Em que dia do mês o seu salário cai?');
   });
 });
 

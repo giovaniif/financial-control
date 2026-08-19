@@ -221,6 +221,6 @@ function asJsonObject(input: unknown): JsonObject {
 
 function rethrowAsDomainError(cause: unknown): never {
   throw new LanguageModelFailed(
-    cause instanceof Error ? cause.message : 'The model call failed.',
+    cause instanceof Error ? cause.message : 'A chamada ao modelo falhou.',
   );
 }

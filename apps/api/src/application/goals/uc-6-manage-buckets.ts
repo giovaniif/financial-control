@@ -305,7 +305,7 @@ export class ManageBuckets {
   private async require(id: string): Promise<Bucket> {
     const bucket = await this.buckets.findById(id);
     if (bucket === undefined) {
-      throw new BucketNotFound(`No bucket ${id}.`);
+      throw new BucketNotFound(`Não há nenhuma caixinha ${id}.`);
     }
     return bucket;
   }

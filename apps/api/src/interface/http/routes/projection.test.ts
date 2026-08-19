@@ -100,7 +100,7 @@ describe('GET /dashboard', () => {
 
     expect(response.statusCode).toBe(200);
     expect(body.currentCycleMonth).toBe('2026-09');
-    expect(body.headline.cycleLabel).toBe('October 2026');
+    expect(body.headline.cycleLabel).toBe('Outubro de 2026');
     expect(body.headline.incoming).toBe(1_800_000);
     expect(body.headline.free).toBe(1_039_000);
   });
@@ -113,7 +113,7 @@ describe('GET /dashboard', () => {
       })
     ).json<DashboardResponse>();
 
-    expect(body.headline.cycleLabel).toBe('September 2026');
+    expect(body.headline.cycleLabel).toBe('Setembro de 2026');
   });
 
   it('rejects a month it cannot read', async () => {

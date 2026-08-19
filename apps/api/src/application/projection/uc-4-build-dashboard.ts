@@ -142,7 +142,7 @@ export class BuildDashboard {
 
     const [, currentRef, nextRef] = window;
     if (currentRef === undefined || nextRef === undefined) {
-      throw new Error('The rolling window always holds at least three cycles.');
+      throw new Error('A janela móvel sempre tem pelo menos três ciclos.');
     }
 
     const chosenRef =
@@ -238,8 +238,8 @@ export class BuildDashboard {
         if (unsettled.length > 0) {
           alerts.push({
             severity: AlertSeverity.Critical,
-            title: `${ref.label} has ${String(unsettled.length)} unsettled entr${unsettled.length === 1 ? 'y' : 'ies'}`,
-            body: `${describe(unsettled)} — the cycle cannot be closed until each is settled or skipped.`,
+            title: `O ciclo de ${ref.label} tem ${String(unsettled.length)} lançamento${unsettled.length === 1 ? '' : 's'} em aberto`,
+            body: `${describe(unsettled)} — o ciclo não fecha enquanto cada um não receber baixa ou for ignorado.`,
           });
         }
       }
@@ -251,8 +251,8 @@ export class BuildDashboard {
           .find((row) => row.balance.isNegative());
         alerts.push({
           severity: AlertSeverity.Critical,
-          title: `Projected negative balance on ${negativeOn.toISO()}`,
-          body: `${ref.label} runs to ${culprit?.balance.toReais() ?? '—'} after ${culprit?.entry.description ?? 'that entry'}.`,
+          title: `Saldo negativo projetado em ${negativeOn.toISO()}`,
+          body: `O ciclo de ${ref.label} chega a R$ ${culprit?.balance.toReais() ?? '—'} depois de ${culprit?.entry.description ?? 'esse lançamento'}.`,
         });
       }
 
@@ -263,8 +263,8 @@ export class BuildDashboard {
       if (!withEstimates.equals(confirmed)) {
         alerts.push({
           severity: AlertSeverity.Warning,
-          title: `${ref.label} still rests on an unconfirmed estimate`,
-          body: `It closes at ${withEstimates.toReais()} with the estimate, ${confirmed.toReais()} without.`,
+          title: `O ciclo de ${ref.label} ainda depende de uma estimativa não confirmada`,
+          body: `Ele fecha em R$ ${withEstimates.toReais()} com a estimativa e em R$ ${confirmed.toReais()} sem ela.`,
         });
       }
     }
@@ -280,8 +280,8 @@ export class BuildDashboard {
       if (bucket.target.date.isBefore(today) && !bucket.isComplete) {
         alerts.push({
           severity: AlertSeverity.Warning,
-          title: `${bucket.name} is behind its target date`,
-          body: `It holds ${bucket.balance.toReais()} of ${bucket.target.amount.toReais()}, and the target date ${bucket.target.date.toISO()} has passed.`,
+          title: `${bucket.name} está atrasada em relação à data-alvo`,
+          body: `Ela tem R$ ${bucket.balance.toReais()} de R$ ${bucket.target.amount.toReais()}, e a data-alvo ${bucket.target.date.toISO()} já passou.`,
         });
       }
     }
@@ -321,27 +321,27 @@ function kpisOf(cycle: Cycle | undefined, estimates: Estimates): KpiView[] {
 
   return [
     {
-      label: 'Total Outcome',
+      label: 'Total de saídas',
       amountCents: chain?.totalOutcome.cents ?? 0,
-      note: 'everything leaving the account',
+      note: 'tudo o que sai da conta',
     },
     {
-      label: 'Expected Surplus',
+      label: 'Sobra Esperada',
       amountCents: chain?.expectedSurplus.cents ?? 0,
-      note: 'available to allocate',
+      note: 'o que há para alocar',
     },
     {
-      label: 'Net Surplus',
+      label: 'Sobra Líquida',
       amountCents: chain?.netSurplus.cents ?? 0,
-      note: 'free cash after allocations',
+      note: 'dinheiro livre depois das alocações',
     },
     {
-      label: 'Lowest point in cycle',
+      label: 'Ponto mais baixo do ciclo',
       amountCents: low?.balance.cents ?? 0,
       note:
         low === undefined
-          ? 'nothing scheduled yet'
-          : `on ${low.date.toISO()}, after ${low.entry.description}`,
+          ? 'nada agendado ainda'
+          : `em ${low.date.toISO()}, depois de ${low.entry.description}`,
     },
   ];
 }
@@ -381,7 +381,7 @@ function describe(entries: readonly LedgerEntry[]): string {
   const names = entries.slice(0, 3).map((entry) => entry.description);
 
   return entries.length > 3
-    ? `${names.join(', ')} and ${String(entries.length - 3)} more`
+    ? `${names.join(', ')} e mais ${String(entries.length - 3)}`
     : names.join(', ');
 }
 

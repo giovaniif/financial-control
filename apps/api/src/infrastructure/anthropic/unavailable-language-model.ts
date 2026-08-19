@@ -6,7 +6,7 @@ import type {
 import { LanguageModelUnavailable } from '../../domain/ports/language-model.js';
 
 const REASON =
-  'No ANTHROPIC_API_KEY is configured, so the assistant is switched off. Everything else in the app works without it.';
+  'Nenhuma ANTHROPIC_API_KEY está configurada, então o assistente está desligado. Todo o resto do app funciona sem ele.';
 
 /**
  * The model when there is no key.

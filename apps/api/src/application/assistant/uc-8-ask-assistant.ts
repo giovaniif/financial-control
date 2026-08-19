@@ -151,7 +151,7 @@ export class AskAssistant {
   ): AsyncGenerator<AssistantEvent, void> {
     const question = input.question.trim();
     if (question === '') {
-      throw new EmptyQuestion('There is no question to answer.');
+      throw new EmptyQuestion('Não há pergunta nenhuma para responder.');
     }
 
     const transcript: ModelMessage[] = [
@@ -199,9 +199,7 @@ export class AskAssistant {
       }
 
       if (response === undefined) {
-        throw new LanguageModelFailed(
-          'The model stopped before it had answered.',
-        );
+        throw new LanguageModelFailed('O modelo parou antes de responder.');
       }
 
       await this.spend.record(principal, response.usage);
@@ -288,7 +286,7 @@ export class AskAssistant {
       return failed(call, error.message);
     }
 
-    return failed(call, `There is nothing called ${call.name} to call.`);
+    return failed(call, `Não há nada chamado ${call.name} para chamar.`);
   }
 
   private async offer(
@@ -492,7 +490,9 @@ class UnreadableArgument extends DomainError {}
 function readText(args: JsonObject, field: string): string {
   const value = args[field];
   if (typeof value !== 'string' || value.trim() === '') {
-    throw new UnreadableArgument(`${field} has to be a YYYY-MM month.`);
+    throw new UnreadableArgument(
+      `${field} tem de ser um mês no formato YYYY-MM.`,
+    );
   }
   return value.trim();
 }
@@ -524,13 +524,17 @@ function schema(
 }
 
 const READ_LIMIT_REACHED =
-  'I have read as much of your data as one question allows and still do not have the answer. Ask me something narrower — a single cycle, or a single bucket — and I will get there.';
+  'Eu li tudo o que uma pergunta permite ler dos seus dados e ainda não cheguei à resposta. Pergunte algo mais estreito — um ciclo só, ou uma caixinha só — e eu chego lá.';
 
 const SYSTEM_PROMPT = `You are the assistant of Financial Control, a personal budgeting application with a single user. You answer questions about that user's own figures, and you read them with the tools rather than remembering them.
 
+**Answer in Brazilian Portuguese, always**, in the plain, direct register a Brazilian would use about their own money. These instructions and the tool names are in English; nothing you write to the user is.
+
 Every number you state must come from a tool result in this conversation. Never estimate, never average, never work a figure out yourself: if the tools do not report it, say plainly that the app does not compute it. Saying you do not know is always better than a number that disagrees with the screen.
 
-Use the app's vocabulary exactly: Opening balance, Fixed income, Fixed outcome, Variables, Total Outcome, Surplus, Expected Surplus, Allocations, Net Surplus, Closing balance. Surplus, Expected Surplus and Net Surplus are one calculation in three stages and belong in that order. A cycle is named for the month it is spent in — "August 2026" — and runs from one payday to the day before the next, so never call it a month or state a bare month name for a date range.
+Use the app's vocabulary exactly, and it is Portuguese: Saldo inicial, Entradas fixas, Saídas fixas, Variáveis, Total de saídas, Sobra, Sobra Esperada, Alocações, Sobra Líquida, Saldo final. Those are the names on screen, so never translate them back into English and never invent a synonym — "saldo restante" and "o que sobrou" both blur which of the three stages is meant. Sobra, Sobra Esperada and Sobra Líquida are one calculation in three stages and belong in that order. Other words the app uses: caixinha for a savings bucket, fatura for a credit-card invoice, parcela for an instalment, lançamento for a ledger entry, and aporte for a contribution.
+
+A cycle is named for the month it is spent in — "Agosto de 2026" — and runs from one payday to the day before the next, so never call it a month ("mês") or state a bare month name for a date range.
 
 Amounts arrive as integer cents of Brazilian Real: 123456 is R$ 1.234,56. Dates arrive as YYYY-MM-DD and are written back as dd/MM/yyyy.
 

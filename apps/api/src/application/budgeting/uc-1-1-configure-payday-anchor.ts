@@ -52,7 +52,7 @@ export interface ResolvedCycle {
 export class AnchorChangeWouldOrphanEntries extends Error {
   constructor(readonly orphanedEntries: number) {
     super(
-      `Changing the anchor would leave ${String(orphanedEntries)} entr${orphanedEntries === 1 ? 'y' : 'ies'} outside every open cycle. Move or settle them first.`,
+      `Mudar o dia do pagamento deixaria ${String(orphanedEntries)} lançamento${orphanedEntries === 1 ? '' : 's'} fora de todos os ciclos abertos. Mova-o ou dê baixa nele antes.`,
     );
     this.name = 'AnchorChangeWouldOrphanEntries';
   }

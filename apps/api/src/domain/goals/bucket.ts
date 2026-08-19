@@ -114,26 +114,26 @@ export class Bucket {
     events?: readonly BucketEvent[];
   }): Bucket {
     if (input.name.trim() === '') {
-      throw new InvalidBucket('A bucket needs a name.');
+      throw new InvalidBucket('Uma caixinha precisa de um nome.');
     }
     if (input.mode === BucketMode.Goal && input.target === undefined) {
       throw new InvalidBucket(
-        `${input.name} is a goal, so it needs a target amount and a target date.`,
+        `${input.name} é uma meta, então precisa de um valor-alvo e de uma data-alvo.`,
       );
     }
     if (input.target !== undefined && !input.target.amount.isPositive()) {
       throw new InvalidBucket(
-        `${input.name} is a goal, so its target must be more than nothing.`,
+        `${input.name} é uma meta, então o valor-alvo tem de ser maior que zero.`,
       );
     }
     if (input.mode === BucketMode.Ongoing && input.target !== undefined) {
       throw new InvalidBucket(
-        `${input.name} is ongoing, so it has no target — there is nothing to complete.`,
+        `${input.name} é contínua, então não tem valor-alvo — não há nada a completar.`,
       );
     }
     if (!Number.isSafeInteger(input.priority) || input.priority < 1) {
       throw new InvalidBucket(
-        `Priority is a whole number of at least 1; received ${String(input.priority)}.`,
+        `A prioridade é um número inteiro de pelo menos 1; recebido ${String(input.priority)}.`,
       );
     }
 
@@ -275,7 +275,7 @@ export class Bucket {
     const event = BucketEvents.withdrawal(id, date, amount, reason);
     if (applyEvent(this.balance, event).isNegative()) {
       throw new WithdrawalTooLarge(
-        `${this.state.name} holds ${this.balance.toReais()}; ${amount.toReais()} cannot come out.`,
+        `${this.state.name} tem R$ ${this.balance.toReais()}; não dá para tirar R$ ${amount.toReais()}.`,
       );
     }
     return this.append(event);
@@ -307,7 +307,7 @@ export class Bucket {
   changePriority(priority: number): Bucket {
     if (!Number.isSafeInteger(priority) || priority < 1) {
       throw new InvalidBucket(
-        `Priority is a whole number of at least 1; received ${String(priority)}.`,
+        `A prioridade é um número inteiro de pelo menos 1; recebido ${String(priority)}.`,
       );
     }
     return this.with({ priority });

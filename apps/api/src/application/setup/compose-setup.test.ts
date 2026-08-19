@@ -108,7 +108,7 @@ describe('composeSetup', () => {
 
     expect(document.cycles).toEqual([]);
     expect(document.templates.map((template) => template.name)).toEqual([
-      'Salary',
+      'Salário',
       'Health Plan',
       'Electricity',
     ]);

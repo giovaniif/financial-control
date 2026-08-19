@@ -125,7 +125,7 @@ describe('GET /cards/:id/billing-preview', () => {
     expect(response.json<BillingPreviewResponse>()).toEqual({
       dueDate: '2026-09-10',
       cycleMonth: '2026-10',
-      cycleLabel: 'October 2026',
+      cycleLabel: 'Outubro de 2026',
     });
   });
 

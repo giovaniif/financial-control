@@ -96,7 +96,7 @@ export class BackupRestore {
   async restore(document: BackupDocument): Promise<void> {
     if (document.version !== BACKUP_VERSION) {
       throw new BackupVersionNotSupported(
-        `This backup says version ${String(document.version)}; this app reads version ${String(BACKUP_VERSION)}.`,
+        `Este backup diz ser da versão ${String(document.version)}; o app lê a versão ${String(BACKUP_VERSION)}.`,
       );
     }
 

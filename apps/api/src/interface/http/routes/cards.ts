@@ -134,7 +134,7 @@ export function registerCardRoutes(
     async (request, reply) => {
       const { purchasedOn } = request.query;
       if (purchasedOn === undefined) {
-        return badRequest(reply, 'purchasedOn is required.');
+        return badRequest(reply, 'purchasedOn é obrigatório.');
       }
 
       try {
@@ -221,7 +221,7 @@ export function registerCardRoutes(
     async (request, reply) => {
       const { amount } = asRecord(request.body);
       if (typeof amount !== 'number') {
-        return badRequest(reply, 'amount is required.');
+        return badRequest(reply, 'amount é obrigatório.');
       }
 
       try {
@@ -243,7 +243,7 @@ export function registerCardRoutes(
     async (request, reply) => {
       const { purchaseId, discount } = asRecord(request.body);
       if (typeof purchaseId !== 'string') {
-        return badRequest(reply, 'purchaseId is required.');
+        return badRequest(reply, 'purchaseId é obrigatório.');
       }
 
       try {

@@ -76,7 +76,7 @@ describe('BuildDashboard headline — the answer to Q1', () => {
 
     expect(view.currentCycleMonth).toBe('2026-09');
     expect(view.headline.cycleMonth).toBe('2026-10');
-    expect(view.headline.cycleLabel).toBe('October 2026');
+    expect(view.headline.cycleLabel).toBe('Outubro de 2026');
   });
   it('reports what arrives, what goes out and what stays free', async () => {
     const { headline } = await building({ cycles: [october()] }).build();
@@ -128,7 +128,7 @@ describe('BuildDashboard for a chosen cycle', () => {
     );
 
     expect(view.headline.cycleMonth).toBe('2026-09');
-    expect(view.headline.cycleLabel).toBe('September 2026');
+    expect(view.headline.cycleLabel).toBe('Setembro de 2026');
     expect(view.headline.incomingCents).toBe(1_000_000);
     expect(view.headline.outgoingCents).toBe(400_000);
   });
@@ -171,10 +171,10 @@ describe('BuildDashboard KPIs', () => {
     const { kpis } = await building({ cycles: [october()] }).build();
 
     expect(kpis.map((k) => k.label)).toEqual([
-      'Total Outcome',
-      'Expected Surplus',
-      'Net Surplus',
-      'Lowest point in cycle',
+      'Total de saídas',
+      'Sobra Esperada',
+      'Sobra Líquida',
+      'Ponto mais baixo do ciclo',
     ]);
     expect(kpis[1]?.amountCents).toBe(889_000);
   });
@@ -276,10 +276,10 @@ describe('BuildDashboard alerts', () => {
     });
 
     const { alerts } = await building({ cycles: [july] }).build();
-    const alert = alerts.find((a) => a.title.includes('unsettled'));
+    const alert = alerts.find((a) => a.title.includes('em aberto'));
 
     expect(alert?.severity).toBe('CRITICAL');
-    expect(alert?.title).toContain('August 2026');
+    expect(alert?.title).toContain('Agosto de 2026');
     expect(alert?.body).toContain('Renovation Progress');
   });
 
@@ -293,7 +293,7 @@ describe('BuildDashboard alerts', () => {
 
     const { alerts } = await building({ cycles: [july] }).build();
 
-    expect(alerts.some((a) => a.title.includes('unsettled'))).toBe(false);
+    expect(alerts.some((a) => a.title.includes('em aberto'))).toBe(false);
   });
 
   it('names only the first few when many are unsettled', async () => {
@@ -310,9 +310,9 @@ describe('BuildDashboard alerts', () => {
     });
 
     const { alerts } = await building({ cycles: [july] }).build();
-    const alert = alerts.find((a) => a.title.includes('unsettled'));
+    const alert = alerts.find((a) => a.title.includes('em aberto'));
 
-    expect(alert?.body).toContain('and 1 more');
+    expect(alert?.body).toContain('e mais 1');
   });
 
   it('leaves a past cycle out of the upcoming list', async () => {
@@ -337,7 +337,7 @@ describe('BuildDashboard alerts', () => {
     });
 
     const { alerts } = await building({ cycles: [broke] }).build();
-    const alert = alerts.find((a) => a.title.includes('negative'));
+    const alert = alerts.find((a) => a.title.includes('negativo'));
 
     expect(alert?.severity).toBe('CRITICAL');
     expect(alert?.body).toContain('Huge bill');
@@ -345,10 +345,10 @@ describe('BuildDashboard alerts', () => {
 
   it('quantifies an unconfirmed estimate both ways', async () => {
     const { alerts } = await building({ cycles: [october()] }).build();
-    const alert = alerts.find((a) => a.title.includes('estimate'));
+    const alert = alerts.find((a) => a.title.includes('estimativa'));
 
     expect(alert?.severity).toBe('WARNING');
-    expect(alert?.body).toContain('with the estimate');
+    expect(alert?.body).toContain('com a estimativa');
   });
 
   it('flags a goal whose target date has passed unmet', async () => {
@@ -362,7 +362,7 @@ describe('BuildDashboard alerts', () => {
 
     const { alerts } = await building({ buckets: [behind] }).build();
 
-    expect(alerts.some((a) => a.title.includes('behind its target'))).toBe(
+    expect(alerts.some((a) => a.title.includes('atrasada em relação'))).toBe(
       true,
     );
   });
@@ -540,10 +540,10 @@ describe('BuildDashboard with estimates excluded', () => {
       Estimates.Excluded,
     );
 
-    expect(included.alerts.some((a) => a.title.includes('negative'))).toBe(
+    expect(included.alerts.some((a) => a.title.includes('negativo'))).toBe(
       true,
     );
-    expect(excluded.alerts.some((a) => a.title.includes('negative'))).toBe(
+    expect(excluded.alerts.some((a) => a.title.includes('negativo'))).toBe(
       false,
     );
   });
@@ -555,9 +555,9 @@ describe('BuildDashboard with estimates excluded', () => {
    */
   it('still quantifies an unconfirmed estimate both ways', async () => {
     const alert = (await confirmed()).alerts.find((a) =>
-      a.title.includes('estimate'),
+      a.title.includes('estimativa'),
     );
 
-    expect(alert?.body).toContain('with the estimate');
+    expect(alert?.body).toContain('com a estimativa');
   });
 });

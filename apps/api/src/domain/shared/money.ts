@@ -26,7 +26,7 @@ export class Money {
   static fromCents(cents: number): Money {
     if (!Number.isSafeInteger(cents)) {
       throw new InvalidAmount(
-        `Money is integer cents; received ${String(cents)}.`,
+        `Um valor em dinheiro é um número inteiro de centavos; recebido ${String(cents)}.`,
       );
     }
     return new Money(cents);
@@ -35,7 +35,7 @@ export class Money {
   static fromReais(input: string): Money {
     const groups = REAIS.exec(input.trim())?.groups;
     if (groups === undefined) {
-      throw new UnparsableAmount(`Not a BRL amount: "${input}".`);
+      throw new UnparsableAmount(`Não é um valor em reais: "${input}".`);
     }
 
     const whole = Number(groups['whole']?.replaceAll('.', '') ?? '0');
@@ -68,7 +68,7 @@ export class Money {
   times(multiplier: number): Money {
     if (!Number.isSafeInteger(multiplier)) {
       throw new InvalidAmount(
-        `A fractional multiplier would create a sub-cent amount; received ${String(multiplier)}.`,
+        `Um multiplicador fracionário criaria um valor menor que um centavo; recebido ${String(multiplier)}.`,
       );
     }
     return Money.fromCents(this.cents * multiplier);
@@ -90,7 +90,7 @@ export class Money {
   dividedInto(count: number): Money[] {
     if (!Number.isSafeInteger(count) || count < 1) {
       throw new InvalidAmount(
-        `Cannot split into ${String(count)} parts; expected a whole number of at least 1.`,
+        `Não dá para dividir em ${String(count)} partes; é preciso um número inteiro de pelo menos 1.`,
       );
     }
 

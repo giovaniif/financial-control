@@ -14,6 +14,18 @@ export const SettlementStatus = {
 export type SettlementStatus =
   (typeof SettlementStatus)[keyof typeof SettlementStatus];
 
+/**
+ * How a status reads on screen. Agrees with `lançamento`, which is masculine,
+ * so an entry is `pago` rather than `paga`.
+ */
+export const SETTLEMENT_STATUS_LABELS: Record<SettlementStatus, string> = {
+  PENDING: 'pendente',
+  PAID: 'pago',
+  RECEIVED: 'recebido',
+  SKIPPED: 'ignorado',
+  OVERDUE: 'atrasado',
+};
+
 const SETTLED = new Set<SettlementStatus>([
   SettlementStatus.Paid,
   SettlementStatus.Received,
@@ -47,7 +59,7 @@ export class PlannedActual {
   settle(actual: Money, status: SettlementStatus): PlannedActual {
     if (this.isSettled) {
       throw new InvalidSettlement(
-        `Already ${this.status}; reopen the cycle to correct it.`,
+        `Este lançamento já está ${SETTLEMENT_STATUS_LABELS[this.status]}; reabra o ciclo para corrigi-lo.`,
       );
     }
     if (
@@ -55,7 +67,7 @@ export class PlannedActual {
       status !== SettlementStatus.Received
     ) {
       throw new InvalidSettlement(
-        `Settling records money moving; ${status} does not. Use skip() instead.`,
+        `Dar baixa registra dinheiro entrando ou saindo, e ${SETTLEMENT_STATUS_LABELS[status]} não registra nada disso: use ignorar.`,
       );
     }
     return new PlannedActual(this.planned, actual, status);
@@ -67,7 +79,9 @@ export class PlannedActual {
    */
   skip(): PlannedActual {
     if (this.isSettled) {
-      throw new InvalidSettlement(`Already ${this.status}; cannot skip it.`);
+      throw new InvalidSettlement(
+        `Este lançamento já está ${SETTLEMENT_STATUS_LABELS[this.status]}; não dá para ignorá-lo.`,
+      );
     }
     return new PlannedActual(this.planned, undefined, SettlementStatus.Skipped);
   }
@@ -75,7 +89,7 @@ export class PlannedActual {
   markOverdue(): PlannedActual {
     if (this.isSettled) {
       throw new InvalidSettlement(
-        `Already ${this.status}; it cannot be overdue.`,
+        `Este lançamento já está ${SETTLEMENT_STATUS_LABELS[this.status]}; não pode ficar atrasado.`,
       );
     }
     return new PlannedActual(this.planned, undefined, SettlementStatus.Overdue);

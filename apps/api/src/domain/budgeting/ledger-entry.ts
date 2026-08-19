@@ -2,7 +2,10 @@ import { DomainError } from '../shared/domain-error.js';
 import type { LocalDate } from '../shared/local-date.js';
 import type { Money } from '../shared/money.js';
 import type { SettlementStatus } from '../shared/planned-actual.js';
-import { PlannedActual } from '../shared/planned-actual.js';
+import {
+  PlannedActual,
+  SETTLEMENT_STATUS_LABELS,
+} from '../shared/planned-actual.js';
 
 export class InvalidEntry extends DomainError {}
 
@@ -66,7 +69,9 @@ export function describeOrigin(origin: EntryOrigin): string {
       return `overridden — ${describeOrigin(origin.original)}`;
     default: {
       const unhandled: never = origin;
-      throw new InvalidEntry(`Unhandled origin: ${JSON.stringify(unhandled)}`);
+      throw new InvalidEntry(
+        `Origem não tratada: ${JSON.stringify(unhandled)}`,
+      );
     }
   }
 }
@@ -100,7 +105,7 @@ export class LedgerEntry {
     origin?: EntryOrigin;
   }): LedgerEntry {
     if (input.description.trim() === '') {
-      throw new InvalidEntry('An entry needs a description.');
+      throw new InvalidEntry('Um lançamento precisa de uma descrição.');
     }
 
     return new LedgerEntry({
@@ -178,7 +183,7 @@ export class LedgerEntry {
   override(planned: Money): LedgerEntry {
     if (this.isSettled) {
       throw new InvalidEntry(
-        `${this.state.description} is already ${this.status}; it cannot be overridden.`,
+        `${this.state.description} já está ${SETTLEMENT_STATUS_LABELS[this.status]}; não dá para sobrescrever o valor.`,
       );
     }
     if (this.state.origin.kind === 'OVERRIDE') {
@@ -202,7 +207,7 @@ export class LedgerEntry {
     const { origin } = this.state;
     if (origin.kind !== 'OVERRIDE') {
       throw new InvalidEntry(
-        `${this.state.description} is not overridden; there is nothing to revert.`,
+        `${this.state.description} não tem valor sobrescrito; não há nada a reverter.`,
       );
     }
 

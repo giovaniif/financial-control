@@ -15,6 +15,13 @@ export const InvoiceStatus = {
 
 export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus];
 
+/** How a status reads on screen. Agrees with `fatura`, which is feminine. */
+const STATUS_LABELS: Record<InvoiceStatus, string> = {
+  OPEN: 'aberta',
+  CLOSED: 'fechada',
+  PAID: 'paga',
+};
+
 export interface InvoiceItem {
   readonly id: string;
   readonly purchaseId: string;
@@ -115,12 +122,12 @@ export class Invoice {
   addItem(item: InvoiceItem): Invoice {
     if (!this.isOpen) {
       throw new InvoiceClosedError(
-        `The invoice due ${this.state.dueDate.toISO()} is ${this.state.status}; it takes no new items.`,
+        `A fatura com vencimento em ${this.state.dueDate.toISO()} está ${STATUS_LABELS[this.state.status]}; ela não aceita novos itens.`,
       );
     }
     if (!this.covers(item.purchasedOn)) {
       throw new InvalidInvoiceItem(
-        `A purchase on ${item.purchasedOn.toISO()} falls outside ${this.period.toString()}.`,
+        `Uma compra em ${item.purchasedOn.toISO()} fica fora do período ${this.period.toString()}.`,
       );
     }
     return this.with({ items: [...this.state.items, item] });
@@ -129,7 +136,7 @@ export class Invoice {
   removeItemsOfPurchase(purchaseId: string): Invoice {
     if (!this.isOpen) {
       throw new InvoiceClosedError(
-        `The invoice due ${this.state.dueDate.toISO()} is ${this.state.status}; its items are fixed.`,
+        `A fatura com vencimento em ${this.state.dueDate.toISO()} está ${STATUS_LABELS[this.state.status]}; os itens dela não mudam mais.`,
       );
     }
     return this.with({
@@ -148,7 +155,7 @@ export class Invoice {
   pay(amount: Money): Invoice {
     if (this.state.status === InvoiceStatus.Paid) {
       throw new InvoiceClosedError(
-        `The invoice due ${this.state.dueDate.toISO()} is already paid.`,
+        `A fatura com vencimento em ${this.state.dueDate.toISO()} já foi paga.`,
       );
     }
     return this.with({ status: InvoiceStatus.Paid, paidAmount: amount });

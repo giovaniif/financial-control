@@ -61,7 +61,7 @@ describe('ManageCards.previewBilling', () => {
 
     expect(preview.dueDate).toBe('2026-09-10');
     expect(preview.cycleMonth).toBe('2026-10');
-    expect(preview.cycleLabel).toBe('October 2026');
+    expect(preview.cycleLabel).toBe('Outubro de 2026');
   });
 
   it('bills a 29 Aug purchase into the October cycle', async () => {

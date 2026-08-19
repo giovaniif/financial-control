@@ -252,7 +252,7 @@ describe('POST /setup/conversation', () => {
         {
           section: 'ANCHOR',
           id: null,
-          summary: expect.stringContaining('Paid on day 5') as string,
+          summary: expect.stringContaining('Pagamento no dia 5') as string,
           fields: null,
         },
       ],
@@ -501,7 +501,9 @@ describe('PATCH /setup/conversation/:id/records/:recordId', () => {
     });
 
     expect(response.statusCode).toBe(400);
-    expect(response.json<{ error: string }>().error).toContain('never reach');
+    expect(response.json<{ error: string }>().error).toContain(
+      'nunca alcançam',
+    );
   });
 
   /**
@@ -525,21 +527,21 @@ describe('PATCH /setup/conversation/:id/records/:recordId', () => {
     expect(refusal.cycles).toEqual([
       {
         month: '2026-09',
-        label: 'September 2026',
+        label: 'Setembro de 2026',
         range: '2026-08-05 – 2026-09-03',
         fallbackDate: '2026-09-03',
         fallbackDayOfMonth: 3,
       },
       {
         month: '2026-12',
-        label: 'December 2026',
+        label: 'Dezembro de 2026',
         range: '2026-11-05 – 2026-12-03',
         fallbackDate: '2026-12-03',
         fallbackDayOfMonth: 3,
       },
       {
         month: '2027-06',
-        label: 'June 2027',
+        label: 'Junho de 2027',
         range: '2027-05-05 – 2027-06-03',
         fallbackDate: '2027-06-03',
         fallbackDayOfMonth: 3,
@@ -607,7 +609,7 @@ describe('PATCH /setup/conversation/:id/records/:recordId', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json<SetupTurnResponse>().message).toContain(
-      'Expected Surplus',
+      'Sobra Esperada',
     );
   });
 });
@@ -687,7 +689,7 @@ describe('POST /setup/conversation — the spend ceiling', () => {
 
     expect(response.statusCode).toBe(503);
     expect(response.json<{ error: string }>().error).toContain(
-      'switched off until tomorrow',
+      'desligado até amanhã',
     );
     expect(model.requests).toHaveLength(0);
   });
@@ -815,13 +817,13 @@ describe('what an established record carries across the wire', () => {
     [
       'an account',
       'rec-1',
-      'Checking — a checking account holding R$ 2.160,00.',
+      'Checking — uma conta corrente com R$ 2.160,00.',
       { name: 'Checking', type: 'CHECKING', balance: 216_000 },
     ],
     [
       'a fixed bill',
       'rec-2',
-      'Health Plan — R$ 320,00 on day 8.',
+      'Health Plan — R$ 320,00 no dia 8.',
       {
         name: 'Health Plan',
         amount: -32_000,
@@ -832,7 +834,7 @@ describe('what an established record carries across the wire', () => {
     [
       'a variable bill',
       'rec-3',
-      'Electricity — R$ 280,00 on day 15, an estimate.',
+      'Electricity — R$ 280,00 no dia 15, uma estimativa.',
       {
         name: 'Electricity',
         amount: -28_000,
@@ -843,7 +845,7 @@ describe('what an established record carries across the wire', () => {
     [
       'a card',
       'rec-4',
-      'Inter — limit R$ 10.000,00, closing on day 28, due on day 10, paid from Checking.',
+      'Inter — limite de R$ 10.000,00, fecha no dia 28, vence no dia 10, pago por Checking.',
       {
         name: 'Inter',
         limit: 1_000_000,
@@ -855,7 +857,7 @@ describe('what an established record carries across the wire', () => {
     [
       'an ongoing bucket',
       'rec-5',
-      'Investments — 20 % of Expected Surplus each cycle, funded #1.',
+      'Investments — 20 % da Sobra Esperada por ciclo, prioridade #1.',
       {
         mode: 'ONGOING',
         name: 'Investments',
@@ -866,7 +868,7 @@ describe('what an established record carries across the wire', () => {
     [
       'a goal bucket',
       'rec-6',
-      'Apartment — R$ 1.778,00 each cycle toward R$ 150.000,00 by 2031-03-05, funded #2.',
+      'Apartment — R$ 1.778,00 por ciclo rumo a R$ 150.000,00 até 2031-03-05, prioridade #2.',
       {
         mode: 'GOAL',
         name: 'Apartment',
@@ -915,7 +917,7 @@ describe('what an established record carries across the wire', () => {
       {
         section: 'ANCHOR',
         id: null,
-        summary: expect.stringContaining('Paid on day 5') as string,
+        summary: expect.stringContaining('Pagamento no dia 5') as string,
         fields: null,
       },
     ]);

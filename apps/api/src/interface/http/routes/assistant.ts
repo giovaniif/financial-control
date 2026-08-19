@@ -174,7 +174,7 @@ function toStreamError(error: unknown): AssistantStreamEvent {
       error:
         error instanceof DomainError
           ? error.message
-          : 'The assistant stopped before it had answered.',
+          : 'O assistente parou antes de responder.',
       status: statusOf(error) ?? 500,
     },
   };

@@ -13,7 +13,7 @@ export class InstallmentRef {
     const whole = Number.isSafeInteger(number) && Number.isSafeInteger(total);
     if (!whole || total < 1 || number < 1 || number > total) {
       throw new InvalidInstallment(
-        `Instalment ${String(number)} of ${String(total)} is not a position in a plan.`,
+        `A parcela ${String(number)} de ${String(total)} não é uma posição possível em um parcelamento.`,
       );
     }
     return new InstallmentRef(number, total);

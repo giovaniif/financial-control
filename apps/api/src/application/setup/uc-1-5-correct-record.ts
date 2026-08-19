@@ -55,7 +55,7 @@ export class CorrectSetupRecord {
     );
     if (corrected === undefined) {
       throw new NothingToCorrect(
-        `Nothing that applies to ${held.record.name} was given, so nothing changed.`,
+        `Nada que se aplique a ${held.record.name} foi informado, então nada mudou.`,
       );
     }
 
@@ -64,7 +64,7 @@ export class CorrectSetupRecord {
     // conversation the edit is meant to fit into.
     const state: SetupState = { ...stored.state, draft: corrected.draft };
     const established = establishedOf(corrected.record);
-    const message = `Corrected. ${established.summary}`;
+    const message = `Corrigido. ${established.summary}`;
 
     await this.save(stored, state, message, {
       established: [established],
@@ -111,7 +111,7 @@ export class CorrectSetupRecord {
     const stored = await this.conversations.load(id);
     if (stored === undefined) {
       throw new SetupConversationNotFound(
-        `There is no setup conversation called "${id}".`,
+        `Não existe nenhuma conversa de configuração chamada "${id}".`,
       );
     }
     return stored;

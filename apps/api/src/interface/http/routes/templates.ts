@@ -147,7 +147,7 @@ export function registerTemplateRoutes(
     async (request, reply) => {
       const input = readChange(request.body);
       if (input === undefined) {
-        return badRequest(reply, 'fromMonth, amount and scope are required.');
+        return badRequest(reply, 'fromMonth, amount e scope são obrigatórios.');
       }
 
       try {
@@ -198,7 +198,7 @@ export function registerTemplateRoutes(
         if (view === undefined) {
           return await badRequest(
             reply,
-            'One of name, status, endMonth or isEstimate is required.',
+            'É preciso informar name, status, endMonth ou isEstimate.',
           );
         }
         return toResponse(view);
