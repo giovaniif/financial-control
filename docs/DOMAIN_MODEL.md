@@ -293,6 +293,32 @@ Re-checking a closed cycle, a withdrawal below zero or an instalment plan's arit
 proposal is built would leave two places to keep correct, and the second unreachable by the domain tests that
 defend the first. The assistant may explain an invariant. It never enforces one.
 
+### Identity is ambient, never an argument
+
+The second rule of this boundary costs nothing today and cannot be added cheaply later.
+
+> **The model never names whose data it reads.**
+
+Tools take domain parameters — which cycle, which bucket — and never an identity. The interactor is
+constructed with repositories already scoped to the caller, so the scope is a property of the request rather
+than a value the model chose. A `Principal` is passed alongside a question and alongside a confirmation, never
+read out of a request body, and it is stamped on a proposal when it is produced.
+
+With one user this is a tautology and every check passes trivially. That is precisely why it has to be built
+now. A tool shaped `read_cycle(cycleId)` over a global id space works perfectly until the day a second user
+exists, at which point anything able to influence the model — including a bill description, which is
+user-entered text that reaches the model as a tool result — can move that id. Prompt injection stops being an
+annoyance and becomes exfiltration.
+
+**A tool that cannot express "somebody else's data" cannot be talked into fetching it.** That property is
+worth more than any filter placed in front of a model, and the way to keep it is to never write the argument
+in the first place. The assistant's tests assert the complete set of argument names across every tool, so a
+future tool that adds an identity fails the build rather than passing review.
+
+Authentication remains out of scope (`USE_CASES.md` §7). What this section fixes is that adding it later is a
+contained change rather than an audit of everything the model can reach — the checklist for that day lives on
+the tracking issue, not here, because it is work to do rather than structure to keep.
+
 ---
 
 ## 7. Ports
