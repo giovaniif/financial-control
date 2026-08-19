@@ -19,6 +19,7 @@ const dashboard = (
 ): DashboardResponse => ({
   today: '2026-08-10',
   currentCycleMonth: '2026-08',
+  estimates: 'included',
   headline: {
     cycleMonth: '2026-09',
     cycleLabel: 'September 2026',

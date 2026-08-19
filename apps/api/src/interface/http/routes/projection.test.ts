@@ -226,3 +226,74 @@ describe('GET /wealth', () => {
     expect(body.retirement).toBeNull();
   });
 });
+
+/**
+ * UC-4.4 — the toggle is global, so the dashboard has to answer in both
+ * readings from the same endpoint. Matches `GET /cycles/:month`, which has
+ * taken `estimates` since it was written.
+ */
+describe('GET /dashboard with the estimates toggle', () => {
+  const withEstimate = () =>
+    Cycle.open({
+      id: '2026-10',
+      ref: CycleRef.forMonth('2026-10', anchor, noHolidays),
+      openingBalance: Money.zero(),
+      entries: [
+        LedgerEntry.create({
+          id: 'salary',
+          description: 'Salary',
+          kind: EntryKind.Income,
+          dueDate: LocalDate.parse('2026-09-04'),
+          planned: reais(18_000),
+        }),
+        LedgerEntry.create({
+          id: 'contractor',
+          description: 'Contractor Costs',
+          kind: EntryKind.Fixed,
+          dueDate: LocalDate.parse('2026-09-25'),
+          planned: reais(-1_500),
+          isEstimate: true,
+        }),
+      ],
+    });
+
+  const dashboard = async (query: string) =>
+    (
+      await serverWith({ cycles: [withEstimate()] }).inject({
+        method: 'GET',
+        url: `/dashboard${query}`,
+      })
+    ).json<DashboardResponse>();
+
+  it('includes the estimates when nothing is asked for', async () => {
+    const body = await dashboard('');
+
+    expect(body.estimates).toBe('included');
+    expect(body.headline.outgoing).toBe(150_000);
+  });
+
+  it('leaves them out when the confirmed reading is asked for', async () => {
+    const body = await dashboard('?estimates=excluded');
+
+    expect(body.estimates).toBe('excluded');
+    expect(body.headline.outgoing).toBe(0);
+    expect(body.headline.closing).toBe(1_800_000);
+  });
+
+  it('still carries the closing balance without estimates either way', async () => {
+    const included = await dashboard('?estimates=included');
+    const excluded = await dashboard('?estimates=excluded');
+
+    expect(included.headline.closingWithoutEstimates).toBe(1_800_000);
+    expect(excluded.headline.closingWithoutEstimates).toBe(1_800_000);
+  });
+
+  it('refuses a reading that is neither', async () => {
+    const response = await serverWith({ cycles: [withEstimate()] }).inject({
+      method: 'GET',
+      url: '/dashboard?estimates=maybe',
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+});

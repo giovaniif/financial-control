@@ -1,3 +1,4 @@
+import type { EstimateMode } from './cycles.js';
 import type { Cents } from './money.js';
 
 export type AlertSeverity = 'CRITICAL' | 'WARNING' | 'INFO';
@@ -52,6 +53,8 @@ export interface AlertResponse {
 export interface DashboardResponse {
   today: string;
   currentCycleMonth: string;
+  /** Which reading every figure below was taken in — UC-4.4. */
+  estimates: EstimateMode;
   headline: HeadlineResponse;
   kpis: KpiResponse[];
   progress: CycleProgressResponse;
