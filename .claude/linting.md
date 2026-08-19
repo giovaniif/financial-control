@@ -125,7 +125,7 @@ shared part belongs one layer down.
 Every check runs on this machine. There is no hosted runner, no workflow file, and
 therefore no such thing as "green on CI but broken locally" — or the reverse.
 
-The cost is that nothing stops an unchecked PR going up. `pnpm check` before `gt submit`
+The cost is that nothing stops an unchecked PR going up. `pnpm check` before `gh stack submit`
 is the whole of the enforcement, and it is on you.
 
 ## Pre-PR checklist
