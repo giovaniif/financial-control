@@ -1,5 +1,9 @@
-import type { SetupAppliedResponse, SetupTurnResponse } from '@fin/contracts';
-import { useState } from 'react';
+import type {
+  SetupAppliedResponse,
+  SetupSection,
+  SetupTurnResponse,
+} from '@fin/contracts';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 
 import { useApplySetup, useSetupTurn } from '../api/use-setup-conversation.js';
@@ -12,17 +16,30 @@ import {
 
 import { Composer } from './composer.js';
 import { DraftReview } from './draft-review.js';
+import { ExampleAnswers } from './example-answers.js';
 import { RecordLine } from './record-line.js';
-import { SetupProgress } from './setup-progress.js';
+
+interface Props {
+  /** What the conversation is asking about now, for the path in the bar. */
+  onAsking: (section: SetupSection | null) => void;
+}
 
 /**
  * UC-1.5 — setup as a conversation: one question at a time, records shown back
  * as they are established and correctable where they sit, and nothing written
  * until the whole draft is read through and applied in the final step.
+ *
+ * The two arrangements below — a greeting with the composer under it, and the
+ * transcript with the composer pinned beneath — are one tree with two sets of
+ * classes rather than two trees, so that the first answer sent does not unmount
+ * the field it was typed in and take the focus with it.
  */
-export function SetupChat() {
+export function SetupChat({ onAsking }: Props) {
   const [entries, setEntries] = useState<Entry[]>([OPENING]);
   const [latest, setLatest] = useState<SetupTurnResponse>();
+  const [draft, setDraft] = useState('');
+  const composer = useRef<HTMLTextAreaElement>(null);
+  const transcript = useRef<HTMLDivElement>(null);
   const turn = useSetupTurn();
   const apply = useApplySetup();
 
@@ -32,12 +49,21 @@ export function SetupChat() {
   const record = (response: SetupTurnResponse) => {
     setLatest(response);
     setEntries(applyTurn(response));
+    onAsking(response.isComplete ? null : response.nextSection);
   };
 
   const conversationId = latest?.conversationId;
   const isComplete = latest?.isComplete ?? false;
-  // Before the first turn there is nothing to ask about but the anchor.
-  const nextSection = latest === undefined ? 'ANCHOR' : latest.nextSection;
+  const hasSpoken = entries.some((entry) => entry.kind === 'user');
+
+  // A new turn belongs at the bottom of the transcript and in view — including
+  // the thinking line, which is what says the answer was taken.
+  useEffect(() => {
+    const region = transcript.current;
+    if (region !== null) {
+      region.scrollTop = region.scrollHeight;
+    }
+  }, [entries, turn.isPending]);
 
   const send = (message: string) => {
     setEntries((current) => [...current, { kind: 'user', text: message }]);
@@ -48,67 +74,123 @@ export function SetupChat() {
   };
 
   if (apply.data !== undefined) {
-    return <Created applied={apply.data} />;
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-10">
+        <div className="mx-auto w-full max-w-2xl">
+          <Created applied={apply.data} />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-5">
-        <p className="max-w-prose leading-7 text-zinc-600">
-          This is a conversation rather than a form. I ask about one thing at a
-          time — seven of them, the payday cycle first and what you are saving
-          for last — and you answer however you like:{' '}
-          <em>&ldquo;18k, always on the 5th&rdquo;</em>,{' '}
-          <em>&ldquo;health plan 320 on the 8th&rdquo;</em>. Everything I
-          understand is shown back as you go, and nothing is written until you
-          have read the whole draft at the end.
-        </p>
-        <SetupProgress next={isComplete ? null : nextSection} />
-      </div>
-
-      <div
-        role="log"
-        aria-label="Setup conversation"
-        className="flex flex-col gap-5"
-      >
-        <ol className="flex flex-col gap-5">
-          {entries.map((entry, index) => (
-            <li key={index}>
-              {entry.kind === 'record' ? (
-                <RecordLine
-                  record={entry}
-                  conversationId={conversationId}
-                  onTurn={record}
-                />
-              ) : (
-                <Line entry={entry} />
-              )}
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      {turn.isPending && <Thinking />}
-
-      {turn.isError && (
-        <p role="alert" className="text-sm text-red-700">
-          {turn.error.message}
+    <div
+      className={
+        hasSpoken
+          ? 'flex min-h-0 flex-1 flex-col'
+          : 'flex min-h-0 flex-1 flex-col items-center justify-center gap-5 overflow-y-auto px-4 py-8'
+      }
+    >
+      {hasSpoken ? null : (
+        <p className="w-full max-w-2xl text-sm text-zinc-500">
+          Setting up is a conversation — seven questions, answered however you
+          like. Nothing is written until you have read the whole draft at the
+          end.
         </p>
       )}
 
-      {isComplete ? (
-        <DraftReview
-          sections={draftSections(entries)}
-          disabled={apply.isPending || conversationId === undefined}
-          onCreate={() => {
-            if (conversationId !== undefined) {
-              apply.mutate(conversationId);
-            }
-          }}
-          error={apply.error?.message}
-        />
-      ) : (
-        <Composer disabled={turn.isPending} onSend={send} />
+      {/* eslint-disable jsx-a11y/no-noninteractive-tabindex --
+          Once the transcript is the region that scrolls, WCAG 2.1.1 requires
+          it to be reachable by keyboard, and a turn can hold no control at all
+          for a tab stop to land on. Before the first answer it scrolls nothing
+          and takes no stop. */}
+      <div
+        ref={transcript}
+        role="log"
+        aria-label="Setup conversation"
+        tabIndex={hasSpoken ? 0 : undefined}
+        className={
+          hasSpoken
+            ? 'min-h-0 flex-1 overflow-y-auto px-4 py-6'
+            : 'w-full max-w-2xl'
+        }
+      >
+        <div
+          className={
+            hasSpoken
+              ? 'mx-auto flex w-full max-w-2xl flex-col gap-5'
+              : 'flex flex-col gap-5'
+          }
+        >
+          <ol className="flex flex-col gap-5">
+            {entries.map((entry, index) => (
+              <li key={index}>
+                {entry.kind === 'record' ? (
+                  <RecordLine
+                    record={entry}
+                    conversationId={conversationId}
+                    onTurn={record}
+                  />
+                ) : (
+                  <Line entry={entry} />
+                )}
+              </li>
+            ))}
+          </ol>
+
+          {turn.isPending && <Thinking />}
+
+          {turn.isError && (
+            <p role="alert" className="text-sm text-red-700">
+              {turn.error.message}
+            </p>
+          )}
+
+          {isComplete && (
+            <DraftReview
+              sections={draftSections(entries)}
+              disabled={apply.isPending || conversationId === undefined}
+              onCreate={() => {
+                if (conversationId !== undefined) {
+                  apply.mutate(conversationId);
+                }
+              }}
+              error={apply.error?.message}
+            />
+          )}
+        </div>
+      </div>
+      {/* eslint-enable jsx-a11y/no-noninteractive-tabindex */}
+
+      {isComplete ? null : (
+        <div
+          className={
+            hasSpoken
+              ? 'shrink-0 border-t border-zinc-200 bg-white px-4 pt-3 pb-4'
+              : 'w-full max-w-2xl'
+          }
+        >
+          <div className="mx-auto w-full max-w-2xl">
+            <Composer
+              ref={composer}
+              value={draft}
+              onChange={setDraft}
+              disabled={turn.isPending}
+              onSend={send}
+            />
+          </div>
+        </div>
+      )}
+
+      {hasSpoken ? null : (
+        <div className="w-full max-w-2xl">
+          <ExampleAnswers
+            onPick={(example) => {
+              setDraft(example);
+              composer.current?.focus();
+            }}
+          />
+        </div>
       )}
     </div>
   );

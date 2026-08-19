@@ -8,9 +8,9 @@ interface Props {
 }
 
 /**
- * UC-1.5 — the seven questions as a path. It reads the draft's own progress:
- * everything behind the current section has been answered, and none of it is a
- * step the user walks through by clicking.
+ * UC-1.5 — the seven questions as a path, carried in the top bar. It reads the
+ * draft's own progress: everything behind the current section has been
+ * answered, and none of it is a step the user walks through by clicking.
  */
 export function SetupProgress({ next }: Props) {
   const current =
@@ -18,12 +18,12 @@ export function SetupProgress({ next }: Props) {
 
   return (
     <nav aria-label="Setup progress">
-      <ol className="flex flex-wrap items-center gap-y-2 text-xs">
+      <ol className="flex items-center text-xs whitespace-nowrap">
         {SECTION_ORDER.map((section, index) => (
           <li
             key={section}
             aria-current={index === current ? true : undefined}
-            className="flex items-center"
+            className="flex shrink-0 items-center"
           >
             {index > 0 && (
               <span aria-hidden="true" className="mx-2 h-px w-4 bg-zinc-200" />
