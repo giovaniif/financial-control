@@ -14,10 +14,10 @@ export const queryKeys = {
    * placeholder instead would stop `['dashboard']` matching `['dashboard',
    * '2026-09']`, and every settle would leave the figures stale.
    */
-  dashboard: (month?: string) =>
+  dashboard: (month?: string, estimates?: EstimateMode) =>
     month === undefined
       ? (['dashboard'] as const)
-      : (['dashboard', month] as const),
+      : (['dashboard', month, estimates ?? null] as const),
   wealth: (month?: string, yields?: string) =>
     ['wealth', month ?? null, yields ?? null] as const,
 
