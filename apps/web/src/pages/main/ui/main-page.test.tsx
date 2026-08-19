@@ -1,14 +1,16 @@
 import type {
   BucketResponse,
   CycleResponse,
+  CycleSummaryResponse,
   DashboardResponse,
+  EstimateMode,
 } from '@fin/contracts';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { renderWithProviders } from '@/shared/testing';
+import { renderWithProviders, stubApi } from '@/shared/testing';
 
 import { MainPage } from './main-page.js';
 
@@ -20,7 +22,7 @@ const dashboard = (
   headline: {
     cycleMonth: '2026-09',
     cycleLabel: 'September 2026',
-    range: '2026-09-04 – 2026-10-04',
+    range: '4 Sep – 4 Oct',
     incoming: 1_800_000,
     outgoing: 911_000,
     free: 355_600,
@@ -33,8 +35,16 @@ const dashboard = (
   kpis: [
     { label: 'Total Outcome', amount: 911_000, note: 'everything out' },
     { label: 'Expected Surplus', amount: 889_000, note: 'to allocate' },
-    { label: 'Net Surplus', amount: 355_600, note: 'free cash' },
-    { label: 'Lowest point in cycle', amount: 355_600, note: 'on 28/09' },
+    {
+      label: 'Net Surplus',
+      amount: 355_600,
+      note: 'free cash after allocations',
+    },
+    {
+      label: 'Lowest point in cycle',
+      amount: 355_600,
+      note: 'on 2026-09-28, after Contractor Costs',
+    },
   ],
   progress: {
     dayOfCycle: 6,
@@ -49,137 +59,171 @@ const dashboard = (
   ...overrides,
 });
 
-const cycle = (month: string): CycleResponse => ({
-  id: month,
-  month,
-  label: `${month} label`,
-  start: `${month}-01`,
-  end: `${month}-28`,
-  status: 'OPEN',
-  estimates: 'included',
-  chain: {
-    openingBalance: 100_000,
-    totalIncome: 1_800_000,
-    totalOutcome: 911_000,
-    variables: 0,
-    surplus: 889_000,
-    expectedSurplus: 889_000,
-    allocations: 533_400,
-    netSurplus: 355_600,
-    closingBalance: 455_600,
-  },
-  entries: [],
-  lowWaterMark: null,
-  firstNegativeDate: null,
-});
-
 /**
- * The pages fetch through the shared client, so the network is the seam — and
- * the stub answers per endpoint, because the shell fetches accounts alongside
- * whatever the page itself asks for.
+ * The same cycle read two ways, as the API answers it: the confirmed reading
+ * is the one that drops the unconfirmed placeholders.
  */
-function respondWith(
-  dashboardBody: DashboardResponse,
-  buckets: BucketResponse[] = [],
-) {
-  // Requests are prefixed with the /api path the Vite proxy forwards.
-  const routes: Record<string, unknown> = {
-    '/api/dashboard': dashboardBody,
-    '/api/accounts': { accounts: [], total: 0 },
-    '/api/buckets': buckets,
-    '/api/cycles': { estimates: 'included', cycles: [] },
+const cycle = (
+  month: string,
+  estimates: EstimateMode = 'included',
+  overrides: Partial<CycleResponse> = {},
+): CycleResponse => {
+  const including = estimates === 'included';
+
+  return {
+    id: month,
+    month,
+    label: `${month} label`,
+    start: `${month}-04`,
+    end: `${month}-28`,
+    status: 'OPEN',
+    estimates,
+    chain: {
+      openingBalance: 100_000,
+      totalIncome: 1_800_000,
+      totalOutcome: including ? 911_000 : 761_000,
+      variables: 0,
+      surplus: including ? 889_000 : 1_039_000,
+      expectedSurplus: including ? 889_000 : 1_039_000,
+      allocations: 533_400,
+      netSurplus: including ? 355_600 : 505_600,
+      closingBalance: including ? 455_600 : 605_600,
+    },
+    entries: [],
+    lowWaterMark: {
+      balance: including ? 355_600 : 505_600,
+      date: '2026-09-28',
+      description: 'Contractor Costs',
+    },
+    firstNegativeDate: null,
+    ...overrides,
   };
-
-  vi.stubGlobal(
-    'fetch',
-    vi.fn((input: string) => {
-      const path = new URL(input, 'http://test').pathname;
-      const body = routes[path] ?? {};
-
-      return Promise.resolve(
-        new Response(JSON.stringify(body), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      );
-    }),
-  );
-}
-
-const renderPage = (entry = '/') =>
-  renderWithProviders(
-    <RouterProvider
-      router={createMemoryRouter([{ path: '/', element: <MainPage /> }], {
-        initialEntries: [entry],
-      })}
-    />,
-  );
+};
 
 const summary = (
   month: string,
-  position: 'current' | 'next' | 'projected',
-) => ({
+  position: CycleSummaryResponse['position'],
+  overrides: Partial<CycleSummaryResponse> = {},
+): CycleSummaryResponse => ({
   month,
   label: `${month} label`,
-  start: `${month}-01`,
+  start: `${month}-04`,
   end: `${month}-28`,
-  status: 'OPEN' as const,
+  status: 'OPEN',
   position,
   openingBalance: 0,
   closingBalance: 0,
   netSurplus: 0,
   isMaterialised: true,
+  ...overrides,
+});
+
+const window_ = (
+  cycles = [summary('2026-08', 'current'), summary('2026-09', 'next')],
+) => ({
+  estimates: 'included',
+  cycles,
 });
 
 /**
- * Answers the dashboard per requested cycle, so what the screen renders is
- * evidence of which one it asked for.
+ * The screen reads the dashboard, the cycle behind it and the buckets, so the
+ * stub answers per endpoint. The cycle answers per estimates mode, which is
+ * what makes the header's toggle visible in the figures.
  */
-function respondPerCycle() {
-  const byMonth: Record<string, DashboardResponse> = {
-    '2026-08': dashboard({
-      headline: { ...dashboard().headline, cycleLabel: 'August 2026' },
-    }),
-    '2026-09': dashboard({
-      headline: { ...dashboard().headline, cycleLabel: 'September 2026' },
-    }),
-  };
+function respondWith(
+  body: DashboardResponse,
+  options: {
+    buckets?: BucketResponse[];
+    cycles?: CycleSummaryResponse[];
+    cycleFor?: (month: string, estimates: EstimateMode) => CycleResponse;
+    assistantAvailable?: boolean;
+  } = {},
+) {
+  const {
+    buckets = [],
+    cycles,
+    cycleFor = (month, estimates) => cycle(month, estimates),
+    assistantAvailable = true,
+  } = options;
+  const months = cycles ?? window_().cycles;
 
-  vi.stubGlobal(
-    'fetch',
-    vi.fn((input: string) => {
-      const url = new URL(input, 'http://test');
-      const body =
-        url.pathname === '/api/dashboard'
-          ? (byMonth[url.searchParams.get('month') ?? ''] ??
-            dashboard({
-              headline: { ...dashboard().headline, cycleLabel: 'no month' },
-            }))
-          : url.pathname === '/api/cycles'
-            ? {
-                estimates: 'included',
-                cycles: [
-                  summary('2026-08', 'current'),
-                  summary('2026-09', 'next'),
-                ],
-              }
-            : url.pathname.startsWith('/api/cycles/')
-              ? cycle(url.pathname.slice('/api/cycles/'.length))
-              : url.pathname === '/api/accounts'
-                ? { accounts: [], total: 0 }
-                : url.pathname === '/api/buckets'
-                  ? []
-                  : {};
-
-      return Promise.resolve(
-        new Response(JSON.stringify(body), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      );
-    }),
-  );
+  stubApi({
+    '/api/dashboard': ({ search }) => {
+      const month = search.get('month');
+      return month === null
+        ? body
+        : {
+            ...body,
+            headline: { ...body.headline, cycleMonth: month },
+          };
+    },
+    '/api/buckets': buckets,
+    '/api/cycles': { estimates: 'included', cycles: months },
+    ...Object.fromEntries(
+      months.map((one) => [
+        `/api/cycles/${one.month}`,
+        ({ search }: { search: URLSearchParams }) =>
+          cycleFor(
+            one.month,
+            (search.get('estimates') ?? 'included') as EstimateMode,
+          ),
+      ]),
+    ),
+    '/api/setup': {
+      anchorConfigured: true,
+      accounts: 1,
+      cards: 0,
+      templates: 1,
+      buckets: 0,
+      isPristine: false,
+      assistantAvailable,
+    },
+  });
 }
+
+const renderPage = (entry = '/') =>
+  renderWithProviders(
+    <RouterProvider
+      router={createMemoryRouter(
+        [
+          { path: '/', element: <MainPage /> },
+          { path: '/savings', element: <p>Savings</p> },
+        ],
+        { initialEntries: [entry] },
+      )}
+    />,
+  );
+
+/** A window wide enough for the assistant to sit beside the figures. */
+function renderWide(entry = '/') {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((query: string) => ({
+      media: query,
+      matches: true,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })),
+  );
+
+  return renderPage(entry);
+}
+
+/** The chain strip names the same figures, so the tiles are read on their own. */
+const tiles = () =>
+  within(screen.getByRole('region', { name: 'Headline figures' }));
+
+const upcoming = (overrides = {}) => ({
+  id: 'e1',
+  cycleMonth: '2026-09',
+  description: 'Electricity',
+  dueDate: '2026-09-15',
+  amount: -28_000,
+  isEstimate: false,
+  isOverdue: false,
+  daysLate: 0,
+  ...overrides,
+});
 
 beforeEach(() => {
   respondWith(dashboard());
@@ -221,16 +265,19 @@ describe('MainPage', () => {
     expect(screen.getByText('R$ 5.056,00')).toBeInTheDocument();
   });
 
-  it('shows the four KPIs in the order the chain runs', async () => {
+  it('shows the four KPIs, each with the note saying what it is made of', async () => {
     renderPage();
 
-    await screen.findByText('Total Outcome');
+    await screen.findByText('Lowest point in cycle');
 
     expect(
-      screen.getAllByText(
+      tiles().getAllByText(
         /^(Total Outcome|Expected Surplus|Net Surplus|Lowest point in cycle)$/,
       ),
     ).toHaveLength(4);
+    expect(
+      tiles().getByText('free cash after allocations'),
+    ).toBeInTheDocument();
   });
 
   it('reports cycle progress against spend', async () => {
@@ -270,16 +317,13 @@ describe('MainPage', () => {
     respondWith(
       dashboard({
         upcoming: [
-          {
-            id: 'e1',
-            cycleMonth: '2026-08',
+          upcoming({
             description: 'Renovation Progress',
             dueDate: '2026-08-06',
             amount: -235_000,
-            isEstimate: false,
             isOverdue: true,
             daysLate: 4,
-          },
+          }),
         ],
       }),
     );
@@ -297,22 +341,7 @@ describe('MainPage', () => {
    * one-click one.
    */
   it('offers to settle at an amount other than the planned one', async () => {
-    respondWith(
-      dashboard({
-        upcoming: [
-          {
-            id: 'e1',
-            cycleMonth: '2026-09',
-            description: 'Electricity',
-            dueDate: '2026-09-15',
-            amount: -28_000,
-            isEstimate: false,
-            isOverdue: false,
-            daysLate: 0,
-          },
-        ],
-      }),
-    );
+    respondWith(dashboard({ upcoming: [upcoming()] }));
 
     renderPage();
 
@@ -326,18 +355,7 @@ describe('MainPage', () => {
   it('offers to confirm money coming in, not settle it', async () => {
     respondWith(
       dashboard({
-        upcoming: [
-          {
-            id: 'e1',
-            cycleMonth: '2026-09',
-            description: 'Salary',
-            dueDate: '2026-09-04',
-            amount: 1_800_000,
-            isEstimate: false,
-            isOverdue: false,
-            daysLate: 0,
-          },
-        ],
+        upcoming: [upcoming({ description: 'Salary', amount: 1_800_000 })],
       }),
     );
 
@@ -352,16 +370,7 @@ describe('MainPage', () => {
     respondWith(
       dashboard({
         upcoming: [
-          {
-            id: 'e1',
-            cycleMonth: '2026-09',
-            description: 'Contractor Costs',
-            dueDate: '2026-09-25',
-            amount: -150_000,
-            isEstimate: true,
-            isOverdue: false,
-            daysLate: 0,
-          },
+          upcoming({ description: 'Contractor Costs', isEstimate: true }),
         ],
       }),
     );
@@ -391,13 +400,13 @@ describe('MainPage', () => {
   it('shows no bucket chips before there are any buckets', async () => {
     renderPage();
 
-    await screen.findByText('Total Outcome');
+    await screen.findByText('Lowest point in cycle');
 
     expect(screen.queryByText('Buckets')).not.toBeInTheDocument();
   });
 
   it('shows a goal bucket as progress toward its target', async () => {
-    respondWith(dashboard(), [goal(), archived()]);
+    respondWith(dashboard(), { buckets: [goal(), archived()] });
 
     renderPage();
 
@@ -410,7 +419,7 @@ describe('MainPage', () => {
   // Reporting progress toward a target that does not exist is the bug UC-6.1
   // exists to prevent.
   it('shows an ongoing bucket as having nothing to complete', async () => {
-    respondWith(dashboard(), [ongoing()]);
+    respondWith(dashboard(), { buckets: [ongoing()] });
 
     renderPage();
 
@@ -418,15 +427,158 @@ describe('MainPage', () => {
     expect(screen.getByText('ongoing — no target to hit')).toBeInTheDocument();
     expect(screen.queryByText(/% of/)).not.toBeInTheDocument();
   });
+
+  // UC-4.6 — one click through to the screen the bucket belongs to.
+  it('leads from a bucket chip to the savings screen', async () => {
+    respondWith(dashboard(), { buckets: [goal()] });
+
+    renderPage();
+
+    expect(
+      await screen.findByRole('link', { name: /Apartment/ }),
+    ).toHaveAttribute('href', '/savings');
+  });
+});
+
+// UC-4.4 — one control, and every figure on the screen answers the same way.
+describe('MainPage answers the estimates toggle', () => {
+  const switchOff = async () =>
+    userEvent.click(
+      screen.getByRole('button', { name: 'Including estimates' }),
+    );
+
+  it('restates the headline from the confirmed figures', async () => {
+    respondWith(dashboard({ upcoming: [upcoming({ isEstimate: true })] }));
+    renderPage();
+
+    const headline = await screen.findByText(/stays free after allocations/);
+    expect(headline).toHaveTextContent('R$ 9.110,00');
+
+    await switchOff();
+
+    expect(headline).toHaveTextContent('R$ 7.610,00');
+    expect(headline).toHaveTextContent('R$ 5.056,00');
+  });
+
+  it('restates the KPI tiles and the chain at the same moment', async () => {
+    respondWith(dashboard());
+    renderPage();
+
+    await screen.findByText('Lowest point in cycle');
+    expect(tiles().getByText('R$ 9.110,00')).toBeInTheDocument();
+
+    await switchOff();
+
+    expect(await tiles().findByText('R$ 7.610,00')).toBeInTheDocument();
+    // The chain strip closes at the confirmed figure too.
+    expect(
+      within(
+        screen.getByRole('region', { name: 'Calculation chain' }),
+      ).getByText('R$ 6.056,00'),
+    ).toBeInTheDocument();
+  });
+
+  it('drops the unconfirmed placeholders from what is due', async () => {
+    respondWith(
+      dashboard({
+        upcoming: [
+          upcoming({ description: 'Contractor Costs', isEstimate: true }),
+        ],
+      }),
+    );
+    renderPage();
+
+    expect(await screen.findByText('Contractor Costs')).toBeInTheDocument();
+
+    await switchOff();
+
+    expect(screen.queryByText('Contractor Costs')).not.toBeInTheDocument();
+  });
+});
+
+// UC-8 — the assistant is part of the screen, not a widget in the corner.
+describe('MainPage and the assistant', () => {
+  const alerts = [
+    {
+      severity: 'CRITICAL' as const,
+      title: 'Projected negative balance on 2026-09-28',
+      body: 'September 2026 runs to -R$ 2.013,22.',
+    },
+  ];
+
+  it('sits beside the figures on a wide window', async () => {
+    renderWide();
+
+    await screen.findByText('Lowest point in cycle');
+
+    expect(
+      screen.getByRole('log', { name: 'Assistant conversation' }),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * At a narrow width the chat and the figures would fight for the same
+   * column, so the chat folds down to one control until it is wanted.
+   */
+  it('folds away at a narrow width rather than crowding the figures', async () => {
+    renderPage();
+
+    await screen.findByText('Lowest point in cycle');
+
+    expect(
+      screen.queryByRole('log', { name: 'Assistant conversation' }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ask Claude' }));
+
+    expect(
+      screen.getByRole('log', { name: 'Assistant conversation' }),
+    ).toBeInTheDocument();
+  });
+
+  // UC-4.7 with UC-8: an alert is the thing most worth asking about.
+  it('makes an alert answerable in a click', async () => {
+    respondWith(dashboard({ alerts }));
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Ask about this alert' }),
+    );
+
+    expect(screen.getByLabelText('Ask about your money')).toHaveValue(
+      'About “Projected negative balance on 2026-09-28”: September 2026 runs ' +
+        'to -R$ 2.013,22. Why is that, and what would change it?',
+    );
+    // The question is offered, never sent on the user's behalf.
+    expect(
+      screen.getByRole('log', { name: 'Assistant conversation' }),
+    ).toHaveTextContent('Nothing asked yet');
+  });
+
+  // UC-8.5 — the figures are the app; the assistant is how you ask about them.
+  it('leaves every figure working when the assistant is switched off', async () => {
+    respondWith(dashboard({ alerts }), { assistantAvailable: false });
+    renderWide();
+
+    expect(
+      await screen.findByText(/stays free after allocations/),
+    ).toHaveTextContent('R$ 9.110,00');
+    expect(tiles().getByText('Total Outcome')).toBeInTheDocument();
+    expect(
+      screen.getByText(/The assistant is switched off/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Ask about your money'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Ask about this alert' }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 // UC-3.3: cycle navigation is global, and this screen used to ignore it —
 // the control was rendered in the header and did nothing at all.
 describe('MainPage follows the selected cycle', () => {
-  beforeEach(() => {
-    respondPerCycle();
-  });
-
   it('opens on the next cycle when none is selected', async () => {
     renderPage();
 
@@ -436,6 +588,12 @@ describe('MainPage follows the selected cycle', () => {
   });
 
   it('describes the cycle the nav has selected', async () => {
+    respondWith(
+      dashboard({
+        headline: { ...dashboard().headline, cycleLabel: 'August 2026' },
+      }),
+    );
+
     renderPage('/?cycle=2026-08');
 
     expect(
@@ -456,7 +614,7 @@ describe('MainPage follows the selected cycle', () => {
   it('does not call a past cycle the next one', async () => {
     renderPage('/?cycle=2026-08');
 
-    await screen.findByText(/In the August 2026 cycle/);
+    await screen.findByText(/In the September 2026 cycle/);
 
     expect(screen.queryByText('Next cycle')).not.toBeInTheDocument();
   });
@@ -468,61 +626,33 @@ describe('MainPage follows the selected cycle', () => {
    * refreshing the figures: the request went out, the cache never moved.
    */
   it('shows the new figures after settling, not the stale ones', async () => {
-    const upcoming = {
-      id: 'e1',
-      cycleMonth: '2026-09',
+    let settled = false;
+    const due = upcoming({
       description: 'Renovation Progress',
       dueDate: '2026-09-24',
       amount: -235_000,
-      isEstimate: false,
-      isOverdue: false,
-      daysLate: 0,
-    };
-    let settled = false;
+    });
 
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((input: string, init?: RequestInit) => {
-        const url = new URL(input, 'http://test');
-
-        if (init?.method === 'POST') {
-          settled = true;
-          return Promise.resolve(new Response(null, { status: 204 }));
-        }
-
-        const body =
-          url.pathname === '/api/dashboard'
-            ? dashboard({
-                headline: {
-                  ...dashboard().headline,
-                  free: settled ? 1_000_000 : 355_600,
-                },
-                upcoming: settled ? [] : [upcoming],
-              })
-            : url.pathname === '/api/cycles'
-              ? {
-                  estimates: 'included',
-                  cycles: [
-                    summary('2026-08', 'current'),
-                    summary('2026-09', 'next'),
-                  ],
-                }
-              : url.pathname.startsWith('/api/cycles/')
-                ? cycle(url.pathname.slice('/api/cycles/'.length))
-                : url.pathname === '/api/accounts'
-                  ? { accounts: [], total: 0 }
-                  : url.pathname === '/api/buckets'
-                    ? []
-                    : {};
-
-        return Promise.resolve(
-          new Response(JSON.stringify(body), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          }),
-        );
-      }),
-    );
+    stubApi({
+      '/api/dashboard': () =>
+        dashboard({
+          headline: {
+            ...dashboard().headline,
+            free: settled ? 1_000_000 : 355_600,
+          },
+          upcoming: settled ? [] : [due],
+        }),
+      '/api/cycles': window_(),
+      '/api/cycles/2026-09': ({ search }) =>
+        cycle(
+          '2026-09',
+          (search.get('estimates') ?? 'included') as EstimateMode,
+        ),
+      '/api/cycles/2026-09/entries/e1/settle': ({ method }) => {
+        if (method === 'POST') settled = true;
+        return new Response(null, { status: 204 });
+      },
+    });
 
     renderPage();
 
@@ -533,6 +663,54 @@ describe('MainPage follows the selected cycle', () => {
     // The freed-up figure is the visible proof the cache was invalidated and
     // refetched, not just that a request went out.
     expect(await screen.findByText('R$ 10.000,00')).toBeInTheDocument();
+  });
+});
+
+// UC-3.8 — offered once the cycle's end date has passed, never forced.
+describe('MainPage and closing a cycle', () => {
+  it('does not offer to close a cycle still running', async () => {
+    renderPage();
+
+    await screen.findByText('Lowest point in cycle');
+
+    expect(
+      screen.queryByRole('button', { name: 'Close the cycle' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('offers to close a cycle whose end has passed, with what is blocking it', async () => {
+    respondWith(dashboard({ today: '2026-09-30' }), {
+      cycleFor: (month, estimates) =>
+        cycle(month, estimates, {
+          entries: [
+            {
+              id: 'e1',
+              description: 'Electricity',
+              kind: 'FIXED',
+              dueDate: '2026-09-15',
+              planned: -28_000,
+              actual: null,
+              status: 'PENDING',
+              isEstimate: false,
+              isOverridden: false,
+              variance: null,
+              balance: 0,
+            },
+          ],
+        }),
+    });
+
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Close the cycle' }),
+    );
+
+    expect(
+      within(screen.getByRole('dialog')).getByText(
+        /1 entry is still unsettled/,
+      ),
+    ).toBeInTheDocument();
   });
 });
 

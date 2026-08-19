@@ -6,6 +6,8 @@ export interface StubRequest {
   method: string;
   /** The parsed JSON body, or undefined for a read. */
   body: unknown;
+  /** The query string, for a route whose answer depends on it. */
+  search: URLSearchParams;
 }
 
 /**
@@ -56,7 +58,7 @@ export function stubApi(routes: Record<string, StubRoute>): void {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: string, init?: RequestInit) => {
-      const { pathname } = new URL(input, 'http://test');
+      const { pathname, searchParams } = new URL(input, 'http://test');
       const route = table[pathname];
       // `object` covers functions as well, so narrowing by typeof widens the
       // signature away rather than picking the responder out of the union.
@@ -65,6 +67,7 @@ export function stubApi(routes: Record<string, StubRoute>): void {
           ? (route as StubReply)({
               method: init?.method ?? 'GET',
               body: read(init?.body),
+              search: searchParams,
             })
           : route;
 

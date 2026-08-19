@@ -1,26 +1,41 @@
-import type { CyclePosition, DashboardResponse } from '@fin/contracts';
-import { useEffect } from 'react';
+import type {
+  AlertResponse,
+  CyclePosition,
+  CycleProgressResponse,
+  CycleResponse,
+} from '@fin/contracts';
+import type { ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { useBuckets } from '@/entities/bucket';
 import { useCycle } from '@/entities/cycle';
 import { useDashboard } from '@/entities/dashboard';
 import { useSelectedCycle } from '@/features/navigate-cycle';
-import { formatDate } from '@/shared/lib';
-import {
-  Amount,
-  Card,
-  CardTitle,
-  EmptyState,
-  Skeleton,
-  StatTile,
-} from '@/shared/ui';
+import { useSetupState } from '@/shared/api';
+import { useMediaQuery } from '@/shared/lib';
+import { useEstimates } from '@/shared/model';
+import { EmptyState, Skeleton } from '@/shared/ui';
 import { AlertList } from '@/widgets/alert-list';
 import { AppShell } from '@/widgets/app-shell';
-import { ChainStrip } from '@/widgets/chain-strip';
 import { UpcomingList } from '@/widgets/upcoming-list';
 
+import type { MainFigures } from '../model/figures.js';
+import { questionFor } from '../model/alert-question.js';
+import { figuresFor } from '../model/figures.js';
+import { handToAssistant } from '../model/hand-to-assistant.js';
+import { AssistantAside } from './assistant-aside.js';
+import { BucketChips } from './bucket-chips.js';
+import { ChainSection } from './chain-section.js';
+import { CloseSection } from './close-section.js';
+import { HeadlineSection } from './headline-section.js';
+import { KpiSection } from './kpi-section.js';
+import { ProgressSection } from './progress-section.js';
+
+/** The width at which the chat can stand beside the figures without crowding them. */
+const WIDE = '(min-width: 80rem)';
+
 /**
- * UC-4 — the screen that justifies the whole payday-cycle model.
+ * UC-4 — the screen that justifies the whole payday-cycle model, with the
+ * assistant beside it rather than bolted to a corner.
  *
  * It opens on the current cycle and speaks about the next: the question is
  * always asked from the middle of the cycle you are in.
@@ -43,6 +58,18 @@ export function MainPage() {
   }, [isExplicit, next, select]);
 
   const { data, isPending, isError } = useDashboard(month);
+  const { data: cycle } = useCycle(month);
+  const { estimates } = useEstimates();
+  const setup = useSetupState();
+
+  const isWide = useMediaQuery(WIDE);
+  const [isAsking, setIsAsking] = useState(false);
+  const panel = useRef<HTMLDivElement>(null);
+
+  const ask = (alert: AlertResponse) => {
+    setIsAsking(true);
+    handToAssistant(panel.current, questionFor(alert));
+  };
 
   return (
     <AppShell
@@ -57,248 +84,72 @@ export function MainPage() {
           body="Check that the API is running."
         />
       ) : (
-        <div className="flex flex-col gap-4">
-          <Headline data={data} position={selected?.position} />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {data.kpis.map((kpi) => (
-              <StatTile
-                key={kpi.label}
-                label={kpi.label}
-                cents={kpi.amount}
-                note={kpi.note}
-              />
-            ))}
-          </div>
-          <Chain month={month} />
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <div className="flex flex-col gap-4 xl:col-span-2">
-              <UpcomingList entries={data.upcoming} />
-              <AlertList alerts={data.alerts} />
-            </div>
-            <div className="flex flex-col gap-4">
-              <Progress data={data} />
-              <BucketChips />
-            </div>
-          </div>
-        </div>
+        <Screen
+          figures={figuresFor(data, cycle, estimates)}
+          progress={data.progress}
+          alerts={data.alerts}
+          cycle={cycle}
+          today={data.today}
+          position={selected?.position}
+          onAsk={setup.data?.assistantAvailable === false ? undefined : ask}
+          assistant={
+            <AssistantAside
+              isOpen={isWide || isAsking}
+              isWide={isWide}
+              onToggle={() => {
+                setIsAsking((open) => !open);
+              }}
+              panelRef={panel}
+            />
+          }
+        />
       )}
     </AppShell>
   );
 }
 
 /**
- * UC-3.1 — the calculation chain in the one order it is ever presented. It
- * moved here when the Ledger screen went, and it reads the selected cycle
- * rather than the dashboard, which does not carry the chain.
+ * The figures and the chat are two columns that never compete: the figures
+ * take the room they need, the chat holds a column of its own, and below the
+ * wide breakpoint they stack instead of splitting a screen neither fits on.
  */
-function Chain({ month }: { month: string | undefined }) {
-  const { data } = useCycle(month);
-
-  if (data === undefined) {
-    return null;
-  }
-
-  return (
-    <ChainStrip
-      chain={data.chain}
-      openingFrom="carried in from the previous cycle"
-    />
-  );
-}
-
-/** How the cycle on screen relates to today, since it is no longer always next. */
-const eyebrows: Record<CyclePosition, string> = {
-  past: 'Past cycle',
-  current: 'This cycle',
-  next: 'Next cycle',
-  projected: 'Projected cycle',
-};
-
-/** UC-4.1 — the answer as one sentence, and the three numbers qualifying it. */
-function Headline({
-  data,
+function Screen({
+  figures,
+  progress,
+  alerts,
+  cycle,
+  today,
   position,
+  onAsk,
+  assistant,
 }: {
-  data: DashboardResponse;
+  figures: MainFigures;
+  progress: CycleProgressResponse;
+  alerts: AlertResponse[];
+  cycle: CycleResponse | undefined;
+  today: string;
   position: CyclePosition | undefined;
-}) {
-  const { headline } = data;
-
-  return (
-    <section className="flex flex-col gap-4 rounded-xl bg-zinc-900 p-6 text-zinc-50">
-      <div className="flex items-center gap-2 text-[10px] font-semibold tracking-widest text-zinc-400 uppercase">
-        {position === undefined ? 'Cycle' : eyebrows[position]}
-        <span className="font-mono text-xs normal-case">{headline.range}</span>
-      </div>
-
-      <p className="max-w-4xl text-2xl leading-snug font-normal">
-        In the {headline.cycleLabel} cycle you&rsquo;ll receive{' '}
-        <strong className="font-mono font-semibold">
-          {formatSigned(headline.incoming)}
-        </strong>
-        , pay{' '}
-        <strong className="font-mono font-semibold text-red-300">
-          {formatSigned(headline.outgoing)}
-        </strong>
-        , and{' '}
-        <strong className="font-mono font-semibold text-green-300">
-          {formatSigned(headline.free)}
-        </strong>{' '}
-        stays free after allocations.
-      </p>
-
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-zinc-800 pt-3 text-xs">
-        <Qualifier
-          label="Lowest point"
-          value={headline.lowestPoint}
-          note={
-            headline.lowestPointDate === null
-              ? 'nothing scheduled'
-              : `on ${formatDate(headline.lowestPointDate)}`
-          }
-        />
-        <Qualifier label="Closes at" value={headline.closing} />
-        {/* Never let a guess masquerade as a fact. */}
-        <Qualifier
-          label="Without the estimates"
-          value={headline.closingWithoutEstimates}
-          tone="text-amber-300"
-        />
-      </div>
-    </section>
-  );
-}
-
-function Qualifier({
-  label,
-  value,
-  note,
-  tone = 'text-zinc-50',
-}: {
-  label: string;
-  value: number | null;
-  note?: string;
-  tone?: string;
+  onAsk: ((alert: AlertResponse) => void) | undefined;
+  assistant: ReactNode;
 }) {
   return (
-    <span className="flex items-baseline gap-2">
-      <span className="text-zinc-400">{label}</span>
-      <span className={`font-mono text-sm font-medium ${tone}`}>
-        {value === null ? '—' : formatSigned(value)}
-      </span>
-      {note !== undefined && <span className="text-zinc-500">{note}</span>}
-    </span>
-  );
-}
-
-/** UC-4.3 — two progress readings; the gap between them is the signal. */
-function Progress({ data }: { data: DashboardResponse }) {
-  const { progress } = data;
-
-  return (
-    <Card className="flex flex-col gap-3">
-      <CardTitle>This cycle so far</CardTitle>
-      <Bar
-        label={`Day ${String(progress.dayOfCycle)} of ${String(progress.cycleLength)}`}
-        percent={progress.timePercent}
-        tone="bg-zinc-900"
-      />
-      <Bar
-        label="Spent against planned"
-        percent={progress.spentPercent}
-        tone={
-          progress.spentPercent > progress.timePercent
-            ? 'bg-red-600'
-            : 'bg-green-600'
-        }
-      />
-      <p className="text-xs text-zinc-500">
-        <Amount cents={progress.spent} /> of{' '}
-        <Amount cents={progress.plannedOut} /> planned.
-      </p>
-    </Card>
-  );
-}
-
-function Bar({
-  label,
-  percent,
-  tone,
-}: {
-  label: string;
-  percent: number;
-  tone: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-zinc-600">{label}</span>
-        <span className="font-mono text-zinc-500">{percent}%</span>
-      </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
-        <div
-          className={`h-full rounded-full ${tone}`}
-          style={{ width: `${String(Math.min(100, percent))}%` }}
+    <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
+      <div className="flex min-w-0 flex-col gap-4">
+        <HeadlineSection
+          headline={figures.headline}
+          position={position}
+          action={<CloseSection cycle={cycle} today={today} />}
         />
+        <KpiSection kpis={figures.kpis} />
+        <ChainSection cycle={cycle} />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <ProgressSection progress={progress} />
+          <BucketChips />
+        </div>
+        <UpcomingList entries={figures.upcoming} />
+        <AlertList alerts={alerts} onAsk={onAsk} />
       </div>
+      {assistant}
     </div>
   );
-}
-
-/** UC-4.6 — each bucket as a compact chip, one click through to UC-6. */
-function BucketChips() {
-  const { data } = useBuckets();
-  const buckets = (data ?? []).filter((bucket) => bucket.status === 'ACTIVE');
-
-  if (buckets.length === 0) {
-    return null;
-  }
-
-  return (
-    <Card className="flex flex-col gap-3">
-      <CardTitle>Buckets</CardTitle>
-      {buckets.map((bucket) => (
-        <div key={bucket.id} className="flex flex-col gap-1">
-          <div className="flex items-baseline justify-between text-sm">
-            <span>{bucket.name}</span>
-            <Amount cents={bucket.balance} className="text-xs" />
-          </div>
-          {/* A goal shows progress; an ongoing bucket has nothing to complete. */}
-          {bucket.percentComplete === null ? (
-            <span className="text-xs text-zinc-500">
-              ongoing — no target to hit
-            </span>
-          ) : (
-            <>
-              <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
-                <div
-                  className="h-full rounded-full bg-teal-600"
-                  style={{ width: `${String(bucket.percentComplete)}%` }}
-                />
-              </div>
-              <span className="text-xs text-zinc-500">
-                {bucket.percentComplete}% of{' '}
-                {bucket.target === null ? (
-                  '—'
-                ) : (
-                  <Amount cents={bucket.target} />
-                )}
-              </span>
-            </>
-          )}
-        </div>
-      ))}
-    </Card>
-  );
-}
-
-/**
- * The headline reads as prose, so amounts appear without a leading minus —
- * "pay R$ 9.110" rather than "pay −R$ 9.110". The direction is in the verb.
- */
-function formatSigned(cents: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(Math.abs(cents) / 100);
 }

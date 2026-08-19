@@ -37,7 +37,10 @@ export function ChainStrip({
   ];
 
   return (
-    <div className="grid grid-cols-2 divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 bg-white sm:grid-cols-4 xl:grid-cols-7 xl:divide-x">
+    <section
+      aria-label="Calculation chain"
+      className="grid grid-cols-2 divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 bg-white sm:grid-cols-4 xl:grid-cols-7 xl:divide-x"
+    >
       {steps.map((step) => (
         <div key={step.label} className="flex flex-col gap-1 p-3">
           <span className="text-[10px] font-semibold tracking-wider text-zinc-500 uppercase">
@@ -47,6 +50,6 @@ export function ChainStrip({
           <span className="text-[11px] text-zinc-400">{step.note}</span>
         </div>
       ))}
-    </div>
+    </section>
   );
 }
