@@ -1,23 +1,15 @@
-import type { BackupDocument, SpreadsheetReading } from '@fin/contracts';
+import type { BackupDocument } from '@fin/contracts';
 import { useId, useState } from 'react';
 
 import { useRestoreBackup } from '@/features/backup-restore';
-import {
-  ReadingReview,
-  UploadSpreadsheet,
-} from '@/features/import-spreadsheet';
 import { ApiError } from '@/shared/api';
 import { Button } from '@/shared/ui';
 
-export type StartMode = 'scratch' | 'spreadsheet' | 'backup';
+export type StartMode = 'scratch' | 'backup';
 
 interface Props {
   mode: StartMode | undefined;
   onChooseMode: (mode: StartMode) => void;
-  reading: SpreadsheetReading | undefined;
-  onRead: (reading: SpreadsheetReading, file: File) => void;
-  onCorrectYear: (firstColumnYear: number) => void;
-  isRereading: boolean;
   onRestored: () => void;
 }
 
@@ -39,11 +31,6 @@ const questions = [
 
 const choices: { mode: StartMode; label: string; body: string }[] = [
   {
-    mode: 'spreadsheet',
-    label: 'From my spreadsheet',
-    body: 'Reads a “Controle Financeiro” workbook. It fills in the bills, the amounts and the bucket rules; the next steps ask for the dates it has none of.',
-  },
-  {
     mode: 'backup',
     label: 'From a backup',
     body: 'A file this app exported. It is a complete dataset, so it goes straight in and the rest of setup is skipped.',
@@ -56,15 +43,7 @@ const choices: { mode: StartMode; label: string; body: string }[] = [
 ];
 
 /** UC-1.5 — the two questions everything else on the screen is evidence for. */
-export function WhyStep({
-  mode,
-  onChooseMode,
-  reading,
-  onRead,
-  onCorrectYear,
-  isRereading,
-  onRestored,
-}: Props) {
+export function WhyStep({ mode, onChooseMode, onRestored }: Props) {
   const group = useId();
 
   return (
@@ -117,17 +96,6 @@ export function WhyStep({
           </label>
         ))}
       </fieldset>
-
-      {mode === 'spreadsheet' &&
-        (reading === undefined ? (
-          <UploadSpreadsheet onRead={onRead} />
-        ) : (
-          <ReadingReview
-            reading={reading}
-            onCorrectYear={onCorrectYear}
-            isRereading={isRereading}
-          />
-        ))}
 
       {mode === 'backup' && <RestoreBackup onRestored={onRestored} />}
     </div>
