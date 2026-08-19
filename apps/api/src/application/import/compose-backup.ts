@@ -1,11 +1,11 @@
 import type {
-  AccountType,
   BackupBucket,
   BackupBucketEvent,
   BackupCard,
   BackupDocument,
   BackupTemplate,
-  ShiftPolicy,
+  ImportAnswers,
+  ReconciliationRow,
 } from '@fin/contracts';
 import { BACKUP_VERSION } from '@fin/contracts';
 
@@ -21,40 +21,7 @@ import type {
 export class ImportAnswersIncomplete extends DomainError {}
 export class DueDayOutsideCycle extends DomainError {}
 
-export interface ImportAnswers {
-  anchor: { anchorDay: number; shiftPolicy: ShiftPolicy };
-  accounts: { name: string; type: AccountType; balance: number }[];
-  /** Outcome labels the user identified as credit cards. */
-  cards: {
-    label: string;
-    closingDay: number;
-    dueDay: number;
-    limit: number;
-    paymentAccountName: string;
-  }[];
-  /** Day of the month each label falls due, keyed by label. */
-  dueDays: Record<string, number>;
-  /** Labels the user is still guessing at — UC-2.6. */
-  estimates: string[];
-  buckets: {
-    name: string;
-    mode: 'GOAL' | 'ONGOING';
-    target?: number;
-    targetDate?: string;
-    priority: number;
-    /** The observed balance to open at, recorded as a correction. */
-    seedBalance?: number;
-  }[];
-  /** The first cycle to import; anything earlier is outside the app's window. */
-  fromMonth: string;
-}
-
-export interface ReconciliationRow {
-  month: string;
-  figure: 'totalOutcome' | 'surplus' | 'expectedSurplus';
-  sheet: number;
-  imported: number;
-}
+export type { ImportAnswers, ReconciliationRow };
 
 export interface Composition {
   document: BackupDocument;

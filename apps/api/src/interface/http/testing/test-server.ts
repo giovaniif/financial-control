@@ -10,6 +10,7 @@ import { LedgerActions } from '../../../application/budgeting/uc-3-ledger-action
 import { ManageCards } from '../../../application/cards/uc-5-manage-cards.js';
 import { ManageBuckets } from '../../../application/goals/uc-6-manage-buckets.js';
 import { BuildDashboard } from '../../../application/projection/uc-4-build-dashboard.js';
+import { ImportSpreadsheet } from '../../../application/import/uc-1-7-import-spreadsheet.js';
 import { ReadSetupState } from '../../../application/projection/uc-1-5-read-setup-state.js';
 import { ProjectWealth } from '../../../application/projection/uc-7-project-wealth.js';
 import { ListCycles } from '../../../application/budgeting/uc-3-3-list-cycles.js';
@@ -19,6 +20,7 @@ import {
   InMemoryCardRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
+  InMemorySpreadsheetReader,
   InMemoryTemplateRepository,
 } from '../../../application/testing/fakes.js';
 import { FixedClock } from '../../../application/testing/fixed-clock.js';
@@ -42,6 +44,17 @@ export function buildTestServer(
   const templates = new InMemoryTemplateRepository();
   const cards = new InMemoryCardRepository();
   const buckets = new InMemoryBucketRepository();
+
+  const backup = new BackupRestore(
+    cycles,
+    accounts,
+    templates,
+    cards,
+    buckets,
+    settings,
+    noHolidays,
+    clock,
+  );
 
   return buildServer({
     clock,
@@ -72,13 +85,10 @@ export function buildTestServer(
     closeCycle: new CloseCycle(cycles, settings, accounts, noHolidays, clock),
     manageCards: new ManageCards(cards, cycles, settings, noHolidays),
     manageBuckets: new ManageBuckets(buckets, cycles, settings, noHolidays),
-    backupRestore: new BackupRestore(
-      cycles,
-      accounts,
-      templates,
-      cards,
-      buckets,
-      settings,
+    backupRestore: backup,
+    importSpreadsheet: new ImportSpreadsheet(
+      new InMemorySpreadsheetReader({ sheets: [] }),
+      backup,
       noHolidays,
       clock,
     ),

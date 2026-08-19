@@ -1,3 +1,9 @@
+import type {
+  ImportAnswers,
+  ImportReportResponse,
+  SpreadsheetReading,
+} from '@fin/contracts';
+
 import type { Clock } from '../../domain/ports/clock.js';
 import type { HolidayCalendar } from '../../domain/ports/holiday-calendar.js';
 import type { SpreadsheetReader } from '../../domain/ports/spreadsheet-reader.js';
@@ -6,26 +12,8 @@ import type { BackupRestore } from '../backup/uc-1-6-backup-restore.js';
 import {
   interpretSpreadsheet,
   UnrecognisedSpreadsheet,
-  type SpreadsheetReading,
 } from './interpret-spreadsheet.js';
-import {
-  composeBackup,
-  type ImportAnswers,
-  type ReconciliationRow,
-} from './compose-backup.js';
-
-export interface ImportReport {
-  imported: {
-    templates: number;
-    accounts: number;
-    cards: number;
-    buckets: number;
-    months: number;
-  };
-  /** Where the import differs from the spreadsheet's own arithmetic. */
-  mismatches: ReconciliationRow[];
-  notes: string[];
-}
+import { composeBackup } from './compose-backup.js';
 
 /**
  * UC-1.7 — import from the "Controle Financeiro" spreadsheet.
@@ -61,7 +49,7 @@ export class ImportSpreadsheet {
   async apply(
     reading: SpreadsheetReading,
     answers: ImportAnswers,
-  ): Promise<ImportReport> {
+  ): Promise<ImportReportResponse> {
     const { document, mismatches, notes } = composeBackup(
       reading,
       answers,

@@ -1,60 +1,26 @@
+import type {
+  BucketReading,
+  DerivedFigures,
+  MonthReading,
+  NamedAmount,
+  ReadRule,
+  SpreadsheetReading,
+} from '@fin/contracts';
+
 import { DomainError } from '../../domain/shared/domain-error.js';
 import type { LocalDate } from '../../domain/shared/local-date.js';
 import type { Cell, SheetGrid } from '../../domain/ports/spreadsheet-reader.js';
 
 export class UnrecognisedSpreadsheet extends DomainError {}
 
-export interface NamedAmount {
-  label: string;
-  amount: number;
-}
-
-export interface DerivedFigures {
-  totalOutcome: number | null;
-  surplus: number | null;
-  expectedSurplus: number | null;
-  netSurplus: number | null;
-}
-
-export interface MonthReading {
-  /** `YYYY-MM`, the cycle this column maps onto. */
-  month: string;
-  monthName: string;
-  /** No amount anywhere in the column — emptier than it looks. */
-  isBlank: boolean;
-  salary: number | null;
-  outcomes: NamedAmount[];
-  variables: NamedAmount[];
-  allocations: NamedAmount[];
-  balances: NamedAmount[];
-  /** The sheet's own arithmetic, kept for reconciliation. */
-  derived: DerivedFigures;
-}
-
-export type ReadRule =
-  { kind: 'PERCENT'; percent: number } | { kind: 'FIXED'; amount: number };
-
-export interface BucketReading {
-  name: string;
-  rule: ReadRule | null;
-  latestBalance: number | null;
-  /**
-   * The running balance was typed over rather than accumulated, so the
-   * history behind it is gone — see UC-6.7.
-   */
-  balanceWasOverwritten: boolean;
-}
-
-export interface SpreadsheetReading {
-  months: MonthReading[];
-  /** Every distinct outcome label, in the order the sheet lists them. */
-  outcomeLabels: string[];
-  buckets: BucketReading[];
-  inference: { firstColumnYear: number; reasoning: string };
-  /** What the wizard has to ask for, because the sheet holds none of it. */
-  missing: string[];
-  warnings: string[];
-}
+export type {
+  BucketReading,
+  DerivedFigures,
+  MonthReading,
+  NamedAmount,
+  ReadRule,
+  SpreadsheetReading,
+};
 
 export interface InterpretOptions {
   referenceDate: LocalDate;

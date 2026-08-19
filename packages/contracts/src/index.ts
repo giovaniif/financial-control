@@ -83,6 +83,18 @@ export type {
   WealthProjectionResponse,
 } from './projection.js';
 export type { SetupStateResponse } from './setup.js';
+export type {
+  ApplyImportRequest,
+  BucketReading,
+  DerivedFigures,
+  ImportAnswers,
+  ImportReportResponse,
+  MonthReading,
+  NamedAmount,
+  ReadRule,
+  ReconciliationRow,
+  SpreadsheetReading,
+} from './import.js';
 export { BACKUP_VERSION } from './backup.js';
 export type {
   BackupAccount,
