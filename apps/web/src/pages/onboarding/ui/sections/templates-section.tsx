@@ -8,7 +8,7 @@ interface Props {
 }
 
 /** UC-2 — the engine that fills every projected cycle. */
-export function TemplatesStep({ currentMonth }: Props) {
+export function TemplatesSection({ currentMonth }: Props) {
   const { data, isPending } = useTemplates();
   const templates = data?.templates ?? [];
 

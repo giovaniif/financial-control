@@ -3,7 +3,7 @@ import { ManageAccounts } from '@/features/manage-accounts';
 import { Amount, Badge, EmptyState, Skeleton } from '@/shared/ui';
 
 /** UC-1.2 — the accounts total is where every cycle's balance chain starts. */
-export function AccountsStep() {
+export function AccountsSection() {
   const { data, isPending } = useAccounts();
   const accounts = data?.accounts ?? [];
 

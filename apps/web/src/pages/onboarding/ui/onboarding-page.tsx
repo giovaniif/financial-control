@@ -1,27 +1,12 @@
-import type { AnchorChangeRequest } from '@fin/contracts';
-import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
-import { useChangeAnchor } from '@/features/configure-anchor';
-import { useSelectedCycle } from '@/features/navigate-cycle';
+import { useSetupState } from '@/shared/api';
 import { skipSetup } from '@/shared/model';
-import { Button, Stepper } from '@/shared/ui';
+import { Skeleton } from '@/shared/ui';
 
-import { STEPS, type StepId } from '../model/steps.js';
-import { useWizard } from '../model/use-wizard.js';
-import { AccountsStep } from './steps/accounts-step.js';
-import { BucketsStep } from './steps/buckets-step.js';
-import { CardsStep } from './steps/cards-step.js';
-import { CycleStep } from './steps/cycle-step.js';
-import { DoneStep } from './steps/done-step.js';
-import { TemplatesStep } from './steps/templates-step.js';
-import { WhyStep, type StartMode } from './steps/why-step.js';
-
-/** Salary on the 5th, moving back off a closed bank — the app's default. */
-const DEFAULT_ANCHOR: AnchorChangeRequest = {
-  anchorDay: 5,
-  shiftPolicy: 'PRECEDING',
-};
+import { RestoreBackup } from './restore-backup.js';
+import { SetupChat } from './setup-chat.js';
+import { SetupForm } from './setup-form.js';
 
 /** The gate records where the user was sent from; nothing else sets it. */
 function redirectedFrom(state: unknown): string | undefined {
@@ -33,18 +18,16 @@ function redirectedFrom(state: unknown): string | undefined {
 
 /**
  * UC-1.5 — first run. Deliberately outside the app shell: the sidebar leads to
- * seven screens that are all empty until this is finished.
+ * screens that are all empty until this is finished.
+ *
+ * Which way it asks is decided before the user types anything. Learning that
+ * the assistant is unreachable from a first turn coming back refused would
+ * mean asking someone to start over in a different form.
  */
 export function OnboardingPage() {
-  const wizard = useWizard();
-  const step = STEPS[wizard.index];
-  const heading = useRef<HTMLHeadingElement>(null);
+  const { data, isPending } = useSetupState();
   const navigate = useNavigate();
   const location = useLocation();
-  const [anchor, setAnchor] = useState(DEFAULT_ANCHOR);
-  const [startMode, setStartMode] = useState<StartMode>();
-  const changeAnchor = useChangeAnchor();
-  const { selectedMonth } = useSelectedCycle();
 
   // Leaving lands on whatever the user originally asked for, not on the
   // dashboard they never chose.
@@ -53,115 +36,37 @@ export function OnboardingPage() {
     void navigate(redirectedFrom(location.state) ?? '/', { replace: true });
   };
 
-  /**
-   * Each step commits its own configuration before the wizard moves on, which
-   * is what makes this a setup rather than a tour. A step that writes nothing
-   * simply advances.
-   */
-  const commit: Partial<Record<StepId, () => Promise<unknown>>> = {
-    cycle: () => changeAnchor.mutateAsync(anchor),
-  };
-
-  /**
-   * Why the wizard will not move on yet. Choosing to start from a backup and
-   * then walking past it lands the user in the from-scratch flow having been
-   * told their data would be restored.
-   */
-  const blockedReason = (): string | undefined => {
-    if (wizard.stepId !== 'why') {
-      return undefined;
-    }
-    if (startMode === 'backup') {
-      return 'Restore the backup to go on, or pick another way to start.';
-    }
-    return undefined;
-  };
-
-  const blocked = blockedReason();
-
-  const advance = () => {
-    const write = commit[wizard.stepId];
-    if (write === undefined) {
-      wizard.next();
-      return;
-    }
-    void write().then(wizard.next);
-  };
-
-  // Swapping the body alone would leave a screen reader announcing the
-  // previous step, so the new heading takes focus.
-  useEffect(() => {
-    heading.current?.focus();
-  }, [wizard.index]);
-
-  if (step === undefined) {
-    return null;
-  }
-
   return (
     <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-8 px-6 py-10">
-      <header className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
+      <header className="flex items-center justify-between">
+        <div>
           <p className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
-            Setting up
+            First run
           </p>
-          <button
-            type="button"
-            onClick={leave}
-            className="cursor-pointer text-sm text-zinc-500 underline-offset-2 hover:underline"
-          >
-            Skip for now
-          </button>
+          <h1 className="text-2xl font-semibold">Setting up</h1>
         </div>
-        <Stepper steps={STEPS} current={wizard.index} />
+        <button
+          type="button"
+          onClick={leave}
+          className="cursor-pointer text-sm text-zinc-500 underline-offset-2 hover:underline"
+        >
+          Skip for now
+        </button>
       </header>
 
-      <main className="flex flex-1 flex-col gap-4">
-        <h1
-          ref={heading}
-          tabIndex={-1}
-          className="text-2xl font-semibold outline-none"
-        >
-          {step.title}
-        </h1>
-        {wizard.stepId === 'why' && (
-          <WhyStep
-            mode={startMode}
-            onChooseMode={setStartMode}
-            onRestored={wizard.toEnd}
-          />
+      <main className="flex flex-1 flex-col gap-8">
+        {isPending ? (
+          <Skeleton className="h-64 w-full" />
+        ) : data?.assistantAvailable === true ? (
+          <SetupChat />
+        ) : (
+          <SetupForm />
         )}
-        {wizard.stepId === 'cycle' && (
-          <CycleStep anchor={anchor} onChange={setAnchor} />
-        )}
-        {wizard.stepId === 'accounts' && <AccountsStep />}
-        {wizard.stepId === 'cards' && <CardsStep />}
-        {wizard.stepId === 'templates' && (
-          <TemplatesStep currentMonth={selectedMonth ?? ''} />
-        )}
-        {wizard.stepId === 'buckets' && <BucketsStep />}
-        {wizard.stepId === 'done' && <DoneStep />}
+        {/* Restoring replaces everything, so it is only offered while there
+            is nothing to lose. Profile carries the same thing with the counts
+            it would overwrite spelled out. */}
+        {data?.isPristine === true && <RestoreBackup />}
       </main>
-
-      <footer className="flex items-center justify-between border-t border-zinc-200 pt-4">
-        <Button onClick={wizard.back} disabled={wizard.isFirst}>
-          Back
-        </Button>
-        <div className="flex items-center gap-3">
-          {blocked !== undefined && (
-            <p className="text-xs text-zinc-500">{blocked}</p>
-          )}
-          <Button
-            variant="primary"
-            onClick={advance}
-            disabled={
-              wizard.isLast || changeAnchor.isPending || blocked !== undefined
-            }
-          >
-            Continue
-          </Button>
-        </div>
-      </footer>
     </div>
   );
 }
