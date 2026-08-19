@@ -83,14 +83,14 @@ export class AssistantConversation {
     const message = input.message.trim();
     if (message.length > this.limits.maxQuestionCharacters) {
       throw new QuestionTooLong(
-        `A question may be ${String(this.limits.maxQuestionCharacters)} characters long; this one is ${String(message.length)}. Nothing was sent to the model — ask it in fewer words, or in more than one question.`,
+        `Uma pergunta pode ter ${String(this.limits.maxQuestionCharacters)} caracteres; esta tem ${String(message.length)}. Nada foi enviado ao modelo — pergunte em menos palavras, ou em mais de uma pergunta.`,
       );
     }
 
     const stored = await this.open(principal, input.conversationId);
     if (turnsOf(stored) >= this.limits.maxTurnsPerConversation) {
       throw new ConversationTooLong(
-        `This conversation has had the ${String(this.limits.maxTurnsPerConversation)} turns one conversation may have. Start a new one and it will read your figures again.`,
+        `Esta conversa já teve as ${String(this.limits.maxTurnsPerConversation)} rodadas que uma conversa pode ter. Comece outra e ela lê os seus números de novo.`,
       );
     }
 
@@ -130,7 +130,7 @@ export class AssistantConversation {
     // not exist: whose it is, is not something a caller gets to learn.
     if (stored?.principal.equals(principal) !== true) {
       throw new AssistantConversationNotFound(
-        `There is no conversation called "${id}".`,
+        `Não existe nenhuma conversa chamada "${id}".`,
       );
     }
     return stored;

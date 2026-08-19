@@ -55,7 +55,7 @@ export class CloseCycle {
 
     if (!today.isAfter(ref.end)) {
       throw new CycleNotOverYet(
-        `${ref.label} runs until ${ref.end.toISO()}; it cannot be closed yet.`,
+        `O ciclo de ${ref.label} vai até ${ref.end.toISO()}; ainda não dá para fechá-lo.`,
       );
     }
 
@@ -146,7 +146,9 @@ export class CloseCycle {
     const cycle = await this.cycles.findByMonth(ref);
 
     if (cycle === undefined) {
-      throw new CycleNotFound(`The ${ref.label} cycle has nothing in it yet.`);
+      throw new CycleNotFound(
+        `O ciclo de ${ref.label} ainda não tem nada dentro.`,
+      );
     }
     return { cycle, ref };
   }

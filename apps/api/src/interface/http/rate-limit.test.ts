@@ -60,7 +60,9 @@ describe('the routes that spend money', () => {
     expect(codes.slice(0, 2)).not.toContain(429);
     expect(stopped.statusCode).toBe(429);
     expect(stopped.headers['retry-after']).toBe('60');
-    expect(stopped.json<{ error: string }>().error).toContain('Too many');
+    expect(stopped.json<{ error: string }>().error).toContain(
+      'Requisições demais',
+    );
   });
 
   it('stops a hot loop on the assistant', async () => {

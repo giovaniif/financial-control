@@ -295,7 +295,7 @@ describe('closing a cycle', () => {
   });
 
   it('names how many entries are in the way', () => {
-    expect(() => workedExample().close()).toThrow(/14 unsettled entries/);
+    expect(() => workedExample().close()).toThrow(/14 lançamentos em aberto/);
   });
 
   it('closes once every entry is settled or skipped', () => {

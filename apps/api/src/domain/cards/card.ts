@@ -50,18 +50,18 @@ export class Card {
     plans?: readonly InstallmentPlan[];
   }): Card {
     if (input.name.trim() === '') {
-      throw new InvalidCard('A card needs a name.');
+      throw new InvalidCard('Um cartão precisa de um nome.');
     }
     if (input.limit.isNegative()) {
-      throw new InvalidCard('A card limit cannot be negative.');
+      throw new InvalidCard('O limite de um cartão não pode ser negativo.');
     }
     for (const [label, day] of [
-      ['closing', input.closingDay],
-      ['due', input.dueDay],
+      ['fechamento', input.closingDay],
+      ['vencimento', input.dueDay],
     ] as const) {
       if (!Number.isSafeInteger(day) || day < 1 || day > 31) {
         throw new InvalidCard(
-          `A ${label} day is a day of the month; received ${String(day)}.`,
+          `O dia de ${label} é um dia do mês; recebido ${String(day)}.`,
         );
       }
     }
@@ -151,11 +151,11 @@ export class Card {
     const count = input.installments ?? 1;
     if (!Number.isSafeInteger(count) || count < 1) {
       throw new InvalidCard(
-        `A purchase is split into at least one instalment; received ${String(count)}.`,
+        `Uma compra é dividida em pelo menos uma parcela; recebido ${String(count)}.`,
       );
     }
     if (input.description.trim() === '') {
-      throw new InvalidCard('A purchase needs a description.');
+      throw new InvalidCard('Uma compra precisa de uma descrição.');
     }
 
     // dividedInto gives the remainder to the last part, so the instalments
@@ -215,7 +215,9 @@ export class Card {
       (candidate) => candidate.purchaseId === input.purchaseId,
     );
     if (plan === undefined) {
-      throw new PurchaseNotFound(`No instalment plan ${input.purchaseId}.`);
+      throw new PurchaseNotFound(
+        `Não há nenhum parcelamento ${input.purchaseId}.`,
+      );
     }
 
     const outstanding = this.state.invoices.filter(

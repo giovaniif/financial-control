@@ -75,7 +75,7 @@ export async function buildSpendGuard(
  */
 function tooManyRequests(_request: unknown, context: { after: string }) {
   const body = {
-    error: `Too many requests to the assistant. Try again in ${context.after}.`,
+    error: `Requisições demais ao assistente. Tente de novo em ${context.after}.`,
   };
 
   return Object.defineProperty(body, 'statusCode', {

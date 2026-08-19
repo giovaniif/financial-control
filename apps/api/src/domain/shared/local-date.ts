@@ -26,12 +26,12 @@ export class LocalDate {
     );
     if (!whole || month < 1 || month > 12) {
       throw new InvalidDate(
-        `Not a calendar date: ${String(year)}-${String(month)}-${String(day)}.`,
+        `Não é uma data do calendário: ${String(year)}-${String(month)}-${String(day)}.`,
       );
     }
     if (day < 1 || day > LocalDate.lastDayOfMonth(year, month)) {
       throw new InvalidDate(
-        `${String(year)}-${String(month)} has no day ${String(day)}.`,
+        `${String(year)}-${String(month)} não tem dia ${String(day)}.`,
       );
     }
     return new LocalDate(year, month, day);
@@ -40,7 +40,7 @@ export class LocalDate {
   static parse(iso: string): LocalDate {
     const groups = ISO.exec(iso)?.groups;
     if (groups === undefined) {
-      throw new InvalidDate(`Not an ISO date: "${iso}".`);
+      throw new InvalidDate(`Não é uma data ISO: "${iso}".`);
     }
     return LocalDate.of(
       Number(groups['year']),

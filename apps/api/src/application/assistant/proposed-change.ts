@@ -6,6 +6,7 @@ import { DomainError } from '../../domain/shared/domain-error.js';
 import type { LocalDate } from '../../domain/shared/local-date.js';
 import type { Money } from '../../domain/shared/money.js';
 import type { SettlementStatus } from '../../domain/shared/planned-actual.js';
+import { SETTLEMENT_STATUS_LABELS } from '../../domain/shared/planned-actual.js';
 import { EditScope } from '../budgeting/uc-2-manage-templates.js';
 
 export class UnknownProposal extends DomainError {}
@@ -129,55 +130,60 @@ export type ProposedChange =
 export function summarise(change: ProposedChange): string {
   switch (change.kind) {
     case 'SETTLE_ENTRY':
-      return `Settle entry ${change.entryId} in the ${change.month} cycle as ${change.status.toLowerCase()}, at ${
+      return `Dar baixa no lançamento ${change.entryId} do ciclo ${change.month} como ${SETTLEMENT_STATUS_LABELS[change.status]}, ${
         change.actual === undefined
-          ? 'its planned amount'
-          : money(change.actual)
+          ? 'pelo valor planejado'
+          : `por ${money(change.actual)}`
       }.`;
     case 'ADD_ENTRY':
-      return `Add “${change.description}” to the ${change.month} cycle — a ${change.entryKind.toLowerCase()} of ${money(change.amount)} due on ${change.dueDate.toISO()}${estimate(change.isEstimate)}.`;
+      return `Adicionar “${change.description}” ao ciclo ${change.month} — ${ENTRY_KINDS[change.entryKind]} de ${money(change.amount)} com vencimento em ${change.dueDate.toISO()}${estimate(change.isEstimate)}.`;
     case 'REGISTER_PURCHASE':
-      return `Register “${change.description}” of ${money(change.amount)} on card ${change.cardId}, bought on ${change.purchasedOn.toISO()}, in ${
+      return `Registrar “${change.description}” de ${money(change.amount)} no cartão ${change.cardId}, comprada em ${change.purchasedOn.toISO()}, em ${
         change.installments === 1
-          ? 'one payment'
-          : `${String(change.installments)} instalments`
+          ? 'uma parcela'
+          : `${String(change.installments)} parcelas`
       }.`;
     case 'CREATE_TEMPLATE':
-      return `Create the recurring ${change.direction === Direction.In ? 'income' : 'outcome'} “${change.name}” of ${money(change.amount)} on day ${String(change.dueDayOfMonth)}, from the ${change.startMonth ?? 'current'} cycle${
-        change.endMonth === undefined
-          ? ''
-          : ` until the ${change.endMonth} cycle`
+      return `Criar ${change.direction === Direction.In ? 'a entrada recorrente' : 'a saída recorrente'} “${change.name}” de ${money(change.amount)} no dia ${String(change.dueDayOfMonth)}, a partir do ciclo ${change.startMonth ?? 'atual'}${
+        change.endMonth === undefined ? '' : ` até o ciclo ${change.endMonth}`
       }${estimate(change.isEstimate)}.`;
     case 'CHANGE_TEMPLATE_AMOUNT':
-      return `Change template ${change.templateId} to ${money(change.amount)} from the ${change.fromMonth} cycle, ${
+      return `Mudar a recorrência ${change.templateId} para ${money(change.amount)} a partir do ciclo ${change.fromMonth}, ${
         change.scope === EditScope.ThisAndFuture
-          ? 'this cycle and every future one'
-          : 'this cycle only'
+          ? 'neste ciclo e em todos os futuros'
+          : 'somente neste ciclo'
       }.`;
     case 'CHANGE_PAYDAY_ANCHOR':
-      return `Move the payday anchor to day ${String(change.anchorDay)}, taking the ${
-        change.shiftPolicy === ShiftPolicy.Preceding ? 'preceding' : 'following'
-      } business day when that one is closed.`;
+      return `Mudar o dia do pagamento para o dia ${String(change.anchorDay)}, indo para o dia útil ${
+        change.shiftPolicy === ShiftPolicy.Preceding ? 'anterior' : 'seguinte'
+      } quando esse dia cai em fim de semana ou feriado.`;
     case 'CREATE_GOAL_BUCKET':
-      return `Create the goal bucket “${change.name}” — ${describeRule(change.rule)} each cycle toward ${money(change.target)} by ${change.targetDate.toISO()}, funded #${String(change.priority)}.`;
+      return `Criar a caixinha de meta “${change.name}” — ${describeRule(change.rule)} por ciclo rumo a ${money(change.target)} até ${change.targetDate.toISO()}, prioridade #${String(change.priority)}.`;
     case 'CREATE_ONGOING_BUCKET':
-      return `Create the ongoing bucket “${change.name}” — ${describeRule(change.rule)} each cycle, funded #${String(change.priority)}.`;
+      return `Criar a caixinha contínua “${change.name}” — ${describeRule(change.rule)} por ciclo, prioridade #${String(change.priority)}.`;
     case 'CHANGE_ALLOCATION_RULE':
-      return `Change bucket ${change.bucketId} to take ${describeRule(change.rule)} each cycle.`;
+      return `Mudar a caixinha ${change.bucketId} para receber ${describeRule(change.rule)} por ciclo.`;
     case 'OVERRIDE_CONTRIBUTION':
-      return `Put ${money(change.amount)} into bucket ${change.bucketId} for the ${change.month} cycle, this once.`;
+      return `Colocar ${money(change.amount)} na caixinha ${change.bucketId} no ciclo ${change.month}, só desta vez.`;
     default: {
       const unhandled: never = change;
-      throw new UnknownProposal(
-        `Nothing describes ${JSON.stringify(unhandled)}.`,
-      );
+      throw new UnknownProposal(`Nada descreve ${JSON.stringify(unhandled)}.`);
     }
   }
 }
 
+/** How a kind of entry reads inside a proposal's sentence. */
+const ENTRY_KINDS: Record<EntryKind, string> = {
+  INCOME: 'uma entrada',
+  FIXED: 'uma conta fixa',
+  INVOICE: 'uma fatura',
+  VARIABLE: 'um lançamento variável',
+  ALLOCATION: 'uma alocação',
+};
+
 function describeRule(rule: AllocationRule): string {
   return rule.kind === 'PERCENT'
-    ? `${rule.percentage.toString()} of Expected Surplus`
+    ? `${rule.percentage.toString()} da Sobra Esperada`
     : money(rule.amount);
 }
 
@@ -186,5 +192,5 @@ function money(amount: Money): string {
 }
 
 function estimate(isEstimate: boolean): string {
-  return isEstimate ? ', an estimate' : '';
+  return isEstimate ? ', uma estimativa' : '';
 }

@@ -16,7 +16,7 @@ export class DateRange {
   static of(start: LocalDate, end: LocalDate): DateRange {
     if (end.isBefore(start)) {
       throw new InvalidDateRange(
-        `A range cannot end before it starts: ${start.toISO()} – ${end.toISO()}.`,
+        `Um período não pode terminar antes de começar: ${start.toISO()} – ${end.toISO()}.`,
       );
     }
     return new DateRange(start, end);

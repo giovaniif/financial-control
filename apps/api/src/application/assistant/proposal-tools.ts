@@ -399,7 +399,7 @@ function stated(args: JsonObject, field: string): JsonValue | undefined {
 }
 
 function missing(field: string, expectation: string): never {
-  throw new UnreadableProposal(`${field} has to be ${expectation}.`);
+  throw new UnreadableProposal(`${field} tem de ser ${expectation}.`);
 }
 
 function readText(args: JsonObject, field: string): string | undefined {
@@ -409,7 +409,7 @@ function readText(args: JsonObject, field: string): string | undefined {
 }
 
 function requireText(args: JsonObject, field: string): string {
-  return readText(args, field) ?? missing(field, 'a non-empty value');
+  return readText(args, field) ?? missing(field, 'um valor não vazio');
 }
 
 function readMonth(args: JsonObject, field: string): string | undefined {
@@ -418,14 +418,16 @@ function readMonth(args: JsonObject, field: string): string | undefined {
 }
 
 function requireMonth(args: JsonObject, field: string): string {
-  return readMonth(args, field) ?? missing(field, 'a YYYY-MM cycle');
+  return (
+    readMonth(args, field) ?? missing(field, 'um ciclo no formato YYYY-MM')
+  );
 }
 
 function requireDate(args: JsonObject, field: string): LocalDate {
   const value = readText(args, field);
   return value !== undefined && ISO_DATE.test(value)
     ? LocalDate.parse(value)
-    : missing(field, 'a YYYY-MM-DD date');
+    : missing(field, 'uma data no formato YYYY-MM-DD');
 }
 
 function readInteger(args: JsonObject, field: string): number | undefined {
@@ -436,7 +438,7 @@ function readInteger(args: JsonObject, field: string): number | undefined {
 }
 
 function requireInteger(args: JsonObject, field: string): number {
-  return readInteger(args, field) ?? missing(field, 'a whole number');
+  return readInteger(args, field) ?? missing(field, 'um número inteiro');
 }
 
 function readCents(args: JsonObject, field: string): Money | undefined {
@@ -445,7 +447,9 @@ function readCents(args: JsonObject, field: string): Money | undefined {
 }
 
 function requireCents(args: JsonObject, field: string): Money {
-  return readCents(args, field) ?? missing(field, 'an amount in whole cents');
+  return (
+    readCents(args, field) ?? missing(field, 'um valor em centavos inteiros')
+  );
 }
 
 function readFlag(args: JsonObject, field: string): boolean | undefined {
@@ -469,7 +473,7 @@ function requireChoice<T extends string>(
 ): T {
   return (
     readChoice(args, field, allowed) ??
-    missing(field, `one of ${allowed.join(', ')}`)
+    missing(field, `um destes: ${allowed.join(', ')}`)
   );
 }
 
@@ -484,13 +488,13 @@ function requireRule(args: JsonObject): AllocationRule {
 
   if (percent !== undefined && amount !== undefined) {
     throw new UnreadableProposal(
-      'A bucket takes either a percentage of Expected Surplus or a fixed amount, not both.',
+      'Uma caixinha recebe ou um percentual da Sobra Esperada ou um valor fixo, nunca os dois.',
     );
   }
   if (amount !== undefined) return Allocation.fixed(amount);
   if (typeof percent !== 'number' || !Number.isFinite(percent) || percent < 0) {
     throw new UnreadableProposal(
-      'A bucket needs either percentOfExpectedSurplus or fixedAmountInCents.',
+      'Uma caixinha precisa de percentOfExpectedSurplus ou de fixedAmountInCents.',
     );
   }
 

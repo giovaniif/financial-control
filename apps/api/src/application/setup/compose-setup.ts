@@ -18,7 +18,7 @@ import { SetupConversationNotFound } from './uc-1-5-converse-setup.js';
 
 export class SetupNotComplete extends DomainError {}
 
-const SALARY = 'Salary';
+const SALARY = 'Salário';
 
 /**
  * UC-1.5 — a finished setup conversation as a v1 backup document.
@@ -41,7 +41,7 @@ export function composeSetup(
   const anchor = draft.anchor;
   if (!draft.isComplete || anchor === undefined) {
     throw new SetupNotComplete(
-      `The setup still has to answer: ${draft.remainingSections.join(', ')}.`,
+      `A configuração ainda precisa responder: ${draft.remainingSections.join(', ')}.`,
     );
   }
 
@@ -264,7 +264,7 @@ export class CompleteSetup {
     const stored = await this.conversations.load(conversationId);
     if (stored === undefined) {
       throw new SetupConversationNotFound(
-        `There is no setup conversation called "${conversationId}".`,
+        `Não existe nenhuma conversa de configuração chamada "${conversationId}".`,
       );
     }
 

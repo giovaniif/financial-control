@@ -71,7 +71,7 @@ describe('a record states the same thing in its fields as in its sentence', () =
     const established = establishedOf(held('Checking'));
 
     expect(established.summary).toBe(
-      'Checking — a checking account holding R$ 2.160,00.',
+      'Checking — uma conta corrente com R$ 2.160,00.',
     );
     expect(established).toMatchObject({
       section: 'ACCOUNTS',
@@ -85,7 +85,7 @@ describe('a record states the same thing in its fields as in its sentence', () =
   it('a fixed bill — what it costs and the day it falls due', () => {
     const established = establishedOf(held('Health Plan'));
 
-    expect(established.summary).toBe('Health Plan — R$ 320,00 on day 8.');
+    expect(established.summary).toBe('Health Plan — R$ 320,00 no dia 8.');
     expect(established).toMatchObject({
       section: 'FIXED_BILLS',
       record: { name: 'Health Plan', dueDayOfMonth: 8, isEstimate: false },
@@ -96,7 +96,7 @@ describe('a record states the same thing in its fields as in its sentence', () =
     const established = establishedOf(held('Electricity'));
 
     expect(established.summary).toBe(
-      'Electricity — R$ 280,00 on day 15, an estimate.',
+      'Electricity — R$ 280,00 no dia 15, uma estimativa.',
     );
     expect(established).toMatchObject({
       section: 'VARIABLE_BILLS',
@@ -108,7 +108,7 @@ describe('a record states the same thing in its fields as in its sentence', () =
     const established = establishedOf(held('Inter'));
 
     expect(established.summary).toBe(
-      'Inter — limit R$ 10.000,00, closing on day 28, due on day 10, paid from Checking.',
+      'Inter — limite de R$ 10.000,00, fecha no dia 28, vence no dia 10, pago por Checking.',
     );
     expect(established).toMatchObject({
       section: 'CARDS',
@@ -120,7 +120,7 @@ describe('a record states the same thing in its fields as in its sentence', () =
     const established = establishedOf(held('Investments'));
 
     expect(established.summary).toBe(
-      'Investments — 20 % of Expected Surplus each cycle, funded #1.',
+      'Investments — 20 % da Sobra Esperada por ciclo, prioridade #1.',
     );
     expect(established).toMatchObject({
       section: 'BUCKETS',
@@ -132,7 +132,7 @@ describe('a record states the same thing in its fields as in its sentence', () =
     const established = establishedOf(held('Apartment'));
 
     expect(established.summary).toBe(
-      'Apartment — R$ 1.778,00 each cycle toward R$ 150.000,00 by 2031-03-05, funded #2.',
+      'Apartment — R$ 1.778,00 por ciclo rumo a R$ 150.000,00 até 2031-03-05, prioridade #2.',
     );
     expect(established).toMatchObject({
       section: 'BUCKETS',
@@ -155,7 +155,7 @@ describe('the record a turn has just added', () => {
     });
 
     expect(establishedIn(before, after).summary).toBe(
-      'Rent — R$ 7.600,00 on day 10.',
+      'Rent — R$ 7.600,00 no dia 10.',
     );
   });
 

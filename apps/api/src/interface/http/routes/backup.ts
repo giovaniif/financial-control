@@ -24,7 +24,7 @@ export function registerBackupRoutes(
     if (!looksLikeBackup(document)) {
       return badRequest(
         reply,
-        'The body is not a backup document: it has no version.',
+        'O corpo da requisição não é um backup: não tem version.',
       );
     }
 
@@ -40,7 +40,7 @@ export function registerBackupRoutes(
       if (error instanceof DomainError) {
         return badRequest(
           reply,
-          `The backup could not be read: ${error.message}`,
+          `Não foi possível ler o backup: ${error.message}`,
         );
       }
       throw error;

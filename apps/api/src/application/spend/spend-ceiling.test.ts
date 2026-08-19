@@ -60,7 +60,7 @@ describe('SpendCeiling', () => {
     await ceiling.record(sole, used(1_200, 0));
 
     await expect(ceiling.check(sole)).rejects.toThrow(
-      /Everything else in the app works without it/,
+      /Todo o resto do app funciona sem ele/,
     );
   });
 

@@ -27,7 +27,7 @@ export interface ScriptedTurn {
 }
 
 const NO_KEY =
-  'No ANTHROPIC_API_KEY is configured, so the assistant is switched off.';
+  'Nenhuma ANTHROPIC_API_KEY está configurada, então o assistente está desligado.';
 
 export class ScriptExhausted extends DomainError {}
 

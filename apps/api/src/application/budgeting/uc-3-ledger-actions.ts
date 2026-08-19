@@ -112,7 +112,7 @@ export class LedgerActions {
 
     if (cycle === undefined) {
       throw new CycleNotFound(
-        `The ${ref.label} cycle has nothing in it yet; read it first to materialise it.`,
+        `O ciclo de ${ref.label} ainda não tem nada dentro; abra-o primeiro para materializá-lo.`,
       );
     }
 
@@ -123,7 +123,9 @@ export class LedgerActions {
 function entryOrThrow(cycle: Cycle, entryId: string): LedgerEntry {
   const entry = cycle.entries.find((candidate) => candidate.id === entryId);
   if (entry === undefined) {
-    throw new EntryNotFound(`No entry ${entryId} in ${cycle.ref.label}.`);
+    throw new EntryNotFound(
+      `Não há nenhum lançamento ${entryId} no ciclo de ${cycle.ref.label}.`,
+    );
   }
   return entry;
 }

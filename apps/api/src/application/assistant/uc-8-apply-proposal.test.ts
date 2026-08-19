@@ -567,7 +567,7 @@ describe('ApplyProposal — validation happens here, not when the proposal was m
     );
 
     await expect(apply.confirm(me, confirmation)).rejects.toThrow(
-      /Already PAID/,
+      /já está pago/,
     );
 
     const entries = (await october(cycles)).entries;

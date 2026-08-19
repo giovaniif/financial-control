@@ -375,7 +375,7 @@ describe('POST /assistant/messages', () => {
     });
 
     expect(response.statusCode).toBe(400);
-    expect(response.json<{ error: string }>().error).toContain('60 characters');
+    expect(response.json<{ error: string }>().error).toContain('60 caracteres');
     expect(model.requests).toHaveLength(0);
   });
 
@@ -390,7 +390,7 @@ describe('POST /assistant/messages', () => {
     });
 
     expect(third.statusCode).toBe(409);
-    expect(third.json<{ error: string }>().error).toContain('2 turns');
+    expect(third.json<{ error: string }>().error).toContain('2 rodadas');
     expect(model.requests).toHaveLength(2);
   });
 
@@ -637,7 +637,7 @@ describe('POST /assistant/messages — the spend ceiling', () => {
 
     expect(response.statusCode).toBe(503);
     expect(response.json<{ error: string }>().error).toContain(
-      'switched off until tomorrow',
+      'desligado até amanhã',
     );
     expect(model.requests).toHaveLength(0);
   });
