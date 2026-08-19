@@ -1,8 +1,4 @@
-import type {
-  SetupAppliedResponse,
-  SetupSection,
-  SetupTurnResponse,
-} from '@fin/contracts';
+import type { SetupAppliedResponse, SetupTurnResponse } from '@fin/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 
@@ -19,11 +15,6 @@ import { DraftReview } from './draft-review.js';
 import { ExampleAnswers } from './example-answers.js';
 import { RecordLine } from './record-line.js';
 
-interface Props {
-  /** What the conversation is asking about now, for the path in the bar. */
-  onAsking: (section: SetupSection | null) => void;
-}
-
 /**
  * UC-1.5 — setup as a conversation: one question at a time, records shown back
  * as they are established and correctable where they sit, and nothing written
@@ -34,7 +25,7 @@ interface Props {
  * classes rather than two trees, so that the first answer sent does not unmount
  * the field it was typed in and take the focus with it.
  */
-export function SetupChat({ onAsking }: Props) {
+export function SetupChat() {
   const [entries, setEntries] = useState<Entry[]>([OPENING]);
   const [latest, setLatest] = useState<SetupTurnResponse>();
   const [draft, setDraft] = useState('');
@@ -49,7 +40,6 @@ export function SetupChat({ onAsking }: Props) {
   const record = (response: SetupTurnResponse) => {
     setLatest(response);
     setEntries(applyTurn(response));
-    onAsking(response.isComplete ? null : response.nextSection);
   };
 
   const conversationId = latest?.conversationId;

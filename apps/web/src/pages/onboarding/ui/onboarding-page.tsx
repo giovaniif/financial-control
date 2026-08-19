@@ -1,5 +1,3 @@
-import type { SetupSection } from '@fin/contracts';
-import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
 import { useSetupState } from '@/shared/api';
@@ -9,7 +7,6 @@ import { Skeleton } from '@/shared/ui';
 import { SetupChat } from './setup-chat.js';
 import { SetupForm } from './setup-form.js';
 import { SetupFrame } from './setup-frame.js';
-import { SetupProgress } from './setup-progress.js';
 
 /** The gate records where the user was sent from; nothing else sets it. */
 function redirectedFrom(state: unknown): string | undefined {
@@ -35,9 +32,6 @@ export function OnboardingPage() {
   const { data, isPending } = useSetupState();
   const navigate = useNavigate();
   const location = useLocation();
-  // Where the conversation has got to. Held here because the path reading it
-  // lives in the bar, and the conversation lives under the bar.
-  const [asking, setAsking] = useState<SetupSection | null>('ANCHOR');
 
   // Leaving lands on whatever the user originally asked for, not on the
   // dashboard they never chose.
@@ -49,12 +43,9 @@ export function OnboardingPage() {
   const isConversation = data?.assistantAvailable === true;
 
   return (
-    <SetupFrame
-      onSkip={leave}
-      progress={isConversation ? <SetupProgress next={asking} /> : undefined}
-    >
+    <SetupFrame onSkip={leave}>
       {isConversation ? (
-        <SetupChat onAsking={setAsking} />
+        <SetupChat />
       ) : (
         // The form is a document, and a document scrolls — but inside the
         // frame, so the bar above it stays where it was put.
