@@ -122,4 +122,19 @@ describe('FakeLanguageModel', () => {
       ScriptExhausted,
     );
   });
+  /**
+   * A refusal is a well-formed answer, not a failure, so the double has to be
+   * able to produce one — an interactor that treats it as an error is a bug a
+   * script must be able to catch.
+   */
+  it('replays a scripted refusal', async () => {
+    const model = new FakeLanguageModel([
+      { text: 'I cannot help with that.', stopReason: 'refusal' },
+    ]);
+
+    const response = await model.complete(ask('do something else'));
+
+    expect(response.stopReason).toBe('refusal');
+    expect(response.text).toBe('I cannot help with that.');
+  });
 });
