@@ -19,7 +19,7 @@ const questions = [
     question:
       "It's the middle of the month. How much will I pay in the next cycle, and how much will be left when I'm next paid?",
     answer:
-      'The Dashboard answers this in one sentence — with the actual dates money leaves the account, not an average monthly spend.',
+      'Main answers this in one sentence — with the actual dates money leaves the account, not an average monthly spend.',
   },
   {
     id: 'q2',

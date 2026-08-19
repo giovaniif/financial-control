@@ -13,6 +13,7 @@ export function stubApi(routes: Record<string, unknown>): void {
     '/api/cards': [],
     '/api/cycles': { estimates: 'included', cycles: [] },
     '/api/settings/anchor/resolve': { cycles: [] },
+    '/api/wealth': { horizons: [], buckets: [], retirement: null },
     '/api/setup': {
       anchorConfigured: false,
       accounts: 0,

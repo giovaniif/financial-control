@@ -47,7 +47,7 @@ describe('the first-run gate', () => {
 
   it('sends a pristine app to the wizard from any route', async () => {
     stubApi({});
-    renderAt('/ledger');
+    renderAt('/profile');
 
     expect(
       await screen.findByRole('heading', {
@@ -59,10 +59,10 @@ describe('the first-run gate', () => {
 
   it('leaves a configured app alone', async () => {
     stubApi({ '/api/setup': configured });
-    renderAt('/settings');
+    renderAt('/profile');
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Settings' }),
+      await screen.findByRole('heading', { level: 1, name: 'Profile' }),
     ).toBeInTheDocument();
   });
 
@@ -84,10 +84,10 @@ describe('the first-run gate', () => {
   it('stops redirecting once the user has skipped', async () => {
     skipSetup();
     stubApi({});
-    renderAt('/settings');
+    renderAt('/profile');
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Settings' }),
+      await screen.findByRole('heading', { level: 1, name: 'Profile' }),
     ).toBeInTheDocument();
   });
 });

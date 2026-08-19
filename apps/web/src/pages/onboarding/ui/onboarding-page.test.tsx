@@ -15,7 +15,7 @@ const renderPage = () =>
       router={createMemoryRouter(
         [
           { path: '/onboarding', element: <OnboardingPage /> },
-          { path: '/', element: <p>Dashboard</p> },
+          { path: '/', element: <p>Main</p> },
         ],
         { initialEntries: ['/onboarding'] },
       )}
@@ -118,7 +118,7 @@ describe('OnboardingPage', () => {
       await screen.findByRole('button', { name: 'Skip for now' }),
     );
 
-    expect(await screen.findByText('Dashboard')).toBeInTheDocument();
+    expect(await screen.findByText('Main')).toBeInTheDocument();
     expect(hasSkippedSetup()).toBe(true);
   });
 
@@ -300,7 +300,7 @@ describe('OnboardingPage', () => {
       await goTo('You are set up');
 
       expect(
-        await screen.findByRole('link', { name: 'Open the Dashboard' }),
+        await screen.findByRole('link', { name: 'Open Main' }),
       ).toHaveAttribute('href', '/');
       expect(screen.getByText('configured')).toBeInTheDocument();
       // Scoped to the summary row: the step indicator also renders a "4".
