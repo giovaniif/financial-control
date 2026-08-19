@@ -267,6 +267,72 @@ describe('interpretSpreadsheet', () => {
     });
   });
 
+  /**
+   * The app holds a rolling twelve cycles and never reaches further back, so a
+   * row that stopped before the current one is history. Asking the user for
+   * its due day would be asking about something that will not be imported.
+   */
+  describe('what is still live', () => {
+    const withHistory: GridSpec = {
+      ...twoMonths,
+      // Julho is behind the current column and carries a bill of its own.
+      A4: 'Faculdade',
+      B4: -400,
+      A30: 'Viagem Europa',
+      B30: ['=B26*0.3', 3751.95],
+      B33: ['=B26-B28-B29-B30', 5002.6],
+      A40: 'Viagem Europa Real',
+      B40: 3751.95,
+    };
+
+    it('names today as the column the app is standing in', () => {
+      expect(read().currentMonth).toBe('2026-08');
+    });
+
+    it('leaves out a bill that stopped before the current cycle', () => {
+      const reading = read(withHistory);
+
+      expect(reading.outcomeLabels).toEqual(['Convênio', 'Energia']);
+    });
+
+    it('leaves out a bucket that stopped before the current cycle', () => {
+      const reading = read(withHistory);
+
+      expect(reading.buckets.map((bucket) => bucket.name)).toEqual([
+        'Reserva',
+        'Investimentos',
+      ]);
+    });
+
+    // Dropped quietly is how an import loses something without anyone noticing.
+    it('says what it left behind', () => {
+      const warnings = read(withHistory).warnings.join(' ');
+
+      expect(warnings).toMatch(/Faculdade stopped before the current cycle/);
+      expect(warnings).toMatch(
+        /Viagem Europa stopped before the current cycle/,
+      );
+    });
+
+    it('keeps a bill that is blank now but returns later', () => {
+      const reading = read({
+        ...twoMonths,
+        D3: null,
+        E1: 'Setembro',
+        E3: 'Energia',
+        F3: -320,
+      });
+
+      expect(reading.outcomeLabels).toContain('Energia');
+    });
+
+    it('falls back to the first column when none names this month', () => {
+      const reading = read({ A1: 'Janeiro', C1: 'Fevereiro' }, '2026-08-12');
+
+      expect(reading.currentMonth).toBe('2026-01');
+    });
+  });
+
   describe('the buckets', () => {
     it('pairs an allocation row with its running balance', () => {
       const reading = read();

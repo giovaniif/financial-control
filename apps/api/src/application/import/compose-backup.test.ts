@@ -34,6 +34,7 @@ function reading(
 ): SpreadsheetReading {
   return {
     months: [month()],
+    currentMonth: '2026-09',
     outcomeLabels: ['Convênio'],
     buckets: [],
     inference: { firstColumnYear: 2026, reasoning: '' },

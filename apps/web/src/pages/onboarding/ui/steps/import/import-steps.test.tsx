@@ -40,6 +40,7 @@ const reading: SpreadsheetReading = {
     month('Setembro', '2026-09', -265_000),
     month('Outubro', '2026-10', -292_400),
   ],
+  currentMonth: '2026-08',
   outcomeLabels: ['Convênio', 'Evoluçao Obra', 'Inter'],
   buckets: [
     {

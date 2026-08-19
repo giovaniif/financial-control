@@ -100,14 +100,77 @@ export function interpretSpreadsheet(
     readMonth(sheet, column, rows, monthOf(inference.firstColumnYear, column)),
   );
 
+  /**
+   * Everything is reported from the current cycle onward. The app holds a
+   * rolling twelve and never reaches back further, so a bill that stopped two
+   * years ago is history — asking the user for its due day would be asking
+   * about something that is not going to be imported.
+   */
+  const currentMonth = currentMonthOf(months, options.referenceDate);
+  const live = months.filter((month) => month.month >= currentMonth);
+
+  const outcomeLabels = labelsIn(live, (month) => month.outcomes);
+  const buckets = readBuckets(sheet, columns, rows, months);
+  const liveBuckets = labelsIn(live, (month) => month.allocations);
+
   return {
     months,
-    outcomeLabels: distinctLabels(sheet, columns, rows.outcomes),
-    buckets: readBuckets(sheet, columns, rows, months),
+    currentMonth,
+    outcomeLabels,
+    buckets: buckets.filter((bucket) => liveBuckets.includes(bucket.name)),
     inference,
     missing: MISSING,
-    warnings,
+    warnings: [
+      ...warnings,
+      ...retired(
+        'bills',
+        labelsIn(months, (month) => month.outcomes),
+        outcomeLabels,
+      ),
+      ...retired(
+        'buckets',
+        buckets.map((bucket) => bucket.name),
+        liveBuckets,
+      ),
+    ],
   };
+}
+
+/**
+ * The column standing for today. A cycle's boundaries depend on the payday
+ * anchor, which nobody has chosen yet when a workbook is read, so this is the
+ * column named for the current calendar month — the same one the year
+ * inference anchors on.
+ */
+function currentMonthOf(
+  months: MonthReading[],
+  referenceDate: LocalDate,
+): string {
+  const today = `${String(referenceDate.year)}-${String(referenceDate.month).padStart(2, '0')}`;
+
+  return months.some((month) => month.month === today)
+    ? today
+    : (months[0]?.month ?? today);
+}
+
+function labelsIn(
+  months: MonthReading[],
+  pick: (month: MonthReading) => NamedAmount[],
+): string[] {
+  return [
+    ...new Set(months.flatMap((month) => pick(month).map((it) => it.label))),
+  ];
+}
+
+/** Rows the sheet carries but that stopped before the current cycle. */
+function retired(what: string, all: string[], live: string[]): string[] {
+  const gone = all.filter((label) => !live.includes(label));
+
+  return gone.length === 0
+    ? []
+    : [
+        `${gone.join(', ')} stopped before the current cycle, so ${gone.length === 1 ? 'it was' : 'they were'} left out of the ${what} to import.`,
+      ];
 }
 
 /** Row 1 names the months, one per column pair: label in `n`, amount in `n+1`. */
@@ -440,26 +503,6 @@ function toCents(cell: Cell | undefined): number | undefined {
     return Number.isFinite(parsed) ? Math.round(parsed * 100) : undefined;
   }
   return undefined;
-}
-
-function distinctLabels(
-  sheet: SheetGrid,
-  columns: MonthColumn[],
-  rows: number[],
-): string[] {
-  const labels = new Set<string>();
-
-  for (const row of rows) {
-    for (const column of columns) {
-      const value = sheet.cells.get(
-        `${toColumnName(column.labelColumn)}${String(row)}`,
-      )?.value;
-      if (typeof value === 'string' && value.trim() !== '') {
-        labels.add(value.trim());
-      }
-    }
-  }
-  return [...labels];
 }
 
 function readBuckets(
