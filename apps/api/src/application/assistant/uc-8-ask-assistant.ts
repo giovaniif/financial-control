@@ -6,10 +6,12 @@ import type {
   JsonObject,
   LanguageModel,
   ModelMessage,
+  ModelResponse,
   ToolCall,
   ToolDeclaration,
   ToolResult,
 } from '../../domain/ports/language-model.js';
+import { LanguageModelFailed } from '../../domain/ports/language-model.js';
 import { DomainError } from '../../domain/shared/domain-error.js';
 import type { Principal } from '../../domain/shared/principal.js';
 import type { ReadCycle } from '../budgeting/uc-3-1-read-cycle.js';
@@ -75,6 +77,27 @@ export interface AssistantAnswer {
 }
 
 /**
+ * A turn as it happens.
+ *
+ * There is one shape of turn and it is this one: prose as it is written, the
+ * tools as they finish, and the whole answer last. A caller that wants only
+ * the finished answer folds the stream; nothing asks the model twice.
+ */
+export type AssistantEvent =
+  | { readonly kind: 'text'; readonly delta: string }
+  | { readonly kind: 'read'; readonly read: AssistantRead }
+  | {
+      readonly kind: 'answer';
+      readonly answer: AssistantAnswer;
+      /**
+       * The transcript this turn leaves behind, for whoever holds the
+       * conversation. It is handed out rather than kept because a turn is not
+       * the thing that decides how long a conversation may run.
+       */
+      readonly transcript: readonly ModelMessage[];
+    };
+
+/**
  * UC-8.1 / UC-8.2 — a question about the user's own figures, answered from
  * the app's own numbers.
  *
@@ -89,9 +112,10 @@ export interface AssistantAnswer {
  * whose description reads like an instruction is therefore just a string in
  * a JSON payload.
  *
- * The transcript is built here rather than taken from the caller: a client
- * that supplied one would decide how many input tokens each question costs
- * and could show the model results that never happened.
+ * The history a turn continues from comes from the store that holds it, never
+ * over the wire: a client that supplied one would decide how many input
+ * tokens each question costs and could show the model results that never
+ * happened. See {@link AssistantConversation}.
  */
 export class AskAssistant {
   constructor(
@@ -100,6 +124,7 @@ export class AskAssistant {
     private readonly proposals: AssistantProposals,
     private readonly ids: IdSource,
     private readonly clock: Clock,
+    private readonly maxToolRoundTrips = MAX_TOOL_ROUND_TRIPS,
   ) {}
 
   /**
@@ -117,24 +142,27 @@ export class AskAssistant {
    * from what was asked. Every proposal this turn composes is stamped with
    * it, and only that principal can confirm one.
    */
-  async ask(
+  async *converse(
     principal: Principal,
-    input: { question: string },
-  ): Promise<AssistantAnswer> {
+    input: { question: string; history?: readonly ModelMessage[] },
+  ): AsyncGenerator<AssistantEvent, void> {
     const question = input.question.trim();
     if (question === '') {
       throw new EmptyQuestion('There is no question to answer.');
     }
 
-    const transcript: ModelMessage[] = [{ role: 'user', text: question }];
+    const transcript: ModelMessage[] = [
+      ...(input.history ?? []),
+      { role: 'user', text: question },
+    ];
     const reads: AssistantRead[] = [];
     const proposals: ProposalOffer[] = [];
 
-    for (let round = 0; round < MAX_TOOL_ROUND_TRIPS; round += 1) {
+    for (let round = 0; round < this.maxToolRoundTrips; round += 1) {
       // Sent as a copy: what the model was shown is finished before it is
       // asked, so nothing this loop appends afterwards reaches back into a
       // request that has already gone out.
-      const response = await this.model.complete({
+      const stream = this.model.stream({
         system: SYSTEM_PROMPT,
         messages: [...transcript],
         tools: [
@@ -142,6 +170,30 @@ export class AskAssistant {
           ...PROPOSAL_TOOLS.map((spec) => spec.tool),
         ],
       });
+
+      let response: ModelResponse | undefined;
+      // A caller that stops reading closes this loop, which closes the
+      // model's stream with it: nobody pays for output nobody reads.
+      for await (const event of stream) {
+        switch (event.kind) {
+          case 'text':
+            yield { kind: 'text', delta: event.delta };
+            break;
+          // Acted on from the finished response, where the arguments are
+          // whole. The streamed call only says one is coming.
+          case 'toolCall':
+            break;
+          case 'done':
+            response = event.response;
+            break;
+        }
+      }
+
+      if (response === undefined) {
+        throw new LanguageModelFailed(
+          'The model stopped before it had answered.',
+        );
+      }
 
       transcript.push({
         role: 'assistant',
@@ -152,24 +204,34 @@ export class AskAssistant {
       // A refusal is a well-formed answer the user is shown, not a failure
       // the caller has to recover from.
       if (response.stopReason === 'refusal') {
-        return answer(response.text, reads, proposals, { wasRefused: true });
+        yield done(response.text, reads, proposals, transcript, {
+          wasRefused: true,
+        });
+        return;
       }
 
       if (response.toolCalls.length === 0) {
-        return answer(response.text, reads, proposals, {});
+        yield done(response.text, reads, proposals, transcript, {});
+        return;
       }
 
       const results: ToolResult[] = [];
       for (const call of response.toolCalls) {
         const outcome = await this.run(principal, call);
-        reads.push({ tool: call.name, failure: outcome.failure });
+        const read: AssistantRead = {
+          tool: call.name,
+          failure: outcome.failure,
+        };
+
+        reads.push(read);
+        yield { kind: 'read', read };
         if (outcome.offer !== undefined) proposals.push(outcome.offer);
         results.push(outcome.result);
       }
       transcript.push({ role: 'toolResults', results });
     }
 
-    return answer(READ_LIMIT_REACHED, reads, proposals, {
+    yield done(READ_LIMIT_REACHED, reads, proposals, transcript, {
       hitReadLimit: true,
     });
   }
@@ -259,18 +321,23 @@ function produced(call: ToolCall, payload: ReadPayload): ToolOutcome {
   };
 }
 
-function answer(
+function done(
   message: string,
   reads: readonly AssistantRead[],
   proposals: readonly ProposalOffer[],
+  transcript: readonly ModelMessage[],
   outcome: { wasRefused?: boolean; hitReadLimit?: boolean },
-): AssistantAnswer {
+): AssistantEvent {
   return {
-    message,
-    reads: [...reads],
-    proposals: [...proposals],
-    wasRefused: outcome.wasRefused ?? false,
-    hitReadLimit: outcome.hitReadLimit ?? false,
+    kind: 'answer',
+    answer: {
+      message,
+      reads: [...reads],
+      proposals: [...proposals],
+      wasRefused: outcome.wasRefused ?? false,
+      hitReadLimit: outcome.hitReadLimit ?? false,
+    },
+    transcript: [...transcript],
   };
 }
 
