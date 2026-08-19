@@ -7,6 +7,10 @@ import type { Card } from '../../domain/cards/card.js';
 import type { Bucket } from '../../domain/goals/bucket.js';
 import type { IdSource } from '../../domain/ports/id-source.js';
 import type {
+  ProposalStore,
+  StoredProposal,
+} from '../../domain/ports/proposal-store.js';
+import type {
   SetupConversationStore,
   StoredSetupConversation,
 } from '../../domain/ports/setup-conversation-store.js';
@@ -255,5 +259,27 @@ export class FakeSetupConversationStore<
   save(conversation: StoredSetupConversation<TState, TRecord>): Promise<void> {
     this.rows.set(conversation.id, conversation);
     return Promise.resolve();
+  }
+}
+
+/**
+ * Proposals as a map, for the same reason as the conversation store above:
+ * a test in `application` may not import `infrastructure`, and the production
+ * implementation is the same map behind the same port.
+ */
+export class FakeProposalStore<TChange> implements ProposalStore<TChange> {
+  private readonly rows = new Map<string, StoredProposal<TChange>>();
+
+  load(id: string): Promise<StoredProposal<TChange> | undefined> {
+    return Promise.resolve(this.rows.get(id));
+  }
+
+  save(proposal: StoredProposal<TChange>): Promise<void> {
+    this.rows.set(proposal.id, proposal);
+    return Promise.resolve();
+  }
+
+  get stored(): StoredProposal<TChange>[] {
+    return [...this.rows.values()];
   }
 }

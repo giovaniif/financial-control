@@ -18,6 +18,7 @@ import type {
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
 import { Percentage } from '../../domain/shared/percentage.js';
+import { Principal } from '../../domain/shared/principal.js';
 import { ReadCycle } from '../budgeting/uc-3-1-read-cycle.js';
 import { ListCycles } from '../budgeting/uc-3-3-list-cycles.js';
 import { ManageBuckets } from '../goals/uc-6-manage-buckets.js';
@@ -26,14 +27,18 @@ import { ProjectWealth } from '../projection/uc-7-project-wealth.js';
 import type { ScriptedTurn } from '../testing/fake-language-model.js';
 import { FakeLanguageModel } from '../testing/fake-language-model.js';
 import {
+  FakeProposalStore,
   InMemoryAccountRepository,
   InMemoryBucketRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
+  SequentialIdSource,
 } from '../testing/fakes.js';
 import { FixedClock } from '../testing/fixed-clock.js';
 
+import type { ProposedChange } from './proposed-change.js';
+import { summarise } from './proposed-change.js';
 import {
   AskAssistant,
   EmptyQuestion,
@@ -91,6 +96,9 @@ const call = (name: string, args: JsonObject = {}): ToolCall => {
   return { id: `call-${String(issued)}`, name, arguments: args };
 };
 
+/** The one user this app has, supplied by the caller as identity always is. */
+const me = Principal.sole();
+
 const wire = (script: readonly ScriptedTurn[], bill?: string) => {
   const cycles = new InMemoryCycleRepository([october(bill)]);
   const buckets = new InMemoryBucketRepository([reserve()]);
@@ -113,8 +121,23 @@ const wire = (script: readonly ScriptedTurn[], bill?: string) => {
     wealth: new ProjectWealth(buckets),
   };
   const model = new FakeLanguageModel(script);
+  const proposals = new FakeProposalStore<ProposedChange>();
 
-  return { model, reads, assistant: new AskAssistant(model, reads) };
+  return {
+    model,
+    reads,
+    cycles,
+    buckets,
+    templates,
+    proposals,
+    assistant: new AskAssistant(
+      model,
+      reads,
+      proposals,
+      new SequentialIdSource('proposal'),
+      clock,
+    ),
+  };
 };
 
 const asked = (model: FakeLanguageModel, turn: number): ModelMessage[] => [
@@ -147,7 +170,7 @@ describe('AskAssistant — answering from the app’s own figures', () => {
       { text: 'October closes at R$ 3.556,00.' },
     ]);
 
-    const answer = await assistant.ask({
+    const answer = await assistant.ask(me, {
       question: 'How much is left after October?',
     });
 
@@ -167,7 +190,7 @@ describe('AskAssistant — answering from the app’s own figures', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask({ question: 'What is October’s surplus?' });
+    await assistant.ask(me, { question: 'What is October’s surplus?' });
 
     const payload = payloadOf(resultsOf(model, 0)[0]);
     expect(payload['month']).toBe('2026-10');
@@ -186,6 +209,9 @@ describe('AskAssistant — answering from the app’s own figures', () => {
     const off = new AskAssistant(
       FakeLanguageModel.unavailable(),
       wire([]).reads,
+      new FakeProposalStore<ProposedChange>(),
+      new SequentialIdSource('proposal'),
+      clock,
     );
     expect(off.isAvailable).toBe(false);
   });
@@ -193,7 +219,7 @@ describe('AskAssistant — answering from the app’s own figures', () => {
   it('refuses an empty question without paying for a model call', async () => {
     const { assistant, model } = wire([]);
 
-    await expect(assistant.ask({ question: '  ' })).rejects.toBeInstanceOf(
+    await expect(assistant.ask(me, { question: '  ' })).rejects.toBeInstanceOf(
       EmptyQuestion,
     );
     expect(model.requests).toHaveLength(0);
@@ -201,10 +227,10 @@ describe('AskAssistant — answering from the app’s own figures', () => {
 });
 
 describe('AskAssistant — the tool set', () => {
-  it('offers one tool per read model', async () => {
+  it('offers one tool per read model and one per change it may propose', async () => {
     const { assistant, model } = wire([{ text: 'Nothing to read.' }]);
 
-    await assistant.ask({ question: 'Hello?' });
+    await assistant.ask(me, { question: 'Hello?' });
 
     expect(model.requests[0]?.tools.map((tool) => tool.name)).toEqual([
       'read_dashboard',
@@ -212,6 +238,16 @@ describe('AskAssistant — the tool set', () => {
       'list_cycles',
       'read_buckets',
       'project_wealth',
+      'propose_settle_entry',
+      'propose_add_entry',
+      'propose_register_purchase',
+      'propose_recurring_template',
+      'propose_template_amount_change',
+      'propose_payday_anchor_change',
+      'propose_goal_bucket',
+      'propose_ongoing_bucket',
+      'propose_allocation_rule_change',
+      'propose_contribution_override',
     ]);
   });
 
@@ -220,13 +256,44 @@ describe('AskAssistant — the tool set', () => {
   it('takes no identity argument anywhere in the tool set', async () => {
     const { assistant, model } = wire([{ text: 'Nothing to read.' }]);
 
-    await assistant.ask({ question: 'Hello?' });
+    await assistant.ask(me, { question: 'Hello?' });
 
     const fields = (model.requests[0]?.tools ?? []).flatMap((tool) =>
       Object.keys(tool.inputSchema['properties'] as JsonObject),
     );
     expect(new Set(fields)).toEqual(
-      new Set(['month', 'includeEstimates', 'contributionsFromMonth']),
+      new Set([
+        'month',
+        'includeEstimates',
+        'contributionsFromMonth',
+        'entryId',
+        'status',
+        'actualAmountInCents',
+        'description',
+        'entryKind',
+        'dueDate',
+        'amountInCents',
+        'isEstimate',
+        'cardId',
+        'purchasedOn',
+        'installments',
+        'name',
+        'direction',
+        'dueDayOfMonth',
+        'startMonth',
+        'endMonth',
+        'templateId',
+        'fromMonth',
+        'scope',
+        'anchorDay',
+        'shiftPolicy',
+        'targetInCents',
+        'targetDate',
+        'percentOfExpectedSurplus',
+        'fixedAmountInCents',
+        'priority',
+        'bucketId',
+      ]),
     );
   });
 });
@@ -238,7 +305,7 @@ describe('AskAssistant — the same figures the screens show', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask({ question: 'What does next cycle look like?' });
+    await assistant.ask(me, { question: 'What does next cycle look like?' });
 
     expect(payloadOf(resultsOf(model, 0)[0])).toMatchObject(
       asJson(await reads.dashboard.build()) as Record<string, unknown>,
@@ -251,7 +318,7 @@ describe('AskAssistant — the same figures the screens show', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask({ question: 'Which cycles are there?' });
+    await assistant.ask(me, { question: 'Which cycles are there?' });
 
     expect(payloadOf(resultsOf(model, 0)[0])['cycles']).toEqual(
       asJson(await reads.cycles.rollingWindow()),
@@ -264,7 +331,7 @@ describe('AskAssistant — the same figures the screens show', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask({ question: 'How is the Reserve doing?' });
+    await assistant.ask(me, { question: 'How is the Reserve doing?' });
 
     expect(payloadOf(resultsOf(model, 0)[0])['buckets']).toEqual(
       asJson(await reads.buckets.list()),
@@ -281,7 +348,7 @@ describe('AskAssistant — the same figures the screens show', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask({
+    await assistant.ask(me, {
       question: 'Where does the Reserve land in 5 years?',
     });
 
@@ -309,7 +376,7 @@ describe('AskAssistant — estimates stay legible', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask({ question: 'What does October cost?' });
+    await assistant.ask(me, { question: 'What does October cost?' });
 
     const payload = payloadOf(resultsOf(model, 0)[0]);
     expect(payload['includesUnconfirmedEstimates']).toBe(true);
@@ -326,7 +393,7 @@ describe('AskAssistant — estimates stay legible', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask({
+    await assistant.ask(me, {
       question: 'What does October cost, confirmed only?',
     });
 
@@ -344,7 +411,7 @@ describe('AskAssistant — what one question may cost', () => {
     );
     const { assistant, model } = wire(looping);
 
-    const answer = await assistant.ask({ question: 'Why? Why? Why?' });
+    const answer = await assistant.ask(me, { question: 'Why? Why? Why?' });
 
     expect(answer.hitReadLimit).toBe(true);
     expect(answer.message).toContain('read as much of your data');
@@ -361,7 +428,9 @@ describe('AskAssistant — outcomes that are not failures', () => {
       { text: 'I would rather not answer that.', stopReason: 'refusal' },
     ]);
 
-    const answer = await assistant.ask({ question: 'Say something awful.' });
+    const answer = await assistant.ask(me, {
+      question: 'Say something awful.',
+    });
 
     expect(answer.wasRefused).toBe(true);
     expect(answer.message).toBe('I would rather not answer that.');
@@ -374,7 +443,9 @@ describe('AskAssistant — outcomes that are not failures', () => {
       { text: 'I cannot see invoices yet.' },
     ]);
 
-    const answer = await assistant.ask({ question: 'Show me my invoices.' });
+    const answer = await assistant.ask(me, {
+      question: 'Show me my invoices.',
+    });
 
     expect(answer.message).toBe('I cannot see invoices yet.');
     expect(answer.reads[0]?.failure).toContain('read_invoices');
@@ -387,7 +458,7 @@ describe('AskAssistant — outcomes that are not failures', () => {
       { text: 'Which month did you mean?' },
     ]);
 
-    const answer = await assistant.ask({ question: 'How was whenever?' });
+    const answer = await assistant.ask(me, { question: 'How was whenever?' });
 
     expect(answer.message).toBe('Which month did you mean?');
     expect(answer.reads[0]?.failure).toBeDefined();
@@ -400,7 +471,9 @@ describe('AskAssistant — outcomes that are not failures', () => {
       { text: 'Which cycle did you mean?' },
     ]);
 
-    const answer = await assistant.ask({ question: 'How did the cycle go?' });
+    const answer = await assistant.ask(me, {
+      question: 'How did the cycle go?',
+    });
 
     expect(answer.reads[0]?.failure).toContain('YYYY-MM');
     expect(resultsOf(model, 0)[0]?.isError).toBe(true);
@@ -417,18 +490,24 @@ describe('AskAssistant — outcomes that are not failures', () => {
     }
 
     const { model, reads } = wire([{ toolCalls: [call('read_buckets')] }]);
-    const assistant = new AskAssistant(model, {
-      ...reads,
-      buckets: new BrokenBuckets(
-        new InMemoryBucketRepository(),
-        new InMemoryCycleRepository(),
-        new InMemorySettingsRepository(anchor),
-        noHolidays,
-      ),
-    });
+    const assistant = new AskAssistant(
+      model,
+      {
+        ...reads,
+        buckets: new BrokenBuckets(
+          new InMemoryBucketRepository(),
+          new InMemoryCycleRepository(),
+          new InMemorySettingsRepository(anchor),
+          noHolidays,
+        ),
+      },
+      new FakeProposalStore<ProposedChange>(),
+      new SequentialIdSource('proposal'),
+      clock,
+    );
 
     await expect(
-      assistant.ask({ question: 'How is the Reserve doing?' }),
+      assistant.ask(me, { question: 'How is the Reserve doing?' }),
     ).rejects.toBeInstanceOf(TypeError);
   });
 });
@@ -440,7 +519,9 @@ describe('AskAssistant — the wealth projection', () => {
       { text: 'Read.' },
     ]);
 
-    await assistant.ask({ question: 'What do the buckets hold in 30 years?' });
+    await assistant.ask(me, {
+      question: 'What do the buckets hold in 30 years?',
+    });
 
     const payload = payloadOf(resultsOf(model, 0)[0]);
     expect(payload['contributionsFromMonth']).toBeNull();
@@ -464,10 +545,305 @@ describe('AskAssistant — a tool result is data, never an instruction', () => {
       directive,
     );
 
-    const answer = await assistant.ask({ question: 'What is in October?' });
+    const answer = await assistant.ask(me, { question: 'What is in October?' });
 
     expect(resultsOf(model, 0)[0]?.content).toContain(directive);
     expect(answer.reads.map((read) => read.tool)).toEqual(['read_cycle']);
     expect(answer.message).toBe('Nothing changed.');
+  });
+});
+
+describe('AskAssistant — proposing a change it may not make', () => {
+  it('offers a change as a proposal and writes nothing at all', async () => {
+    const { assistant, cycles, buckets, templates } = wire([
+      {
+        toolCalls: [
+          call('propose_settle_entry', {
+            month: '2026-10',
+            entryId: 'Rent',
+            status: 'PAID',
+            actualAmountInCents: -761_000,
+          }),
+        ],
+      },
+      { text: 'Ready when you are.' },
+    ]);
+    const before = JSON.stringify([
+      await cycles.findByMonth(ref('2026-10')),
+      await buckets.findAll(),
+      await templates.findAll(),
+    ]);
+
+    const answer = await assistant.ask(me, {
+      question: 'I paid the rent.',
+    });
+
+    expect(answer.proposals).toHaveLength(1);
+    expect(answer.proposals[0]?.change).toEqual({
+      kind: 'SETTLE_ENTRY',
+      month: '2026-10',
+      entryId: 'Rent',
+      status: 'PAID',
+      actual: Money.fromCents(-761_000),
+    });
+    expect(
+      JSON.stringify([
+        await cycles.findByMonth(ref('2026-10')),
+        await buckets.findAll(),
+        await templates.findAll(),
+      ]),
+    ).toBe(before);
+  });
+
+  it('holds the proposal for the principal that asked, with what it was shown as', async () => {
+    const { assistant, proposals } = wire([
+      {
+        toolCalls: [
+          call('propose_contribution_override', {
+            bucketId: 'reserve',
+            month: '2026-10',
+            amountInCents: 50_000,
+          }),
+        ],
+      },
+      { text: 'Confirm and I will put it in.' },
+    ]);
+
+    const answer = await assistant.ask(me, {
+      question: 'Put R$ 500 in the Reserve this cycle.',
+    });
+
+    const [offer] = answer.proposals;
+    if (offer === undefined) throw new Error('Nothing was proposed.');
+
+    const stored = await proposals.load(offer.id);
+    expect(stored?.principal.equals(me)).toBe(true);
+    expect(stored?.summary).toBe(summarise(offer.change));
+    expect(stored?.appliedAt).toBeUndefined();
+    expect(offer.summary).toBe(
+      'Put R$ 500,00 into bucket reserve for the 2026-10 cycle, this once.',
+    );
+    expect(offer.proposedAt).toEqual(clock.now());
+  });
+
+  it('tells the model the change is waiting to be confirmed, not done', async () => {
+    const { assistant, model } = wire([
+      {
+        toolCalls: [call('propose_payday_anchor_change', { anchorDay: 7 })],
+      },
+      { text: 'Confirm it and the cycles will re-slice.' },
+    ]);
+
+    await assistant.ask(me, { question: 'Move my payday to the 7th.' });
+
+    const payload = payloadOf(resultsOf(model, 0)[0]);
+    expect(payload['awaitingConfirmation']).toBe(true);
+    expect(payload['proposalId']).toBe('proposal-1');
+    expect(payload['summary']).toContain('Move the payday anchor to day 7');
+  });
+
+  it.each<[string, string, JsonObject, ProposedChange]>([
+    [
+      'an ad-hoc entry',
+      'propose_add_entry',
+      {
+        month: '2026-10',
+        description: 'Dentist',
+        entryKind: 'VARIABLE',
+        dueDate: '2026-09-20',
+        amountInCents: -30_000,
+      },
+      {
+        kind: 'ADD_ENTRY',
+        month: '2026-10',
+        description: 'Dentist',
+        entryKind: 'VARIABLE',
+        dueDate: LocalDate.parse('2026-09-20'),
+        amount: Money.fromCents(-30_000),
+        isEstimate: false,
+      },
+    ],
+    [
+      'a purchase in instalments',
+      'propose_register_purchase',
+      {
+        cardId: 'inter',
+        description: 'Laptop',
+        purchasedOn: '2026-08-18',
+        amountInCents: -600_000,
+        installments: 10,
+      },
+      {
+        kind: 'REGISTER_PURCHASE',
+        cardId: 'inter',
+        description: 'Laptop',
+        purchasedOn: LocalDate.parse('2026-08-18'),
+        amount: Money.fromCents(-600_000),
+        installments: 10,
+      },
+    ],
+    [
+      'a recurring template',
+      'propose_recurring_template',
+      {
+        name: 'Health Plan',
+        direction: 'OUT',
+        dueDayOfMonth: 8,
+        amountInCents: -32_000,
+        startMonth: '2026-10',
+        isEstimate: true,
+      },
+      {
+        kind: 'CREATE_TEMPLATE',
+        name: 'Health Plan',
+        direction: 'OUT',
+        dueDayOfMonth: 8,
+        amount: Money.fromCents(-32_000),
+        startMonth: '2026-10',
+        endMonth: undefined,
+        isEstimate: true,
+      },
+    ],
+    [
+      'a recurring template that ends, starting in the current cycle',
+      'propose_recurring_template',
+      {
+        name: 'Consulting',
+        direction: 'IN',
+        dueDayOfMonth: 20,
+        amountInCents: 200_000,
+        endMonth: '2027-03',
+      },
+      {
+        kind: 'CREATE_TEMPLATE',
+        name: 'Consulting',
+        direction: 'IN',
+        dueDayOfMonth: 20,
+        amount: Money.fromCents(200_000),
+        startMonth: undefined,
+        endMonth: '2027-03',
+        isEstimate: false,
+      },
+    ],
+    [
+      'a template amount change',
+      'propose_template_amount_change',
+      {
+        templateId: 'salary',
+        fromMonth: '2026-11',
+        amountInCents: 1_800_000,
+        scope: 'THIS_AND_FUTURE',
+      },
+      {
+        kind: 'CHANGE_TEMPLATE_AMOUNT',
+        templateId: 'salary',
+        fromMonth: '2026-11',
+        amount: Money.fromCents(1_800_000),
+        scope: 'THIS_AND_FUTURE',
+      },
+    ],
+    [
+      'a payday anchor change',
+      'propose_payday_anchor_change',
+      { anchorDay: 7, shiftPolicy: 'FOLLOWING' },
+      { kind: 'CHANGE_PAYDAY_ANCHOR', anchorDay: 7, shiftPolicy: 'FOLLOWING' },
+    ],
+    [
+      'a goal bucket',
+      'propose_goal_bucket',
+      {
+        name: 'Apartment',
+        targetInCents: 15_000_000,
+        targetDate: '2031-03-05',
+        percentOfExpectedSurplus: 20,
+        priority: 2,
+      },
+      {
+        kind: 'CREATE_GOAL_BUCKET',
+        name: 'Apartment',
+        target: Money.fromCents(15_000_000),
+        targetDate: LocalDate.parse('2031-03-05'),
+        rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(20)),
+        priority: 2,
+      },
+    ],
+    [
+      'an ongoing bucket',
+      'propose_ongoing_bucket',
+      { name: 'Investments', fixedAmountInCents: 177_800, priority: 3 },
+      {
+        kind: 'CREATE_ONGOING_BUCKET',
+        name: 'Investments',
+        rule: Allocation.fixed(Money.fromCents(177_800)),
+        priority: 3,
+      },
+    ],
+    [
+      'an allocation rule change',
+      'propose_allocation_rule_change',
+      { bucketId: 'reserve', percentOfExpectedSurplus: 25 },
+      {
+        kind: 'CHANGE_ALLOCATION_RULE',
+        bucketId: 'reserve',
+        rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(25)),
+      },
+    ],
+  ])('proposes %s', async (_name, tool, args, expected) => {
+    const { assistant } = wire([
+      { toolCalls: [call(tool, args)] },
+      { text: 'Confirm it and I will.' },
+    ]);
+
+    const answer = await assistant.ask(me, { question: 'Do this for me.' });
+
+    expect(answer.proposals[0]?.change).toEqual(expected);
+  });
+
+  it('hands an argument it cannot read back to the model, storing nothing', async () => {
+    const { assistant, model, proposals } = wire([
+      { toolCalls: [call('propose_add_entry', { month: '2026-10' })] },
+      { text: 'What is it, and when is it due?' },
+    ]);
+
+    const answer = await assistant.ask(me, { question: 'Add a bill.' });
+
+    expect(answer.proposals).toHaveLength(0);
+    expect(proposals.stored).toHaveLength(0);
+    expect(resultsOf(model, 0)[0]?.isError).toBe(true);
+  });
+
+  it('will not propose a bucket with no rule at all', async () => {
+    const { assistant, proposals, model } = wire([
+      {
+        toolCalls: [
+          call('propose_ongoing_bucket', { name: 'Investments', priority: 3 }),
+        ],
+      },
+      { text: 'How much goes in each cycle?' },
+    ]);
+
+    await assistant.ask(me, { question: 'Start an investments bucket.' });
+
+    expect(proposals.stored).toHaveLength(0);
+    expect(resultsOf(model, 0)[0]?.isError).toBe(true);
+  });
+
+  it('will not propose a rule that is both a percentage and an amount', async () => {
+    const { assistant, proposals } = wire([
+      {
+        toolCalls: [
+          call('propose_allocation_rule_change', {
+            bucketId: 'reserve',
+            percentOfExpectedSurplus: 25,
+            fixedAmountInCents: 100_000,
+          }),
+        ],
+      },
+      { text: 'Which of the two did you mean?' },
+    ]);
+
+    await assistant.ask(me, { question: 'Change the Reserve rule.' });
+
+    expect(proposals.stored).toHaveLength(0);
   });
 });
