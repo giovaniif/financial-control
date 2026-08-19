@@ -6,7 +6,7 @@ import {
   PaydayAnchor,
   ShiftPolicy,
 } from '../../domain/budgeting/cycle-ref.js';
-import { Cycle } from '../../domain/budgeting/cycle.js';
+import { Cycle, Estimates } from '../../domain/budgeting/cycle.js';
 import { EntryKind, LedgerEntry } from '../../domain/budgeting/ledger-entry.js';
 import { Allocation, Bucket } from '../../domain/goals/bucket.js';
 import { noHolidays } from '../../domain/ports/holiday-calendar.js';
@@ -434,5 +434,130 @@ describe('BuildDashboard alerts', () => {
     });
 
     expect((await building({ cycles: [clean] }).build()).alerts).toEqual([]);
+  });
+});
+
+/**
+ * UC-4.4 — one control switches every figure in the app, so the read model
+ * has to offer both readings rather than the client assembling the second one
+ * from another endpoint. `Cycle` already computes the chain both ways.
+ */
+describe('BuildDashboard with estimates excluded', () => {
+  const confirmed = () =>
+    building({ cycles: [october()] }).build(undefined, Estimates.Excluded);
+
+  it('says which reading it was built in', async () => {
+    expect((await confirmed()).estimates).toBe(Estimates.Excluded);
+    expect((await building({ cycles: [october()] }).build()).estimates).toBe(
+      Estimates.Included,
+    );
+  });
+
+  // The same figure, pinned both ways: Contractor Costs is the R$ 1.500
+  // placeholder, and it is the whole of the difference.
+  it('leaves the unconfirmed placeholder out of what goes out', async () => {
+    const { headline } = await confirmed();
+
+    expect(headline.outgoingCents).toBe(761_000);
+    expect(headline.freeCents).toBe(505_600);
+    expect(headline.closingCents).toBe(505_600);
+  });
+
+  /**
+   * The third of UC-4.1's qualifying trio is the closing balance *without* the
+   * estimates, and it stays that in both readings — in confirmed-only it
+   * simply agrees with the closing balance beside it.
+   */
+  it('still reports the closing balance without estimates', async () => {
+    const { headline } = await confirmed();
+
+    expect(headline.closingWithoutEstimatesCents).toBe(505_600);
+  });
+
+  it('reads the lowest point off the confirmed run of the balance', async () => {
+    const { headline } = await confirmed();
+
+    expect(headline.lowestPointCents).toBe(505_600);
+    expect(headline.lowestPointDate).toBe('2026-09-28');
+  });
+
+  it('reports the KPI tiles in the same reading', async () => {
+    const { kpis } = await confirmed();
+
+    expect(kpis[0]?.amountCents).toBe(761_000);
+    expect(kpis[1]?.amountCents).toBe(1_039_000);
+  });
+
+  // Progress describes the current cycle rather than the chosen one, so it
+  // follows the toggle for the cycle it actually reports — which the view
+  // names, so the two are never confused.
+  it('measures spend against the planned outcome of the same reading', async () => {
+    const september = Cycle.open({
+      id: '2026-09',
+      ref: ref('2026-09'),
+      openingBalance: Money.zero(),
+      entries: [
+        entry('Rent', EntryKind.Fixed, '2026-08-10', -1_000),
+        entry('Contractor Costs', EntryKind.Fixed, '2026-08-15', -1_000, true),
+      ],
+    });
+
+    const included = await building({ cycles: [september] }).build();
+    const excluded = await building({ cycles: [september] }).build(
+      undefined,
+      Estimates.Excluded,
+    );
+
+    expect(included.progress.plannedOutCents).toBe(200_000);
+    expect(excluded.progress.plannedOutCents).toBe(100_000);
+  });
+
+  // The worklist counts the same entries the chain does, so a figure and the
+  // list it is made of can never disagree.
+  it('leaves an unconfirmed entry out of the upcoming list', async () => {
+    const { upcoming } = await confirmed();
+
+    expect(upcoming.map((u) => u.description)).toEqual([
+      'Salary',
+      'Rent',
+      '→ Reserve',
+    ]);
+  });
+
+  // A projected negative that only an estimate causes is not a confirmed
+  // negative, so the alert follows the reading its figures were taken in.
+  it('reads a projected negative balance in the same reading', async () => {
+    const broke = Cycle.open({
+      id: '2026-10',
+      ref: ref('2026-10'),
+      openingBalance: Money.zero(),
+      entries: [entry('Guess', EntryKind.Fixed, '2026-09-10', -5_000, true)],
+    });
+
+    const included = await building({ cycles: [broke] }).build();
+    const excluded = await building({ cycles: [broke] }).build(
+      undefined,
+      Estimates.Excluded,
+    );
+
+    expect(included.alerts.some((a) => a.title.includes('negative'))).toBe(
+      true,
+    );
+    expect(excluded.alerts.some((a) => a.title.includes('negative'))).toBe(
+      false,
+    );
+  });
+
+  /**
+   * The alert that exists to quantify an estimate is the one thing that must
+   * not follow the toggle: it is what tells the user the two readings differ
+   * at all, and it states both figures itself.
+   */
+  it('still quantifies an unconfirmed estimate both ways', async () => {
+    const alert = (await confirmed()).alerts.find((a) =>
+      a.title.includes('estimate'),
+    );
+
+    expect(alert?.body).toContain('with the estimate');
   });
 });

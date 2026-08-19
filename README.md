@@ -31,6 +31,28 @@ Both bind every interface, so from another machine on the same private network
 substitute this machine's hostname for `localhost`. The web app proxies `/api`
 to the API, so only the web port has to be reachable.
 
+## The assistant, and running it for free
+
+The first-run conversation and the assistant reach the model through one port,
+so which model answers is a wiring decision. By default it is the Claude API,
+and with no `ANTHROPIC_API_KEY` the app still runs — the conversation reports
+itself as switched off and every other figure stays readable.
+
+Set **`OLLAMA_MODEL`** to run the whole flow against a local model instead:
+free, unlimited, and it takes precedence over any key that is configured.
+
+```bash
+ollama serve                       # must be running; http://127.0.0.1:11434
+ollama pull qwen2.5:7b             # a capable tool-caller at this size
+OLLAMA_MODEL=qwen2.5:7b pnpm dev
+```
+
+Leave it unset and nothing changes, which is the point: the default path is
+never the test path. It exercises *our* behaviour — streaming, tool-call round
+trips, the confirmation step, the error paths — and nothing about whether the
+prompts are good. A 7B model's tool-calling is not Haiku's, in either
+direction, so prompt quality is still checked against the real model.
+
 ## Everyday commands
 
 ```bash

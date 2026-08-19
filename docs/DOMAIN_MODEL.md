@@ -330,7 +330,7 @@ Declared in the domain, implemented in infrastructure. The domain never imports 
 | `CycleRepository`, `RecurringTemplateRepository`, `CardRepository`, `BucketRepository`, `AccountRepository` | Prisma |
 | `Clock` | Real clock in production, fixed clock in tests. Nothing in the domain calls `new Date()` |
 | `HolidayCalendar` | Brazilian public holidays, for the payday resolution rule |
-| `LanguageModel` | The conversation of UC-1.5 and the assistant of UC-8. Declared in the domain's own vocabulary — a turn, the tools it may call, the result — so nothing above it knows Anthropic exists. Implemented in `infrastructure/anthropic/`, faked in tests, so no test needs a key or a network |
+| `LanguageModel` | The conversation of UC-1.5 and the assistant of UC-8. Declared in the domain's own vocabulary — a turn, the tools it may call, the result — so nothing above it knows Anthropic exists. Implemented in `infrastructure/anthropic/` and, for free local testing, `infrastructure/ollama/`; faked in tests, so no test needs a key or a network |
 
 `eslint-plugin-boundaries` confines `@anthropic-ai/sdk` to `infrastructure/anthropic/` exactly as it confines
 `@prisma/client` to `infrastructure/prisma/`. One adapter file knows the vendor; everything else knows the

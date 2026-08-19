@@ -74,6 +74,8 @@ export interface AlertView {
 export interface DashboardView {
   readonly today: string;
   readonly currentCycleMonth: string;
+  /** Which reading every figure below was taken in — UC-4.4. */
+  readonly estimates: Estimates;
   readonly headline: HeadlineView;
   readonly kpis: readonly KpiView[];
   readonly progress: CycleProgressView;
@@ -115,8 +117,15 @@ export class BuildDashboard {
    * The worklist and the alerts stay anchored to today either way. They are
    * things to act on, not a view of the chosen cycle, and looking back at a
    * settled cycle must not hide what is overdue now.
+   *
+   * `estimates` is the global toggle of UC-4.4, and it reaches every figure
+   * here — the chain already computes both readings, so there is no second
+   * code path and nothing for a client to reconcile.
    */
-  async build(month?: string): Promise<DashboardView> {
+  async build(
+    month?: string,
+    estimates: Estimates = Estimates.Included,
+  ): Promise<DashboardView> {
     const today = LocalDate.fromInstant(this.clock.now());
     const anchor = await this.settings.load();
     const current = CycleRef.forMonth(
@@ -150,17 +159,23 @@ export class BuildDashboard {
       // Reported alongside the chosen cycle so the UI can still say which one
       // is current, however far the user has navigated from it.
       currentCycleMonth: currentRef.month,
-      headline: headlineOf(chosenRef, chosen),
-      kpis: kpisOf(chosen),
-      progress: progressOf(currentRef, currentCycle, today),
-      upcoming: await this.upcomingFrom(window.slice(LOOK_BACK), today),
-      alerts: await this.alertsFrom(window, buckets, today),
+      estimates,
+      headline: headlineOf(chosenRef, chosen, estimates),
+      kpis: kpisOf(chosen, estimates),
+      progress: progressOf(currentRef, currentCycle, today, estimates),
+      upcoming: await this.upcomingFrom(
+        window.slice(LOOK_BACK),
+        today,
+        estimates,
+      ),
+      alerts: await this.alertsFrom(window, buckets, today, estimates),
     };
   }
 
   private async upcomingFrom(
     window: readonly CycleRef[],
     today: LocalDate,
+    estimates: Estimates,
   ): Promise<UpcomingEntryView[]> {
     const rows: UpcomingEntryView[] = [];
 
@@ -171,7 +186,12 @@ export class BuildDashboard {
       }
 
       for (const entry of cycle.entries) {
-        if (entry.isSettled) {
+        // The worklist counts the same entries the chain does, so a figure
+        // and the list it is made of can never disagree.
+        if (
+          entry.isSettled ||
+          (entry.isEstimate && estimates === Estimates.Excluded)
+        ) {
           continue;
         }
         const daysLate = entry.dueDate.daysUntil(today);
@@ -202,6 +222,7 @@ export class BuildDashboard {
     window: readonly CycleRef[],
     buckets: readonly Bucket[],
     today: LocalDate,
+    estimates: Estimates,
   ): Promise<AlertView[]> {
     const alerts: AlertView[] = [];
 
@@ -223,10 +244,10 @@ export class BuildDashboard {
         }
       }
 
-      const negativeOn = cycle.firstNegativeDate();
+      const negativeOn = cycle.firstNegativeDate(estimates);
       if (negativeOn !== undefined) {
         const culprit = cycle
-          .runningBalance()
+          .runningBalance(estimates)
           .find((row) => row.balance.isNegative());
         alerts.push({
           severity: AlertSeverity.Critical,
@@ -235,6 +256,8 @@ export class BuildDashboard {
         });
       }
 
+      // The one figure that does not follow the toggle: it is what says the
+      // two readings differ at all, and UC-4.7 asks for both numbers in it.
       const withEstimates = cycle.closingBalance(Estimates.Included);
       const confirmed = cycle.closingBalance(Estimates.Excluded);
       if (!withEstimates.equals(confirmed)) {
@@ -269,9 +292,13 @@ export class BuildDashboard {
   }
 }
 
-function headlineOf(ref: CycleRef, cycle: Cycle | undefined): HeadlineView {
-  const chain = cycle?.chain(Estimates.Included);
-  const low = cycle?.lowWaterMark();
+function headlineOf(
+  ref: CycleRef,
+  cycle: Cycle | undefined,
+  estimates: Estimates,
+): HeadlineView {
+  const chain = cycle?.chain(estimates);
+  const low = cycle?.lowWaterMark(estimates);
 
   return {
     cycleMonth: ref.month,
@@ -288,9 +315,9 @@ function headlineOf(ref: CycleRef, cycle: Cycle | undefined): HeadlineView {
   };
 }
 
-function kpisOf(cycle: Cycle | undefined): KpiView[] {
-  const chain = cycle?.chain(Estimates.Included);
-  const low = cycle?.lowWaterMark();
+function kpisOf(cycle: Cycle | undefined, estimates: Estimates): KpiView[] {
+  const chain = cycle?.chain(estimates);
+  const low = cycle?.lowWaterMark(estimates);
 
   return [
     {
@@ -323,6 +350,7 @@ function progressOf(
   ref: CycleRef,
   cycle: Cycle | undefined,
   today: LocalDate,
+  estimates: Estimates,
 ): CycleProgressView {
   const length = ref.range.days;
   const dayOfCycle = Math.min(
@@ -330,7 +358,7 @@ function progressOf(
     Math.max(1, ref.start.daysUntil(today) + 1),
   );
 
-  const planned = cycle?.chain(Estimates.Included).totalOutcome ?? Money.zero();
+  const planned = cycle?.chain(estimates).totalOutcome ?? Money.zero();
   const spent = Money.sum(
     (cycle?.entries ?? [])
       .filter((entry) => entry.isSettled && entry.realised.isNegative())
