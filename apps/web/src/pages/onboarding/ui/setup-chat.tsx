@@ -1,47 +1,46 @@
-import type {
-  EstablishedRecordResponse,
-  SetupAppliedResponse,
-  SetupTurnResponse,
-} from '@fin/contracts';
+import type { SetupAppliedResponse, SetupTurnResponse } from '@fin/contracts';
 import { useId, useState, type SyntheticEvent } from 'react';
 import { Link } from 'react-router';
 
 import { Badge, Button } from '@/shared/ui';
 
 import { useApplySetup, useSetupTurn } from '../api/use-setup-conversation.js';
-import { describeProgress, SECTION_LABELS } from '../model/sections.js';
-import { withLocalDates } from '../model/record-summary.js';
+import { describeProgress } from '../model/sections.js';
+import {
+  applyTurn,
+  draftSections,
+  OPENING,
+  type Entry,
+} from '../model/transcript.js';
 
-type Entry =
-  | { kind: 'assistant' | 'user' | 'correction'; text: string }
-  | ({ kind: 'record' } & EstablishedRecordResponse);
-
-/**
- * The server cannot say the first line — it answers a message, and there is
- * none yet — so the conversation opens on the section that always comes first.
- */
-const OPENING: Entry = {
-  kind: 'assistant',
-  text: "Let's start with the payday cycle. Which day of the month are you paid, and when that day falls on a weekend or a holiday, should the money land before it or after?",
-};
+import { DraftReview } from './draft-review.js';
+import { RecordLine } from './record-line.js';
 
 /**
  * UC-1.5 — setup as a conversation: one question at a time, records shown back
- * as they are established, and nothing written until the whole draft is
- * applied in the final step.
+ * as they are established and correctable where they sit, and nothing written
+ * until the whole draft is read through and applied in the final step.
  */
 export function SetupChat() {
   const answerId = useId();
   const [entries, setEntries] = useState<Entry[]>([OPENING]);
+  const [latest, setLatest] = useState<SetupTurnResponse>();
   const [answer, setAnswer] = useState('');
   const turn = useSetupTurn();
   const apply = useApplySetup();
 
-  const conversationId = turn.data?.conversationId;
-  const isComplete = turn.data?.isComplete ?? false;
+  // Every route the draft can change through answers with a turn, so where it
+  // now stands is whatever came back last — a conversational reply, an inline
+  // edit, or a drop that left a section unanswered again.
+  const record = (response: SetupTurnResponse) => {
+    setLatest(response);
+    setEntries(applyTurn(response));
+  };
+
+  const conversationId = latest?.conversationId;
+  const isComplete = latest?.isComplete ?? false;
   // Before the first turn there is nothing to ask about but the anchor.
-  const nextSection =
-    turn.data === undefined ? 'ANCHOR' : turn.data.nextSection;
+  const nextSection = latest === undefined ? 'ANCHOR' : latest.nextSection;
 
   const send = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -54,11 +53,7 @@ export function SetupChat() {
     setAnswer('');
     turn.mutate(
       conversationId === undefined ? { message } : { message, conversationId },
-      {
-        onSuccess: (response) => {
-          setEntries(append(response));
-        },
-      },
+      { onSuccess: record },
     );
   };
 
@@ -82,7 +77,15 @@ export function SetupChat() {
         <ol className="flex flex-col gap-3">
           {entries.map((entry, index) => (
             <li key={index}>
-              <Line entry={entry} />
+              {entry.kind === 'record' ? (
+                <RecordLine
+                  record={entry}
+                  conversationId={conversationId}
+                  onTurn={record}
+                />
+              ) : (
+                <Line entry={entry} />
+              )}
             </li>
           ))}
         </ol>
@@ -107,7 +110,8 @@ export function SetupChat() {
       )}
 
       {isComplete ? (
-        <Ready
+        <DraftReview
+          sections={draftSections(entries)}
           disabled={apply.isPending || conversationId === undefined}
           onCreate={() => {
             if (conversationId !== undefined) {
@@ -144,39 +148,7 @@ export function SetupChat() {
   );
 }
 
-/**
- * Established records first, then whatever was refused, then what to say next
- * — the order the turn happened in, so a correction reads as the reason for
- * the question that follows it.
- */
-function append(response: SetupTurnResponse) {
-  return (current: Entry[]): Entry[] => [
-    ...current,
-    ...response.established.map((record) => ({
-      kind: 'record' as const,
-      ...record,
-    })),
-    ...response.corrections.map((text) => ({
-      kind: 'correction' as const,
-      text,
-    })),
-    { kind: 'assistant' as const, text: response.message },
-  ];
-}
-
-function Line({ entry }: { entry: Entry }) {
-  if (entry.kind === 'record') {
-    return (
-      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-green-50 px-3 py-2 text-sm">
-        <Badge tone="positive">Recorded</Badge>
-        <span className="text-xs text-zinc-500">
-          {SECTION_LABELS[entry.section]}
-        </span>
-        <span className="text-zinc-900">{withLocalDates(entry.summary)}</span>
-      </div>
-    );
-  }
-
+function Line({ entry }: { entry: Exclude<Entry, { kind: 'record' }> }) {
   if (entry.kind === 'correction') {
     return (
       <div className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm">
@@ -200,36 +172,6 @@ function Line({ entry }: { entry: Entry }) {
       >
         {entry.text}
       </span>
-    </div>
-  );
-}
-
-function Ready({
-  disabled,
-  onCreate,
-  error,
-}: {
-  disabled: boolean;
-  onCreate: () => void;
-  error: string | undefined;
-}) {
-  return (
-    <div className="flex flex-col gap-3 rounded-xl border border-zinc-900 p-4">
-      <h2 className="font-semibold">Every section is answered</h2>
-      <p className="text-sm text-zinc-600">
-        Nothing has been written yet. Creating applies the whole draft at once,
-        and everything in it stays editable afterwards.
-      </p>
-      <div>
-        <Button variant="primary" disabled={disabled} onClick={onCreate}>
-          Create everything
-        </Button>
-      </div>
-      {error !== undefined && (
-        <p role="alert" className="text-sm text-red-700">
-          {error}
-        </p>
-      )}
     </div>
   );
 }
