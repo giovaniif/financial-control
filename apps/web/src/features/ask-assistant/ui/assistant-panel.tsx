@@ -159,23 +159,23 @@ export function AssistantPanel() {
 
   return (
     <Card className="flex h-full min-h-0 flex-col gap-3">
-      <CardTitle>Ask</CardTitle>
+      <CardTitle>Perguntar</CardTitle>
       <p className="text-sm text-zinc-600">
-        Ask about any figure, or say what changed. Every change is proposed
-        first — nothing is written until you confirm it.
+        Pergunte sobre qualquer número, ou diga o que mudou. Toda mudança é
+        proposta antes — nada é escrito até você confirmar.
       </p>
 
       {/* The transcript scrolls inside the rail so the composer below it is
           always reachable, and streaming text never moves the layout. */}
       <div
         role="log"
-        aria-label="Assistant conversation"
+        aria-label="Conversa com o assistente"
         className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto"
       >
         {conversation.entries.length === 0 && streaming === null && (
           <p className="text-sm text-zinc-500">
-            Nothing asked yet. Try{' '}
-            <em>&ldquo;why is September lower than August?&rdquo;</em>
+            Nada perguntado ainda. Tente{' '}
+            <em>&ldquo;por que setembro está mais baixo que agosto?&rdquo;</em>
           </p>
         )}
 
@@ -209,7 +209,7 @@ export function AssistantPanel() {
           >
             <span className="text-xs text-zinc-500">Claude</span>
             <p className="max-w-prose rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-900">
-              {streaming.text === '' ? 'Reading your figures…' : streaming.text}
+              {streaming.text === '' ? 'Lendo seus números…' : streaming.text}
             </p>
             <Reads reads={streaming.reads} />
           </div>
@@ -218,14 +218,14 @@ export function AssistantPanel() {
 
       {failure !== null && failure.status !== SWITCHED_OFF && (
         <p role="alert" className="text-sm text-red-700">
-          The assistant could not answer: {failure.message}
+          O assistente não conseguiu responder: {failure.message}
         </p>
       )}
 
       {isSwitchedOff ? (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          The assistant is switched off — no API key is configured. Every figure
-          on this screen carries on working without it.
+          O assistente está desligado — nenhuma chave de API está configurada.
+          Todos os números desta tela continuam funcionando sem ele.
         </p>
       ) : (
         <form onSubmit={send} className="flex shrink-0 flex-col gap-2">
@@ -233,7 +233,7 @@ export function AssistantPanel() {
             htmlFor={questionId}
             className="text-xs font-medium text-zinc-600"
           >
-            Ask about your money
+            Pergunte sobre o seu dinheiro
           </label>
           <textarea
             id={questionId}
@@ -243,7 +243,7 @@ export function AssistantPanel() {
           />
           <div>
             <Button type="submit" variant="primary" disabled={ask.isPending}>
-              Ask
+              Perguntar
             </Button>
           </div>
         </form>
@@ -264,7 +264,7 @@ function Line({
   if (entry.kind === 'question') {
     return (
       <div className="flex flex-col items-end gap-1">
-        <span className="text-xs text-zinc-500">You</span>
+        <span className="text-xs text-zinc-500">Você</span>
         <span className="max-w-prose rounded-lg bg-zinc-900 px-3 py-2 text-sm text-zinc-50">
           {entry.text}
         </span>
@@ -283,13 +283,13 @@ function Line({
           not failures the panel has to dress as errors. */}
       {entry.wasRefused && (
         <p className="text-xs text-zinc-500">
-          The assistant declined to answer that one.
+          O assistente recusou responder a essa pergunta.
         </p>
       )}
       {entry.hitReadLimit && (
         <p className="text-xs text-zinc-500">
-          It stopped reading before it ran out of the app to read, so this
-          answer covers only what it had.
+          Ele parou de ler antes de esgotar o que havia para ler no app, então
+          esta resposta cobre só o que conseguiu ver.
         </p>
       )}
 
@@ -318,7 +318,7 @@ function Reads({ reads }: { reads: readonly AssistantReadResponse[] }) {
       {reads.map((read, index) => (
         <li key={index} className="flex items-center gap-1">
           <Badge tone={read.failure === null ? 'neutral' : 'warning'}>
-            Read
+            Leitura
           </Badge>
           <span className="font-mono text-xs text-zinc-500">{read.tool}</span>
           {read.failure !== null && (

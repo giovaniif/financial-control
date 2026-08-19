@@ -176,10 +176,10 @@ export function formOf(parsed: ParsedRecord): EditorForm {
   }
 }
 
-const NAME_REQUIRED = 'A name is required.';
-const NOT_MONEY = 'Write an amount the way the app does — 1.234,56.';
-const NOT_A_DAY = 'A day of the month is a whole number.';
-const NOT_A_SHARE = 'Write a share as a number — 20, or 33,33.';
+const NAME_REQUIRED = 'Um nome é obrigatório.';
+const NOT_MONEY = 'Escreva um valor do jeito que o app usa — 1.234,56.';
+const NOT_A_DAY = 'Um dia do mês é um número inteiro.';
+const NOT_A_SHARE = 'Escreva um percentual como número — 20, ou 33,33.';
 
 export interface Correction {
   request: SetupRecordCorrectionRequest;

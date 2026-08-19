@@ -12,8 +12,8 @@ const DEFAULT_ANCHOR: AnchorChangeRequest = {
 };
 
 const policies: { value: ShiftPolicy; label: string }[] = [
-  { value: 'PRECEDING', label: 'the preceding business day' },
-  { value: 'FOLLOWING', label: 'the following business day' },
+  { value: 'PRECEDING', label: 'o dia útil anterior' },
+  { value: 'FOLLOWING', label: 'o dia útil seguinte' },
 ];
 
 /** How many resolved cycles are enough to make the pattern obvious. */
@@ -47,23 +47,25 @@ export function AnchorSection() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 text-zinc-600">
         <p>
-          This app does not think in calendar months. It thinks in{' '}
-          <strong className="font-medium text-zinc-900">payday cycles</strong>:
-          one salary date to the day before the next. That is how the money is
-          actually experienced — an amount arrives, and it has to cover
-          everything until the next amount arrives.
+          Este app não pensa em meses do calendário. Ele pensa em{' '}
+          <strong className="font-medium text-zinc-900">
+            ciclos de pagamento
+          </strong>
+          : de uma data de salário até o dia antes da próxima. É assim que o
+          dinheiro é realmente vivido — um valor chega, e ele precisa cobrir
+          tudo até o próximo valor chegar.
         </p>
         <p>
-          A cycle is named for the month it is{' '}
-          <strong className="font-medium text-zinc-900">spent</strong> in, so it
-          opens on the <em>previous</em> month&rsquo;s payday.
+          Um ciclo é nomeado pelo mês em que é{' '}
+          <strong className="font-medium text-zinc-900">gasto</strong>, então
+          ele começa no pagamento do mês <em>anterior</em>.
         </p>
       </div>
 
       <div className="flex flex-wrap items-end gap-4">
         <div className="w-32">
           <Field
-            label="Salary lands on day"
+            label="Salário cai no dia"
             type="number"
             min={1}
             max={31}
@@ -75,7 +77,7 @@ export function AnchorSection() {
         </div>
         <fieldset className="flex flex-col gap-1">
           <legend className="mb-1 text-xs font-medium text-zinc-500">
-            When that falls on a weekend or holiday, pay moves to
+            Quando isso cai num fim de semana ou feriado, o pagamento vai para
           </legend>
           {policies.map((policy) => (
             <label
@@ -99,7 +101,7 @@ export function AnchorSection() {
 
       <div className="flex flex-col gap-2">
         <p className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
-          Which gives you these cycles
+          O que resulta nestes ciclos
         </p>
         {isPending ? (
           <Skeleton className="h-24 w-full" />
@@ -113,12 +115,12 @@ export function AnchorSection() {
                 </span>
                 {cycle.shifted && (
                   <span className="text-xs text-amber-700">
-                    payday moved off a closed day
+                    pagamento movido para fora de um dia fechado
                   </span>
                 )}
                 {cycle.clamped && (
                   <span className="text-xs text-amber-700">
-                    clamped to the month&rsquo;s last day
+                    ajustado para o último dia do mês
                   </span>
                 )}
               </li>
@@ -128,8 +130,8 @@ export function AnchorSection() {
         {/* Day 30 would miss the 31st of the long months, so the last-day
             payday is expressed as 31 and clamped per month. */}
         <p className="text-xs text-zinc-500">
-          Paid on the last day of the month? Use 31 — it clamps to each
-          month&rsquo;s length, so February resolves correctly too.
+          Pago no último dia do mês? Use 31 — ele se ajusta ao tamanho de cada
+          mês, então fevereiro também é resolvido corretamente.
         </p>
       </div>
 
@@ -141,10 +143,10 @@ export function AnchorSection() {
             save.mutate(anchor);
           }}
         >
-          Save the payday anchor
+          Salvar o dia do pagamento
         </Button>
         {save.isSuccess && (
-          <span className="text-sm text-green-700">Saved.</span>
+          <span className="text-sm text-green-700">Salvo.</span>
         )}
         {save.isError && (
           <span role="alert" className="text-sm text-red-700">

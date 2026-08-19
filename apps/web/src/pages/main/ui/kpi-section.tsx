@@ -6,7 +6,7 @@ import { StatTile } from '@/shared/ui';
 export function KpiSection({ kpis }: { kpis: KpiResponse[] }) {
   return (
     <section
-      aria-label="Headline figures"
+      aria-label="Figuras principais"
       className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4"
     >
       {kpis.map((kpi) => (

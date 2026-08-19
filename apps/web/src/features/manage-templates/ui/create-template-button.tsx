@@ -23,7 +23,7 @@ interface Props {
 /** UC-2.1, UC-2.2 — the engine that fills every future cycle. */
 export function CreateTemplateButton({
   currentMonth,
-  label = 'Add a bill',
+  label = 'Adicionar conta a pagar',
   direction: fixedDirection,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -48,13 +48,13 @@ export function CreateTemplateButton({
     const found: Record<string, string> = {};
 
     if (name.trim() === '') {
-      found['name'] = 'Give it a name.';
+      found['name'] = 'Informe um nome.';
     }
     if (cents === null) {
-      found['amount'] = 'Enter an amount like 1.234,56.';
+      found['amount'] = 'Digite um valor como 1.234,56.';
     }
     if (!Number.isInteger(day) || day < 1 || day > 31) {
-      found['dueDay'] = 'A day between 1 and 31.';
+      found['dueDay'] = 'Um dia entre 1 e 31.';
     }
 
     setErrors(found);
@@ -97,7 +97,7 @@ export function CreateTemplateButton({
       >
         <form onSubmit={submit} className="flex flex-col gap-3">
           <Field
-            label="Name"
+            label="Nome"
             value={name}
             onChange={(event) => {
               setName(event.target.value);
@@ -108,7 +108,7 @@ export function CreateTemplateButton({
             <DirectionSelect value={direction} onChange={setDirection} />
           )}
           <Field
-            label="Amount"
+            label="Valor"
             value={amount}
             placeholder="1.234,56"
             onChange={(event) => {
@@ -119,13 +119,13 @@ export function CreateTemplateButton({
               : { error: errors['amount'] })}
           />
           <Field
-            label="Due day of month"
+            label="Dia de vencimento"
             type="number"
             value={dueDay}
             onChange={(event) => {
               setDueDay(event.target.value);
             }}
-            hint="A day past the end of a short month falls on its last day"
+            hint="Um dia além do fim de um mês curto cai no último dia dele"
             {...(errors['dueDay'] === undefined
               ? {}
               : { error: errors['dueDay'] })}
@@ -138,10 +138,10 @@ export function CreateTemplateButton({
                 setIsEstimate(event.target.checked);
               }}
             />
-            Unconfirmed estimate
+            Estimativa não confirmada
           </label>
           <Button variant="primary" type="submit" disabled={create.isPending}>
-            Create
+            Criar
           </Button>
         </form>
       </Dialog>

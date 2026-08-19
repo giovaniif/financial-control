@@ -31,8 +31,8 @@ export function WealthSection({ month }: { month: string | undefined }) {
     <>
       <NetWorthBars data={data} />
 
-      <Card label="Per bucket" className="flex flex-col gap-3">
-        <CardTitle>What that rate lands on, per bucket</CardTitle>
+      <Card label="Por caixinha" className="flex flex-col gap-3">
+        <CardTitle>Onde esse ritmo chega, por caixinha</CardTitle>
         {data.buckets.map((projection) => (
           <BucketSentence
             key={projection.bucketId}

@@ -16,30 +16,28 @@ describe('explainApplyFailure', () => {
     );
 
     expect(reason).toContain('The cycle is closed.');
-    expect(reason).toContain('refused');
+    expect(reason).toContain('recusou');
   });
 
   it('reads a 404 as the proposal no longer being on the server', () => {
     expect(
       explainApplyFailure(new ApiError(404, '/x', 'No such proposal.')),
-    ).toContain('no longer');
+    ).toContain('não está mais');
   });
 
   it('reads a 503 as the assistant being switched off', () => {
-    expect(explainApplyFailure(new ApiError(503, '/x'))).toContain(
-      'switched off',
-    );
+    expect(explainApplyFailure(new ApiError(503, '/x'))).toContain('desligado');
   });
 
   it('reads a 502 as the assistant having failed, not the change', () => {
     expect(explainApplyFailure(new ApiError(502, '/x'))).toContain(
-      'could not be reached',
+      'Não foi possível falar',
     );
   });
 
   it('says nothing was written when the request never arrived', () => {
     expect(explainApplyFailure(new Error('Failed to fetch'))).toContain(
-      'Nothing was written',
+      'Nada foi escrito',
     );
   });
 });

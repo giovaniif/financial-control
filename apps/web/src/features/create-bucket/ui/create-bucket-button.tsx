@@ -26,11 +26,11 @@ export function CreateBucketButton({ existingCount }: Props) {
           setOpen(true);
         }}
       >
-        Add a bucket
+        Adicionar caixinha
       </Button>
       <Dialog
         open={open}
-        title="Add a bucket"
+        title="Adicionar caixinha"
         onClose={() => {
           setOpen(false);
         }}
@@ -65,23 +65,23 @@ function Form({ priority, onDone }: { priority: number; onDone: () => void }) {
     const percentValue = Number(percent);
 
     if (name.trim() === '') {
-      found['name'] = 'Name the bucket.';
+      found['name'] = 'Dê um nome à caixinha.';
     }
 
     // A goal must have both, or "percent complete" is a question about
     // nothing — see UC-6.1.
     if (mode === 'GOAL' && targetCents === null) {
-      found['target'] = 'A goal needs a target.';
+      found['target'] = 'Uma meta precisa de um valor do objetivo.';
     }
     if (mode === 'GOAL' && targetDate === '') {
-      found['targetDate'] = 'A goal needs the date you want it by.';
+      found['targetDate'] = 'Uma meta precisa de uma data para ser alcançada.';
     }
 
     if (ruleKind === 'PERCENT' && !(percentValue > 0 && percentValue <= 100)) {
-      found['percent'] = 'A share between 0 and 100.';
+      found['percent'] = 'Um percentual entre 0 e 100.';
     }
     if (ruleKind === 'FIXED' && amountCents === null) {
-      found['amount'] = 'Enter an amount like 1.234,56.';
+      found['amount'] = 'Informe um valor como 1.234,56.';
     }
 
     setErrors(found);
@@ -113,7 +113,7 @@ function Form({ priority, onDone }: { priority: number; onDone: () => void }) {
     <form onSubmit={submit} className="flex flex-col gap-3">
       <fieldset className="flex flex-col gap-1">
         <legend className="mb-1 text-xs font-medium text-zinc-600">
-          What kind of bucket is it?
+          Que tipo de caixinha é essa?
         </legend>
         <label className="flex items-start gap-2 text-sm">
           <input
@@ -126,8 +126,8 @@ function Form({ priority, onDone }: { priority: number; onDone: () => void }) {
             }}
           />
           <span>
-            <strong className="font-medium">Goal</strong> — a target amount by a
-            target date
+            <strong className="font-medium">Meta</strong> — um valor e uma data
+            para alcançar
           </span>
         </label>
         <label className="flex items-start gap-2 text-sm">
@@ -141,14 +141,14 @@ function Form({ priority, onDone }: { priority: number; onDone: () => void }) {
             }}
           />
           <span>
-            <strong className="font-medium">Ongoing</strong> — a per-cycle
-            amount with no finish line
+            <strong className="font-medium">Contínua</strong> — um valor por
+            ciclo sem fim
           </span>
         </label>
       </fieldset>
 
       <Field
-        label="Name"
+        label="Nome"
         value={name}
         onChange={(event) => {
           setName(event.target.value);
@@ -159,7 +159,7 @@ function Form({ priority, onDone }: { priority: number; onDone: () => void }) {
       {mode === 'GOAL' && (
         <div className="grid grid-cols-2 gap-3">
           <Field
-            label="Target"
+            label="Valor do objetivo"
             value={target}
             placeholder="150.000,00"
             onChange={(event) => {
@@ -170,7 +170,7 @@ function Form({ priority, onDone }: { priority: number; onDone: () => void }) {
               : { error: errors['target'] })}
           />
           <Field
-            label="Target date"
+            label="Data do objetivo"
             type="date"
             value={targetDate}
             onChange={(event) => {
@@ -185,7 +185,7 @@ function Form({ priority, onDone }: { priority: number; onDone: () => void }) {
 
       <fieldset className="flex flex-col gap-1">
         <legend className="mb-1 text-xs font-medium text-zinc-600">
-          How much goes in each cycle?
+          Quanto entra em cada ciclo?
         </legend>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -196,7 +196,7 @@ function Form({ priority, onDone }: { priority: number; onDone: () => void }) {
               setRuleKind('PERCENT');
             }}
           />
-          A share of Expected Surplus
+          Um percentual da Sobra Esperada
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -207,13 +207,13 @@ function Form({ priority, onDone }: { priority: number; onDone: () => void }) {
               setRuleKind('FIXED');
             }}
           />
-          A fixed amount
+          Um valor fixo
         </label>
       </fieldset>
 
       {ruleKind === 'PERCENT' ? (
         <Field
-          label="Percent of Expected Surplus"
+          label="Percentual da Sobra Esperada"
           type="number"
           value={percent}
           onChange={(event) => {
@@ -225,7 +225,7 @@ function Form({ priority, onDone }: { priority: number; onDone: () => void }) {
         />
       ) : (
         <Field
-          label="Amount per cycle"
+          label="Valor por ciclo"
           value={amount}
           placeholder="1.778,00"
           onChange={(event) => {
@@ -238,20 +238,17 @@ function Form({ priority, onDone }: { priority: number; onDone: () => void }) {
       )}
 
       <p className="text-xs text-zinc-500">
-        Funds {ordinal(priority)} when Expected Surplus does not cover every
-        rule.
+        Financia em {ordinal(priority)} lugar quando a Sobra Esperada não cobre
+        todas as regras.
       </p>
 
       <Button variant="primary" type="submit" disabled={create.isPending}>
-        Add
+        Adicionar
       </Button>
     </form>
   );
 }
 
 function ordinal(value: number): string {
-  const suffixes = ['th', 'st', 'nd', 'rd'];
-  const remainder = value % 100;
-
-  return `${String(value)}${suffixes[(remainder - 20) % 10] ?? suffixes[remainder] ?? suffixes[0] ?? 'th'}`;
+  return `${String(value)}º`;
 }

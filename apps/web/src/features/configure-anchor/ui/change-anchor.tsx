@@ -15,8 +15,8 @@ interface Props {
 }
 
 const policies = {
-  'The preceding business day': 'PRECEDING',
-  'The following business day': 'FOLLOWING',
+  'O dia útil anterior': 'PRECEDING',
+  'O dia útil seguinte': 'FOLLOWING',
 } as const;
 
 type PolicyLabel = keyof typeof policies;
@@ -32,11 +32,11 @@ export function ChangeAnchor({ anchorDay, shiftPolicy }: Props) {
           setOpen(true);
         }}
       >
-        Change the anchor
+        Alterar o dia do pagamento
       </Button>
       <Dialog
         open={open}
-        title="Payday anchor"
+        title="Dia do pagamento"
         onClose={() => {
           setOpen(false);
         }}
@@ -70,27 +70,27 @@ function Form({
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-zinc-500">
-        Changing the anchor re-slices every open cycle. Closed cycles are never
-        re-sliced.
+        Alterar o dia do pagamento redefine os limites de todos os ciclos em
+        aberto. Os ciclos fechados nunca têm seus limites redefinidos.
       </p>
 
       <Field
-        label="Day of month"
+        label="Dia do mês"
         type="number"
         value={day}
         onChange={(event) => {
           setDay(event.target.value);
         }}
-        hint="A day past the end of a short month falls on its last day"
+        hint="Um dia além do fim de um mês curto cai no último dia dele"
       />
 
       <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600">
-        When it lands on a weekend or holiday
+        Quando cai num fim de semana ou feriado
         <select
           value={
             policy === 'PRECEDING'
-              ? 'The preceding business day'
-              : 'The following business day'
+              ? 'O dia útil anterior'
+              : 'O dia útil seguinte'
           }
           onChange={(event) => {
             setPolicy(policies[event.target.value as PolicyLabel]);
@@ -110,15 +110,14 @@ function Form({
           preview.mutate(proposal);
         }}
       >
-        Preview
+        Pré-visualizar
       </Button>
 
       {preview.data !== undefined && (
         <div className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 text-xs">
           {/* What the change would do lands as it appears, not silently. */}
           <span role="alert">
-            {preview.data.totalEntriesMoving} entries would move out of their
-            cycle.
+            {preview.data.totalEntriesMoving} lançamentos mudariam de ciclo.
           </span>
           <ul className="flex flex-col gap-0.5 text-zinc-500">
             {preview.data.shifts.map((shift) => (
@@ -129,8 +128,8 @@ function Form({
           </ul>
           {blocked && (
             <span role="alert" className="text-red-700">
-              {preview.data.orphanedEntries} entries would fall outside every
-              open cycle. Move or settle them first.
+              {preview.data.orphanedEntries} lançamentos ficariam fora de todos
+              os ciclos em aberto. Mova ou dê baixa neles primeiro.
             </span>
           )}
         </div>
@@ -153,13 +152,13 @@ function Form({
               setError(
                 failure instanceof ApiError
                   ? failure.message
-                  : 'The change could not be applied.',
+                  : 'Não foi possível aplicar a mudança.',
               );
             },
           });
         }}
       >
-        Apply the change
+        Aplicar a mudança
       </Button>
     </div>
   );

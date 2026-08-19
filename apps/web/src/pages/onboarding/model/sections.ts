@@ -12,11 +12,11 @@ export const SECTION_ORDER: readonly SetupSection[] = [
 ];
 
 export const SECTION_LABELS: Record<SetupSection, string> = {
-  ANCHOR: 'The payday cycle',
-  ACCOUNTS: 'Accounts',
-  SALARY: 'Salary',
-  FIXED_BILLS: 'Fixed bills',
-  VARIABLE_BILLS: 'Variable bills',
-  CARDS: 'Credit cards',
-  BUCKETS: 'Savings buckets',
+  ANCHOR: 'O ciclo de pagamento',
+  ACCOUNTS: 'Contas',
+  SALARY: 'Salário',
+  FIXED_BILLS: 'Contas fixas',
+  VARIABLE_BILLS: 'Contas variáveis',
+  CARDS: 'Cartões de crédito',
+  BUCKETS: 'Caixinhas',
 };

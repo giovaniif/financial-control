@@ -155,7 +155,9 @@ describe('SavingsPage', () => {
     stub({ '/api/buckets': [] });
     renderPage();
 
-    expect(await screen.findByText('No buckets yet')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Nenhuma caixinha ainda'),
+    ).toBeInTheDocument();
   });
 
   /**
@@ -165,15 +167,15 @@ describe('SavingsPage', () => {
   it('orders its sections from the buckets to the decades', async () => {
     stub({ '/api/buckets': [bucket()], '/api/wealth': wealth() });
     renderPage();
-    await screen.findByRole('region', { name: 'Net worth' });
+    await screen.findByRole('region', { name: 'Patrimônio' });
 
     expect(regionNames()).toEqual([
-      'Buckets',
-      'Allocation this cycle',
-      'Planned against real',
-      'History',
-      'Net worth',
-      'Per bucket',
+      'Caixinhas',
+      'Alocação neste ciclo',
+      'Previsto x real',
+      'Histórico',
+      'Patrimônio',
+      'Por caixinha',
     ]);
   });
 
@@ -183,19 +185,19 @@ describe('SavingsPage', () => {
     stub({ '/api/buckets': [bucket(), ongoing()] });
     renderPage();
 
-    const history = await screen.findByRole('region', { name: 'History' });
+    const history = await screen.findByRole('region', { name: 'Histórico' });
 
-    expect(history).toHaveTextContent('Reserve — history');
+    expect(history).toHaveTextContent('Reserve — histórico');
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Select Investments' }),
+      screen.getByRole('button', { name: 'Selecionar Investments' }),
     );
 
-    expect(screen.getByRole('region', { name: 'History' })).toHaveTextContent(
-      'Investments — history',
+    expect(screen.getByRole('region', { name: 'Histórico' })).toHaveTextContent(
+      'Investments — histórico',
     );
     expect(
-      screen.getByRole('button', { name: 'Select Investments' }),
+      screen.getByRole('button', { name: 'Selecionar Investments' }),
     ).toHaveAttribute('aria-pressed', 'true');
   });
 });
@@ -210,22 +212,22 @@ describe('SavingsPage tells a goal from an ongoing commitment', () => {
     stub({ '/api/buckets': [bucket()] });
     renderPage();
 
-    const buckets = await screen.findByRole('region', { name: 'Buckets' });
+    const buckets = await screen.findByRole('region', { name: 'Caixinhas' });
 
-    expect(within(buckets).getByText('goal')).toBeInTheDocument();
-    expect(buckets).toHaveTextContent('50% of R$ 60.000,00 by 31/12/2027');
-    expect(buckets).toHaveTextContent('20% of Expected Surplus per cycle');
+    expect(within(buckets).getByText('meta')).toBeInTheDocument();
+    expect(buckets).toHaveTextContent('50% de R$ 60.000,00 até 31/12/2027');
+    expect(buckets).toHaveTextContent('20% da Sobra Esperada por ciclo');
   });
 
   it('shows an ongoing bucket as a rate, with nothing to complete', async () => {
     stub({ '/api/buckets': [ongoing()] });
     renderPage();
 
-    const buckets = await screen.findByRole('region', { name: 'Buckets' });
+    const buckets = await screen.findByRole('region', { name: 'Caixinhas' });
 
-    expect(within(buckets).getByText('ongoing')).toBeInTheDocument();
+    expect(within(buckets).getByText('contínua')).toBeInTheDocument();
     expect(buckets).toHaveTextContent(
-      'R$ 1.778,00 per cycle — no target to hit',
+      'R$ 1.778,00 por ciclo — sem objetivo a bater',
     );
     expect(within(buckets).queryByRole('progressbar')).not.toBeInTheDocument();
   });
@@ -240,10 +242,10 @@ describe('SavingsPage tells a goal from an ongoing commitment', () => {
     });
     renderPage();
 
-    const buckets = await screen.findByRole('region', { name: 'Buckets' });
+    const buckets = await screen.findByRole('region', { name: 'Caixinhas' });
 
     expect(within(buckets).queryByRole('progressbar')).not.toBeInTheDocument();
-    expect(buckets).toHaveTextContent('no target to hit');
+    expect(buckets).toHaveTextContent('sem objetivo a bater');
   });
 
   it('keeps growth from saving apart from growth from returns', async () => {
@@ -252,19 +254,19 @@ describe('SavingsPage tells a goal from an ongoing commitment', () => {
     });
     renderPage();
 
-    const buckets = await screen.findByRole('region', { name: 'Buckets' });
+    const buckets = await screen.findByRole('region', { name: 'Caixinhas' });
 
-    expect(buckets).toHaveTextContent('saved R$ 29.000,00');
-    expect(buckets).toHaveTextContent('earned R$ 1.000,00');
+    expect(buckets).toHaveTextContent('aportado R$ 29.000,00');
+    expect(buckets).toHaveTextContent('rendeu R$ 1.000,00');
   });
 
   it('dims an archived bucket but keeps it readable', async () => {
     stub({ '/api/buckets': [bucket({ status: 'ARCHIVED' })] });
     renderPage();
 
-    expect(await screen.findByText('archived')).toBeInTheDocument();
+    expect(await screen.findByText('arquivada')).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Archive Reserve' }),
+      screen.queryByRole('button', { name: 'Arquivar Reserve' }),
     ).not.toBeInTheDocument();
   });
 
@@ -274,14 +276,14 @@ describe('SavingsPage tells a goal from an ongoing commitment', () => {
 
     expect(
       await screen.findByRole('button', {
-        name: 'Adjust the rule for Apartment',
+        name: 'Ajustar a regra de Apartment',
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Record on Apartment' }),
+      screen.getByRole('button', { name: 'Registrar em Apartment' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Archive Apartment' }),
+      screen.getByRole('button', { name: 'Arquivar Apartment' }),
     ).toBeInTheDocument();
   });
 });
@@ -321,14 +323,14 @@ describe('SavingsPage reads the event log', () => {
     stub({ '/api/buckets': [bucket({ events: everyKind })] });
     renderPage();
 
-    const history = await screen.findByRole('region', { name: 'History' });
+    const history = await screen.findByRole('region', { name: 'Histórico' });
 
     for (const kind of [
-      'contribution',
-      'override',
-      'yield',
-      'correction',
-      'withdrawal',
+      'aporte',
+      'ajuste',
+      'rendimento',
+      'correção',
+      'resgate',
     ]) {
       expect(within(history).getByText(kind)).toBeInTheDocument();
     }
@@ -338,26 +340,28 @@ describe('SavingsPage reads the event log', () => {
     stub({ '/api/buckets': [bucket({ events: everyKind })] });
     renderPage();
 
-    const history = await screen.findByRole('region', { name: 'History' });
+    const history = await screen.findByRole('region', { name: 'Histórico' });
 
-    expect(history).toHaveTextContent('growth from returns, not a deposit');
-    expect(history).toHaveTextContent('the rule applied for August 2026');
+    expect(history).toHaveTextContent(
+      'crescimento por rendimento, não um aporte',
+    );
+    expect(history).toHaveTextContent('a regra aplicada em August 2026');
   });
 
   it('says what the rule would have contributed on an override', async () => {
     stub({ '/api/buckets': [bucket({ events: everyKind })] });
     renderPage();
 
-    const history = await screen.findByRole('region', { name: 'History' });
+    const history = await screen.findByRole('region', { name: 'Histórico' });
 
-    expect(history).toHaveTextContent('the rule would have said R$ 1.778,00');
+    expect(history).toHaveTextContent('a regra diria R$ 1.778,00');
   });
 
   it('carries the reason a correction and a withdrawal were made', async () => {
     stub({ '/api/buckets': [bucket({ events: everyKind })] });
     renderPage();
 
-    const history = await screen.findByRole('region', { name: 'History' });
+    const history = await screen.findByRole('region', { name: 'Histórico' });
 
     expect(history).toHaveTextContent('statement differed after fees');
     expect(history).toHaveTextContent('paid the deposit');
@@ -367,9 +371,7 @@ describe('SavingsPage reads the event log', () => {
     stub({ '/api/buckets': [bucket()] });
     renderPage();
 
-    expect(
-      await screen.findByText('Nothing has moved yet'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Nada se moveu ainda')).toBeInTheDocument();
   });
 
   // UC-6.6 — the gap between what the rules said and what is there.
@@ -399,12 +401,14 @@ describe('SavingsPage reads the event log', () => {
     renderPage();
 
     const planned = await screen.findByRole('region', {
-      name: 'Planned against real',
+      name: 'Previsto x real',
     });
 
     expect(planned).toHaveTextContent('R$ 3.556,00');
     expect(planned).toHaveTextContent('R$ 3.000,00');
-    expect(planned).toHaveTextContent('R$ 556,00 behind what the rules said');
+    expect(planned).toHaveTextContent(
+      'R$ 556,00 atrás do que as regras diziam',
+    );
   });
 });
 
@@ -428,14 +432,14 @@ describe('SavingsPage warns when the rules run past the money', () => {
     renderPage();
 
     const allocation = await screen.findByRole('region', {
-      name: 'Allocation this cycle',
+      name: 'Alocação neste ciclo',
     });
 
     expect(allocation).toHaveTextContent(
-      'August 2026 has R$ 8.890,00 of Expected Surplus',
+      'August 2026 tem R$ 8.890,00 de Sobra Esperada',
     );
-    expect(allocation).toHaveTextContent('#1 of 1');
-    expect(allocation).toHaveTextContent('Reserve asks R$ 1.778,00');
+    expect(allocation).toHaveTextContent('#1 de 1');
+    expect(allocation).toHaveTextContent('Reserve pede R$ 1.778,00');
   });
 
   it('names the cycle, the shortfall and who the order actually funds', async () => {
@@ -466,9 +470,11 @@ describe('SavingsPage warns when the rules run past the money', () => {
 
     const alert = await screen.findByRole('alert');
 
-    expect(alert).toHaveTextContent('R$ 2.120,00 short in August 2026');
-    expect(alert).toHaveTextContent('Reserve gets R$ 2.880,00');
-    expect(alert).toHaveTextContent('Investments gets nothing');
+    expect(alert).toHaveTextContent(
+      'Falta R$ 2.120,00 para cobrir as regras em August 2026',
+    );
+    expect(alert).toHaveTextContent('Reserve recebe R$ 2.880,00');
+    expect(alert).toHaveTextContent('Investments não recebe nada');
   });
 
   // A negative Expected Surplus is said out loud, never turned into a
@@ -485,7 +491,7 @@ describe('SavingsPage warns when the rules run past the money', () => {
     renderPage();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'August 2026 has no Expected Surplus to allocate from. Nothing is contributed',
+      'August 2026 não tem Sobra Esperada para alocar. Nada é aportado',
     );
   });
 });
@@ -496,12 +502,12 @@ describe('SavingsPage projects what the buckets grow into', () => {
     stub({ '/api/buckets': [bucket()], '/api/wealth': wealth() });
     renderPage();
 
-    const bars = await screen.findByRole('region', { name: 'Net worth' });
+    const bars = await screen.findByRole('region', { name: 'Patrimônio' });
 
-    for (const years of ['5 years', '10 years', '20 years', '30 years']) {
+    for (const years of ['5 anos', '10 anos', '20 anos', '30 anos']) {
       expect(within(bars).getByText(years)).toBeInTheDocument();
     }
-    expect(bars).toHaveTextContent('assumptions, not facts');
+    expect(bars).toHaveTextContent('premissas, não fatos');
   });
 
   // UC-7.3 — an ongoing bucket has no finish line, only a rate.
@@ -509,10 +515,12 @@ describe('SavingsPage projects what the buckets grow into', () => {
     stub({ '/api/buckets': [bucket()], '/api/wealth': wealth() });
     renderPage();
 
-    const perBucket = await screen.findByRole('region', { name: 'Per bucket' });
+    const perBucket = await screen.findByRole('region', {
+      name: 'Por caixinha',
+    });
 
     expect(perBucket).toHaveTextContent(
-      'At R$ 1.778,00 per cycle and 9% a year, Investments holds R$ 142,0k in 5 years and R$ 331,0k in 10. No target to hit — the question is only whether the rate is right.',
+      'Com R$ 1.778,00 por ciclo e 9% ao ano, Investments tem R$ 142,0k em 5 anos e R$ 331,0k em 10. Sem objetivo a bater — a questão é só se o ritmo está certo.',
     );
   });
 
@@ -538,12 +546,14 @@ describe('SavingsPage projects what the buckets grow into', () => {
     });
     renderPage();
 
-    const perBucket = await screen.findByRole('region', { name: 'Per bucket' });
+    const perBucket = await screen.findByRole('region', {
+      name: 'Por caixinha',
+    });
 
     expect(perBucket).toHaveTextContent(
-      'At R$ 1.778,00 per cycle and 8% a year, Apartment reaches R$ 150.000,00 in March 2031. Target: March 2031.',
+      'Com R$ 1.778,00 por ciclo e 8% ao ano, Apartment alcança R$ 150.000,00 em March 2031. Objetivo: March 2031.',
     );
-    expect(within(perBucket).getByText('on track')).toBeInTheDocument();
+    expect(within(perBucket).getByText('no prazo')).toBeInTheDocument();
   });
 
   it('flags a goal that is behind, with the contribution that fixes it', async () => {
@@ -568,9 +578,9 @@ describe('SavingsPage projects what the buckets grow into', () => {
     });
     renderPage();
 
-    expect(await screen.findByText('behind')).toBeInTheDocument();
+    expect(await screen.findByText('atrasada')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'R$ 2.500,00 per cycle would bring it back',
+      'R$ 2.500,00 por ciclo traria de volta ao prazo',
     );
   });
 
@@ -580,11 +590,11 @@ describe('SavingsPage projects what the buckets grow into', () => {
     renderPage();
 
     const field = await screen.findByLabelText(
-      'Expected annual yield for Investments',
+      'Rendimento anual esperado para Investments',
     );
 
     expect(
-      screen.getByText(/An assumption. Adjusting it here moves the projection/),
+      screen.getByText(/Uma premissa. Ajustar aqui move a projeção/),
     ).toBeInTheDocument();
 
     await userEvent.clear(field);
@@ -613,12 +623,12 @@ describe('SavingsPage projects what the buckets grow into', () => {
     renderPage();
 
     const retirement = await screen.findByRole('region', {
-      name: 'Retirement',
+      name: 'Aposentadoria',
     });
 
-    expect(retirement).toHaveTextContent('R$ 1.000,00 a month');
+    expect(retirement).toHaveTextContent('R$ 1.000,00 por mês');
     expect(retirement).toHaveTextContent(
-      'An assumption, like every yield here',
+      'Uma premissa, como todo rendimento aqui',
     );
   });
 });

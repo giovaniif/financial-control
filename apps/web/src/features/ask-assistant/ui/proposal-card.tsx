@@ -30,7 +30,7 @@ export function ProposalCard({ offered, onApplied, onDismiss }: Props) {
     <div className="flex flex-col gap-2 rounded-lg border border-zinc-300 bg-zinc-50 p-3">
       <div className="flex items-center gap-2">
         <Badge tone="info">{label}</Badge>
-        {isApplied && <Badge tone="positive">Applied</Badge>}
+        {isApplied && <Badge tone="positive">Aplicado</Badge>}
       </div>
 
       <p className="text-sm text-zinc-900">{inAppTerms(proposal.summary)}</p>
@@ -53,7 +53,7 @@ export function ProposalCard({ offered, onApplied, onDismiss }: Props) {
               );
             }}
           >
-            Confirm
+            Confirmar
           </Button>
           {/* Nothing is written here, and nothing is asked of the server. */}
           <Button
@@ -61,7 +61,7 @@ export function ProposalCard({ offered, onApplied, onDismiss }: Props) {
               onDismiss(proposal.id);
             }}
           >
-            Dismiss
+            Descartar
           </Button>
         </div>
       )}

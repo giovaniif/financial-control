@@ -30,8 +30,9 @@ export function BackupRestore({ counts }: { counts: Counts }) {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-zinc-500">
-        A full export and re-import. Nothing takes snapshots behind you, so this
-        is the only way back from a mistake.
+        Uma exportação completa e a possibilidade de reimportar. Nada mais tira
+        instantâneos dos seus dados, então esse é o único jeito de voltar atrás
+        de um erro.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -45,7 +46,7 @@ export function BackupRestore({ counts }: { counts: Counts }) {
             });
           }}
         >
-          Export
+          Exportar
         </Button>
         <Button
           variant="danger"
@@ -53,17 +54,17 @@ export function BackupRestore({ counts }: { counts: Counts }) {
             setImporting(true);
           }}
         >
-          Import
+          Importar
         </Button>
       </div>
 
       {exported !== undefined && (
-        <p className="text-xs text-green-700">Saved as {exported}.</p>
+        <p className="text-xs text-green-700">Salvo como {exported}.</p>
       )}
 
       <Dialog
         open={importing}
-        title="Replace everything from a backup"
+        title="Substituir tudo a partir de um backup"
         onClose={() => {
           setImporting(false);
         }}
@@ -101,7 +102,7 @@ function ImportForm({
     try {
       setDocument(JSON.parse(await file.text()) as BackupDocument);
     } catch {
-      setError(`${file.name} could not be read as a backup.`);
+      setError(`${file.name} não pôde ser lido como um backup.`);
     }
   };
 
@@ -113,13 +114,14 @@ function ImportForm({
         role="alert"
         className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900"
       >
-        This replaces everything currently in the app: {counts.accounts}{' '}
-        accounts, {counts.cycles} cycles, {counts.templates} bills and income,{' '}
-        {counts.cards} cards and {counts.buckets} buckets. There is no undo.
+        Isso substitui tudo o que está no app agora: {counts.accounts} contas,{' '}
+        {counts.cycles} ciclos, {counts.templates} contas e receitas,{' '}
+        {counts.cards} cartões e {counts.buckets} caixinhas. Não há como
+        desfazer.
       </p>
 
       <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600">
-        Backup file
+        Arquivo de backup
         <input
           type="file"
           accept="application/json"
@@ -148,13 +150,13 @@ function ImportForm({
               setError(
                 failure instanceof ApiError
                   ? failure.message
-                  : 'The backup could not be restored.',
+                  : 'Não foi possível restaurar o backup.',
               );
             },
           });
         }}
       >
-        Replace everything
+        Substituir tudo
       </Button>
     </div>
   );

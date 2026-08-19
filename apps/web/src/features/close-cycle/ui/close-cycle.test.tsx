@@ -39,11 +39,11 @@ describe('CloseCycle', () => {
     renderCycle();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Close the cycle' }),
+      screen.getByRole('button', { name: 'Fechar o ciclo' }),
     );
 
     expect(
-      screen.getByRole('dialog', { name: 'Close June 2026' }),
+      screen.getByRole('dialog', { name: 'Fechar June 2026' }),
     ).toBeInTheDocument();
   });
 
@@ -60,7 +60,7 @@ describe('CloseCycle', () => {
     );
 
     expect(
-      screen.queryByRole('button', { name: 'Close the cycle' }),
+      screen.queryByRole('button', { name: 'Fechar o ciclo' }),
     ).not.toBeInTheDocument();
   });
 
@@ -71,14 +71,14 @@ describe('CloseCycle', () => {
     renderCycle({ unsettled: 3 });
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Close the cycle' }),
+      screen.getByRole('button', { name: 'Fechar o ciclo' }),
     );
 
     expect(
-      screen.getByText(/3 entries are still unsettled/),
+      screen.getByText(/3 lançamentos ainda estão sem baixa/),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Close June 2026' }),
+      screen.getByRole('button', { name: 'Fechar June 2026' }),
     ).toBeDisabled();
   });
 
@@ -90,10 +90,10 @@ describe('CloseCycle', () => {
     renderCycle();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Close the cycle' }),
+      screen.getByRole('button', { name: 'Fechar o ciclo' }),
     );
     await userEvent.click(
-      screen.getByRole('button', { name: 'Close June 2026' }),
+      screen.getByRole('button', { name: 'Fechar June 2026' }),
     );
 
     await waitFor(() => {
@@ -109,10 +109,10 @@ describe('CloseCycle', () => {
     renderCycle({ status: 'CLOSED' });
 
     expect(
-      screen.getByRole('button', { name: 'Reopen the cycle' }),
+      screen.getByRole('button', { name: 'Reabrir o ciclo' }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Close the cycle' }),
+      screen.queryByRole('button', { name: 'Fechar o ciclo' }),
     ).not.toBeInTheDocument();
   });
 
@@ -123,11 +123,13 @@ describe('CloseCycle', () => {
     renderCycle({ status: 'CLOSED' });
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Reopen the cycle' }),
+      screen.getByRole('button', { name: 'Reabrir o ciclo' }),
     );
 
     expect(
-      await screen.findByText(/2 later cycles would open at a different/),
+      await screen.findByText(
+        /2 ciclos posteriores abririam com um saldo diferente/,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText('July 2026')).toBeInTheDocument();
     expect(screen.getByText('August 2026')).toBeInTheDocument();
@@ -146,9 +148,9 @@ describe('CloseCycle', () => {
     renderCycle({ status: 'CLOSED' });
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Reopen the cycle' }),
+      screen.getByRole('button', { name: 'Reabrir o ciclo' }),
     );
-    await screen.findByText(/2 later cycles/);
+    await screen.findByText(/2 ciclos posteriores/);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -156,7 +158,7 @@ describe('CloseCycle', () => {
       expect.anything(),
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Reopen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Reabrir' }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -173,11 +175,11 @@ describe('CloseCycle', () => {
     renderCycle({ status: 'CLOSED' });
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Reopen the cycle' }),
+      screen.getByRole('button', { name: 'Reabrir o ciclo' }),
     );
 
     expect(
-      await screen.findByText('No later cycle changes.'),
+      await screen.findByText('Nenhum ciclo posterior muda.'),
     ).toBeInTheDocument();
   });
 });

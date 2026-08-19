@@ -15,30 +15,38 @@ export function ChainStrip({
   openingFrom: string;
 }) {
   const steps = [
-    { label: 'Opening', cents: chain.openingBalance, note: openingFrom },
     {
-      label: 'Total Outcome',
+      label: 'Saldo inicial',
+      cents: chain.openingBalance,
+      note: openingFrom,
+    },
+    {
+      label: 'Total de saídas',
       cents: chain.totalOutcome,
-      note: 'everything out',
+      note: 'tudo que sai',
     },
-    { label: 'Surplus', cents: chain.surplus, note: 'income − outcome' },
+    { label: 'Sobra', cents: chain.surplus, note: 'receita − despesa' },
     {
-      label: 'Expected Surplus',
+      label: 'Sobra Esperada',
       cents: chain.expectedSurplus,
-      note: 'available to allocate',
+      note: 'disponível para alocar',
     },
-    { label: 'Allocations', cents: chain.allocations, note: 'into buckets' },
-    { label: 'Net Surplus', cents: chain.netSurplus, note: 'free cash' },
     {
-      label: 'Closing',
+      label: 'Alocações',
+      cents: chain.allocations,
+      note: 'para as caixinhas',
+    },
+    { label: 'Sobra Líquida', cents: chain.netSurplus, note: 'dinheiro livre' },
+    {
+      label: 'Saldo final',
       cents: chain.closingBalance,
-      note: "next cycle's opening",
+      note: 'abertura do próximo ciclo',
     },
   ];
 
   return (
     <section
-      aria-label="Calculation chain"
+      aria-label="Cadeia de cálculo"
       className="grid grid-cols-2 divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 bg-white sm:grid-cols-4 xl:grid-cols-7 xl:divide-x"
     >
       {steps.map((step) => (

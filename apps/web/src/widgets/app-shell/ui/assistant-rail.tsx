@@ -27,7 +27,7 @@ export function AssistantRail() {
   return (
     <aside
       id={ASSISTANT_RAIL_ID}
-      aria-label="Assistant"
+      aria-label="Assistente"
       hidden={!isOpen}
       data-layout={isWide ? 'inline' : 'overlay'}
       className={
@@ -40,7 +40,7 @@ export function AssistantRail() {
         <div className="flex flex-col gap-0.5">
           <span className="text-sm font-semibold">Claude</span>
           <span className="text-xs text-zinc-500">
-            Ask about any figure on any screen
+            Pergunte sobre qualquer número em qualquer tela
           </span>
         </div>
         <button
@@ -62,7 +62,7 @@ export function AssistantRail() {
           >
             <path d="M14.5 6 8.5 12l6 6" />
           </svg>
-          <span className="sr-only">Close the assistant</span>
+          <span className="sr-only">Fechar o assistente</span>
         </button>
       </div>
 

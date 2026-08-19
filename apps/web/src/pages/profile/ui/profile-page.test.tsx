@@ -110,7 +110,8 @@ const renderPage = () =>
 
 const region = (name: string) => screen.getByRole('region', { name });
 
-const billRows = () => within(region('Bills')).getAllByRole('row').slice(1);
+const billRows = () =>
+  within(region('Contas a pagar')).getAllByRole('row').slice(1);
 
 const positionOf = (name: string) =>
   billRows().findIndex((row) => within(row).queryByText(name) !== null);
@@ -127,21 +128,21 @@ describe('ProfilePage', () => {
   it('orders its sections the way the setup conversation asked them', async () => {
     stubApi({ '/api/settings/anchor': anchor });
     renderPage();
-    await screen.findByText(/Salary lands on day/);
+    await screen.findByText(/O salário cai no dia/);
 
     expect(
       screen
         .getAllByRole('region')
         .map((section) => section.getAttribute('aria-label')),
     ).toEqual([
-      'Payday anchor',
-      'Accounts',
-      'Commitments per cycle',
-      'Salary',
-      'Bills',
-      'Credit cards',
-      'Setup',
-      'Formatting',
+      'Dia do pagamento',
+      'Contas',
+      'Compromissos por ciclo',
+      'Salário',
+      'Contas a pagar',
+      'Cartões de crédito',
+      'Configuração',
+      'Formatação',
       'Backup',
     ]);
   });
@@ -150,8 +151,8 @@ describe('ProfilePage', () => {
     stubApi({ '/api/settings/anchor': anchor });
     renderPage();
 
-    expect(await screen.findByText(/Salary lands on day/)).toBeInTheDocument();
-    expect(screen.getByText(/preceding/)).toBeInTheDocument();
+    expect(await screen.findByText(/O salário cai no dia/)).toBeInTheDocument();
+    expect(screen.getByText(/dia útil anterior/)).toBeInTheDocument();
   });
 
   // Changing it re-slices every open cycle, so it is never silent.
@@ -160,7 +161,7 @@ describe('ProfilePage', () => {
     renderPage();
 
     expect(
-      await screen.findByText(/Closed cycles are never touched/),
+      await screen.findByText(/Os ciclos fechados nunca são alterados/),
     ).toBeInTheDocument();
   });
 
@@ -186,19 +187,23 @@ describe('ProfilePage', () => {
     renderPage();
 
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Change the anchor' }),
+      await screen.findByRole('button', {
+        name: 'Alterar o dia do pagamento',
+      }),
     );
     expect(
-      screen.getByRole('button', { name: 'Apply the change' }),
+      screen.getByRole('button', { name: 'Aplicar a mudança' }),
     ).toBeDisabled();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Pré-visualizar' }),
+    );
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      '3 entries would move out of their cycle',
+      '3 lançamentos mudariam de ciclo',
     );
     expect(
-      screen.getByRole('button', { name: 'Apply the change' }),
+      screen.getByRole('button', { name: 'Aplicar a mudança' }),
     ).toBeEnabled();
   });
 
@@ -214,12 +219,12 @@ describe('ProfilePage', () => {
     });
     renderPage();
 
-    const accounts = await screen.findByRole('region', { name: 'Accounts' });
+    const accounts = await screen.findByRole('region', { name: 'Contas' });
 
-    expect(await within(accounts).findByText('checking')).toBeInTheDocument();
+    expect(await within(accounts).findByText('corrente')).toBeInTheDocument();
     // The balance on its row, and again as the total they add up to.
     expect(within(accounts).getAllByText('R$ 1.660,00')).toHaveLength(2);
-    expect(within(accounts).getByText('In accounts now')).toBeInTheDocument();
+    expect(within(accounts).getByText('Nas contas agora')).toBeInTheDocument();
   });
 
   it('offers to add an account when there are none', async () => {
@@ -227,7 +232,7 @@ describe('ProfilePage', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('button', { name: 'Add account' }),
+      await screen.findByRole('button', { name: 'Adicionar conta' }),
     ).toBeInTheDocument();
   });
 
@@ -260,16 +265,20 @@ describe('ProfilePage', () => {
     await screen.findByText('Health Plan');
 
     expect(
-      within(region('Salary')).getByRole('button', { name: 'Edit Salary' }),
+      within(region('Salário')).getByRole('button', {
+        name: 'Editar Salary',
+      }),
     ).toBeInTheDocument();
     expect(
-      within(region('Bills')).getByText('Health Plan'),
+      within(region('Contas a pagar')).getByText('Health Plan'),
     ).toBeInTheDocument();
     expect(
-      within(region('Bills')).getByText('Electricity'),
+      within(region('Contas a pagar')).getByText('Electricity'),
     ).toBeInTheDocument();
-    expect(within(region('Bills')).getByText('day 8')).toBeInTheDocument();
-    expect(within(region('Salary')).queryByText('Health Plan')).toBeNull();
+    expect(
+      within(region('Contas a pagar')).getByText('dia 8'),
+    ).toBeInTheDocument();
+    expect(within(region('Salário')).queryByText('Health Plan')).toBeNull();
   });
 
   // The order is the order the money leaves, so a cycle reads front to back.
@@ -310,17 +319,21 @@ describe('ProfilePage', () => {
     await screen.findByText('Electricity');
 
     const before = positionOf('Electricity');
-    expect(within(region('Bills')).getByText('~estimate')).toBeInTheDocument();
+    expect(
+      within(region('Contas a pagar')).getByText('~estimativa'),
+    ).toBeInTheDocument();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Edit Electricity' }),
+      screen.getByRole('button', { name: 'Editar Electricity' }),
     );
     await userEvent.click(
-      screen.getByRole('button', { name: 'Confirm the amount' }),
+      screen.getByRole('button', { name: 'Confirmar o valor' }),
     );
 
     await waitFor(() => {
-      expect(within(region('Bills')).queryByText('~estimate')).toBeNull();
+      expect(
+        within(region('Contas a pagar')).queryByText('~estimativa'),
+      ).toBeNull();
     });
     expect(positionOf('Electricity')).toBe(before);
   });
@@ -334,12 +347,12 @@ describe('ProfilePage', () => {
     renderPage();
     await screen.findByText('Electricity');
 
-    const bills = region('Bills');
+    const bills = region('Contas a pagar');
 
-    expect(within(bills).getAllByText('~estimate')).toHaveLength(1);
+    expect(within(bills).getAllByText('~estimativa')).toHaveLength(1);
     expect(
       within(bills).getByRole('row', { name: /Electricity/ }),
-    ).toHaveTextContent('~estimate');
+    ).toHaveTextContent('~estimativa');
   });
 
   // UC-2.7 — the four figures that summarise what the user is committed to.
@@ -351,16 +364,16 @@ describe('ProfilePage', () => {
     renderPage();
 
     const summary = await screen.findByRole('region', {
-      name: 'Commitments per cycle',
+      name: 'Compromissos por ciclo',
     });
 
-    expect(within(summary).getByText('Fixed commitment')).toBeInTheDocument();
-    expect(within(summary).getByText('Fixed income')).toBeInTheDocument();
+    expect(within(summary).getByText('Compromisso fixo')).toBeInTheDocument();
+    expect(within(summary).getByText('Receita fixa')).toBeInTheDocument();
     expect(
-      within(summary).getByText('Unconfirmed estimates'),
+      within(summary).getByText('Estimativas não confirmadas'),
     ).toBeInTheDocument();
     expect(
-      within(summary).getByText('Ending within 12 cycles'),
+      within(summary).getByText('Encerrando em 12 ciclos'),
     ).toBeInTheDocument();
     expect(within(summary).getByText('R$ 18.000,00')).toBeInTheDocument();
   });
@@ -377,17 +390,17 @@ describe('ProfilePage', () => {
     renderPage();
 
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Edit Health Plan' }),
+      await screen.findByRole('button', { name: 'Editar Health Plan' }),
     );
     await userEvent.click(
-      screen.getByRole('button', { name: 'Change amount' }),
+      screen.getByRole('button', { name: 'Alterar valor' }),
     );
 
     expect(
-      screen.getByRole('radio', { name: /This cycle only/ }),
+      screen.getByRole('radio', { name: /Só neste ciclo/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('radio', { name: /This cycle and all future/ }),
+      screen.getByRole('radio', { name: /Neste ciclo e nos futuros/ }),
     ).toBeInTheDocument();
   });
 
@@ -400,14 +413,18 @@ describe('ProfilePage', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('button', { name: 'Add income' }),
+      await screen.findByRole('button', { name: 'Adicionar receita' }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /variable bill/ })).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: /conta variável/i }),
+    ).toBeNull();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add a bill' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Adicionar conta a pagar' }),
+    );
 
     expect(
-      screen.getByRole('checkbox', { name: 'Unconfirmed estimate' }),
+      screen.getByRole('checkbox', { name: 'Estimativa não confirmada' }),
     ).not.toBeChecked();
   });
 
@@ -419,13 +436,15 @@ describe('ProfilePage', () => {
     });
     renderPage();
 
-    const cards = await screen.findByRole('region', { name: 'Credit cards' });
+    const cards = await screen.findByRole('region', {
+      name: 'Cartões de crédito',
+    });
 
     expect(within(cards).getByText('Inter')).toBeInTheDocument();
-    expect(within(cards).getByText('Limit')).toBeInTheDocument();
-    expect(within(cards).getByText('Open invoice')).toBeInTheDocument();
-    expect(within(cards).getByText('Committed')).toBeInTheDocument();
-    expect(within(cards).getByText('Available')).toBeInTheDocument();
+    expect(within(cards).getByText('Limite')).toBeInTheDocument();
+    expect(within(cards).getByText('Fatura aberta')).toBeInTheDocument();
+    expect(within(cards).getByText('Comprometido')).toBeInTheDocument();
+    expect(within(cards).getByText('Disponível')).toBeInTheDocument();
     expect(within(cards).getByText('R$ 2.400,00')).toBeInTheDocument();
   });
 
@@ -442,7 +461,7 @@ describe('ProfilePage', () => {
 
     expect(
       await screen.findByText(
-        'Purchases from 29 Jul to 28 Aug will be billed on the invoice due 10 Sep — the October 2026 cycle.',
+        'As compras de 29 Jul a 28 Aug entram na fatura com vencimento em 10 Sep — ciclo October 2026.',
       ),
     ).toBeInTheDocument();
   });
@@ -457,7 +476,7 @@ describe('ProfilePage', () => {
 
     expect(
       await screen.findByText(
-        /Purchases up to day 28 are billed on the invoice due day 10 of the following month/,
+        /As compras feitas até o dia 28 entram na fatura com vencimento no dia 10 do mês seguinte/,
       ),
     ).toBeInTheDocument();
   });
@@ -475,7 +494,7 @@ describe('ProfilePage', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('button', { name: 'Add a card' }),
+      await screen.findByRole('button', { name: 'Adicionar cartão' }),
     ).toBeInTheDocument();
   });
 
@@ -485,7 +504,9 @@ describe('ProfilePage', () => {
     stubApi({ '/api/settings/anchor': anchor });
     renderPage();
 
-    expect(await screen.findByText(/Add an account first/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Adicione uma conta primeiro/),
+    ).toBeInTheDocument();
   });
 
   // UC-1.5 — the checklist is the conversation's own sections, still outstanding.
@@ -493,20 +514,20 @@ describe('ProfilePage', () => {
     stubApi({ '/api/settings/anchor': anchor });
     renderPage();
 
-    const setup = await screen.findByRole('region', { name: 'Setup' });
+    const setup = await screen.findByRole('region', { name: 'Configuração' });
 
     expect(
       within(setup)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual([
-      '1The payday cyclenot set yet',
-      '2Accounts0 accounts',
-      '3Salary0 recorded',
-      '4Fixed bills0 recorded',
-      '5Variable bills0 recorded',
-      '6Credit cards0 cards',
-      '7Savings buckets0 buckets',
+      '1O ciclo de pagamentoainda não definido',
+      '2Contas0 contas',
+      '3Salário0 registrados',
+      '4Contas fixas0 registrados',
+      '5Contas variáveis0 registrados',
+      '6Cartões de crédito0 cartões',
+      '7Caixinhas0 caixinhas',
     ]);
   });
 
@@ -518,7 +539,7 @@ describe('ProfilePage', () => {
     stubApi({ '/api/settings/anchor': anchor });
     renderPage();
 
-    expect(await screen.findByText('not set yet')).toBeInTheDocument();
+    expect(await screen.findByText('ainda não definido')).toBeInTheDocument();
   });
 
   it('marks the anchor step done once it has been configured', async () => {
@@ -528,7 +549,7 @@ describe('ProfilePage', () => {
     });
     renderPage();
 
-    expect(await screen.findByText('configured')).toBeInTheDocument();
+    expect(await screen.findByText('configurado')).toBeInTheDocument();
   });
 
   // The buckets are the one step this screen does not itself carry.
@@ -537,7 +558,7 @@ describe('ProfilePage', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('link', { name: 'Savings buckets' }),
+      await screen.findByRole('link', { name: 'Caixinhas' }),
     ).toHaveAttribute('href', '/savings');
   });
 
@@ -546,7 +567,9 @@ describe('ProfilePage', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('link', { name: 'Run setup again' }),
+      await screen.findByRole('link', {
+        name: 'Executar a configuração novamente',
+      }),
     ).toHaveAttribute('href', '/onboarding');
   });
 
@@ -565,11 +588,13 @@ describe('ProfilePage', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('button', { name: 'Export' }),
+      await screen.findByRole('button', { name: 'Exportar' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
     expect(
-      screen.getByText(/the only way back from a mistake/),
+      screen.getByRole('button', { name: 'Importar' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/único jeito de voltar atrás de um erro/),
     ).toBeInTheDocument();
   });
 });

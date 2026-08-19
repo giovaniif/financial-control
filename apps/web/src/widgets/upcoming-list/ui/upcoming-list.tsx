@@ -17,11 +17,11 @@ export function UpcomingList({
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <CardTitle>Upcoming</CardTitle>
+      <CardTitle>A vencer</CardTitle>
       {entries.length === 0 ? (
         <EmptyState
-          title="Nothing due"
-          body="Every entry in the next cycles is settled."
+          title="Nada a vencer"
+          body="Todos os lançamentos dos próximos ciclos já foram baixados."
         />
       ) : (
         <ul className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
@@ -42,10 +42,11 @@ export function UpcomingList({
               <span className="min-w-0 flex-1 truncate">
                 {entry.description}
               </span>
-              {entry.isEstimate && <Badge tone="warning">~estimate</Badge>}
+              {entry.isEstimate && <Badge tone="warning">~estimativa</Badge>}
               {entry.isOverdue && (
                 <Badge tone="critical">
-                  {entry.daysLate} day{entry.daysLate === 1 ? '' : 's'} late
+                  {entry.daysLate} dia{entry.daysLate === 1 ? '' : 's'} de
+                  atraso
                 </Badge>
               )}
               <Amount cents={entry.amount} signed className="w-28 text-right" />

@@ -63,15 +63,15 @@ export function MainPage() {
 
   return (
     <AppShell
-      title="Main"
-      subtitle="How much you will pay next cycle, and what survives to the next payday"
+      title="Principal"
+      subtitle="Quanto você vai pagar no próximo ciclo, e o que sobra até o próximo pagamento"
     >
       {isPending ? (
         <Skeleton className="h-48 w-full" />
       ) : isError ? (
         <EmptyState
-          title="The dashboard could not be built"
-          body="Check that the API is running."
+          title="Não foi possível montar o painel"
+          body="Verifique se a API está rodando."
         />
       ) : (
         <Screen

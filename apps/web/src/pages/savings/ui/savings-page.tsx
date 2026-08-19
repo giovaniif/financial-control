@@ -31,16 +31,16 @@ export function SavingsPage() {
 
   return (
     <AppShell
-      title="Investments & Savings"
-      subtitle="Where the surplus goes, how far along each pot is, and where the rate lands"
+      title="Investimentos e Reservas"
+      subtitle="Para onde vai a sobra, o quanto cada caixinha já avançou, e onde o ritmo leva"
     >
       {isPending ? (
         <Skeleton className="h-64 w-full" />
       ) : buckets.length === 0 ? (
         <div className="flex flex-col items-start gap-4">
           <EmptyState
-            title="No buckets yet"
-            body="A bucket is either a goal with a target and a date, or an ongoing amount with nothing to complete."
+            title="Nenhuma caixinha ainda"
+            body="Uma caixinha é uma meta com um valor e uma data do objetivo, ou um valor contínuo sem nada a completar."
           />
           <CreateBucketButton existingCount={0} />
         </div>

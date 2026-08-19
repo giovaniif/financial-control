@@ -14,9 +14,9 @@ describe('questionFor', () => {
     };
 
     expect(questionFor(alert)).toBe(
-      'About “Projected negative balance on 2026-09-28”: September 2026 ' +
-        'runs to -R$ 2.013,22 after Contractor Costs. Why is that, and what ' +
-        'would change it?',
+      'Sobre “Projected negative balance on 2026-09-28”: September 2026 ' +
+        'runs to -R$ 2.013,22 after Contractor Costs. Por que isso acontece, ' +
+        'e o que mudaria isso?',
     );
   });
 });

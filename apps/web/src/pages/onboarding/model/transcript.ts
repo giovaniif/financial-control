@@ -16,7 +16,7 @@ export type Entry =
  */
 export const OPENING: Entry = {
   kind: 'assistant',
-  text: "Let's start with the payday cycle. Which day of the month are you paid, and when that day falls on a weekend or a holiday, should the money land before it or after?",
+  text: 'Vamos começar pelo ciclo de pagamento. Em que dia do mês você recebe e, quando esse dia cai em um fim de semana ou feriado, o dinheiro deve cair antes ou depois?',
 };
 
 /**

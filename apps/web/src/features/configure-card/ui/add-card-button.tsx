@@ -15,7 +15,7 @@ export function AddCardButton({ accounts }: { accounts: AccountResponse[] }) {
   if (accounts.length === 0) {
     return (
       <p className="text-xs text-zinc-500">
-        Add an account first — an invoice is paid from one.
+        Adicione uma conta primeiro — uma fatura é paga a partir de uma conta.
       </p>
     );
   }
@@ -27,11 +27,11 @@ export function AddCardButton({ accounts }: { accounts: AccountResponse[] }) {
           setOpen(true);
         }}
       >
-        Add a card
+        Adicionar cartão
       </Button>
       <Dialog
         open={open}
-        title="Add a card"
+        title="Adicionar cartão"
         onClose={() => {
           setOpen(false);
         }}
@@ -71,16 +71,16 @@ function Form({
     const found: Record<string, string> = {};
 
     if (name.trim() === '') {
-      found['name'] = 'Name the card.';
+      found['name'] = 'Dê um nome ao cartão.';
     }
     if (cents === null) {
-      found['limit'] = 'Enter an amount like 1.234,56.';
+      found['limit'] = 'Digite um valor como 1.234,56.';
     }
     if (!isDay(closing)) {
-      found['closingDay'] = 'A day between 1 and 31.';
+      found['closingDay'] = 'Um dia entre 1 e 31.';
     }
     if (!isDay(due)) {
-      found['dueDay'] = 'A day between 1 and 31.';
+      found['dueDay'] = 'Um dia entre 1 e 31.';
     }
 
     setErrors(found);
@@ -102,7 +102,7 @@ function Form({
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
       <Field
-        label="Name"
+        label="Nome"
         value={name}
         onChange={(event) => {
           setName(event.target.value);
@@ -110,7 +110,7 @@ function Form({
         {...(errors['name'] === undefined ? {} : { error: errors['name'] })}
       />
       <Field
-        label="Limit"
+        label="Limite"
         value={limit}
         placeholder="10.000,00"
         onChange={(event) => {
@@ -120,7 +120,7 @@ function Form({
       />
       <div className="grid grid-cols-2 gap-3">
         <Field
-          label="Closing day"
+          label="Dia de fechamento"
           type="number"
           value={closingDay}
           onChange={(event) => {
@@ -131,7 +131,7 @@ function Form({
             : { error: errors['closingDay'] })}
         />
         <Field
-          label="Due day"
+          label="Dia de vencimento"
           type="number"
           value={dueDay}
           onChange={(event) => {
@@ -147,14 +147,14 @@ function Form({
           is spelled out before the card exists. */}
       {isDay(closing) && isDay(due) && (
         <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-          Purchases up to day {closing} are billed on the invoice due day {due}{' '}
-          of the following month. A purchase one day later waits for the one
-          after that — an entire cycle later in cash terms.
+          As compras feitas até o dia {closing} entram na fatura com vencimento
+          no dia {due} do mês seguinte. Uma compra feita um dia depois espera a
+          fatura seguinte — um ciclo inteiro depois, em termos de caixa.
         </p>
       )}
 
       <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600">
-        Paid from
+        Conta de pagamento
         <select
           value={accountId}
           onChange={(event) => {
@@ -171,7 +171,7 @@ function Form({
       </label>
 
       <Button variant="primary" type="submit" disabled={openCard.isPending}>
-        Add
+        Adicionar
       </Button>
     </form>
   );

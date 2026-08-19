@@ -33,30 +33,32 @@ export function BillsSection() {
       <BillSummary summary={data.summary} />
 
       <BillList
-        title="Salary"
-        description="What arrives each cycle. The day it lands is the payday anchor."
+        title="Salário"
+        description="O que chega a cada ciclo. O dia em que cai é o dia do pagamento."
         bills={byDueDay(data.templates.filter(isIncome))}
         currentMonth={currentMonth}
-        emptyBody="Income is what a cycle is measured against — without it there is nothing to spend."
+        emptyTitle="Nenhum salário ainda"
+        emptyBody="É contra a receita que um ciclo é medido — sem ela não há nada para gastar."
         action={
           <CreateTemplateButton
             currentMonth={currentMonth}
-            label="Add income"
+            label="Adicionar receita"
             direction="IN"
           />
         }
       />
 
       <BillList
-        title="Bills"
-        description="Everything that goes out, in the order it leaves. The ones you are still guessing at are tagged."
+        title="Contas a pagar"
+        description="Tudo que sai, na ordem em que sai. As que você ainda está estimando ficam marcadas."
         bills={byDueDay(data.templates.filter((bill) => !isIncome(bill)))}
         currentMonth={currentMonth}
-        emptyBody="Rent, the health plan, electricity. Each one fills a line in every future cycle, on the day it falls due."
+        emptyTitle="Nenhuma conta a pagar ainda"
+        emptyBody="Aluguel, plano de saúde, energia. Cada uma preenche uma linha em todo ciclo futuro, no dia em que vence."
         action={
           <CreateTemplateButton
             currentMonth={currentMonth}
-            label="Add a bill"
+            label="Adicionar conta a pagar"
             direction="OUT"
           />
         }

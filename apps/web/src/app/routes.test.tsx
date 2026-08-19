@@ -66,10 +66,10 @@ afterEach(() => {
 
 describe('routes', () => {
   it.each([
-    ['/', 'Main'],
-    ['/profile', 'Profile'],
-    ['/savings', 'Investments & Savings'],
-    ['/onboarding', 'Setting up'],
+    ['/', 'Principal'],
+    ['/profile', 'Perfil'],
+    ['/savings', 'Investimentos e Reservas'],
+    ['/onboarding', 'Configurando'],
   ])('renders %s as the %s screen', async (path, heading) => {
     renderAt(path);
 
@@ -82,7 +82,10 @@ describe('routes', () => {
     renderAt('/nowhere');
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Page not found' }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Página não encontrada',
+      }),
     ).toBeInTheDocument();
   });
 
@@ -99,7 +102,7 @@ describe('routes', () => {
       expect(
         await screen.findByRole('heading', {
           level: 1,
-          name: 'Page not found',
+          name: 'Página não encontrada',
         }),
       ).toBeInTheDocument();
     },
@@ -115,11 +118,11 @@ describe('routes', () => {
       renderAt(path);
 
       await userEvent.click(
-        await screen.findByRole('button', { name: 'Open the assistant' }),
+        await screen.findByRole('button', { name: 'Abrir o assistente' }),
       );
 
       expect(
-        screen.getByRole('log', { name: 'Assistant conversation' }),
+        screen.getByRole('log', { name: 'Conversa com o assistente' }),
       ).toBeVisible();
     },
   );

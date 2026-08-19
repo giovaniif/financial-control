@@ -48,8 +48,8 @@ export function Composer({ value, onChange, disabled, onSend, ref }: Props) {
           ref={ref}
           rows={1}
           value={value}
-          aria-label="Your answer"
-          placeholder="18k, always on the 5th"
+          aria-label="Sua resposta"
+          placeholder="18 mil, sempre no dia 5"
           onChange={(event) => {
             onChange(event.target.value);
           }}
@@ -62,7 +62,7 @@ export function Composer({ value, onChange, disabled, onSend, ref }: Props) {
         />
         <button
           type="submit"
-          aria-label="Send"
+          aria-label="Enviar"
           disabled={disabled || value.trim() === ''}
           className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-zinc-900 text-zinc-50 transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
         >
@@ -82,7 +82,7 @@ export function Composer({ value, onChange, disabled, onSend, ref }: Props) {
         </button>
       </div>
       <p className="text-xs text-zinc-400">
-        Enter sends · Shift + Enter starts a new line
+        Enter envia · Shift + Enter começa uma nova linha
       </p>
     </form>
   );

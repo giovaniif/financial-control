@@ -23,12 +23,12 @@ export function EditTemplate({ template, currentMonth }: Props) {
   return (
     <>
       <Button
-        aria-label={`Edit ${template.name}`}
+        aria-label={`Editar ${template.name}`}
         onClick={() => {
           setOpen(true);
         }}
       >
-        Edit
+        Editar
       </Button>
       <Dialog
         open={open}
@@ -81,17 +81,17 @@ function Menu({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Button variant="primary" onClick={onChangeAmount}>
-          Change amount
+          Alterar valor
         </Button>
         <p className="text-xs text-zinc-500">
-          Currently {formatBRL(template.amount)} on day {template.dueDayOfMonth}
-          .
+          Atualmente {formatBRL(template.amount)} no dia{' '}
+          {template.dueDayOfMonth}.
         </p>
       </div>
 
       <div className="flex flex-col gap-2 border-t border-zinc-100 pt-3">
         <Field
-          label="Name"
+          label="Nome"
           value={name}
           onChange={(event) => {
             setName(event.target.value);
@@ -103,7 +103,7 @@ function Menu({
             update.mutate({ name: name.trim() }, done);
           }}
         >
-          Rename
+          Renomear
         </Button>
       </div>
 
@@ -116,7 +116,7 @@ function Menu({
               update.mutate({ status: 'ACTIVE' }, done);
             }}
           >
-            Resume
+            Retomar
           </Button>
         ) : (
           <Button
@@ -125,7 +125,7 @@ function Menu({
               update.mutate({ status: 'PAUSED' }, done);
             }}
           >
-            Pause
+            Pausar
           </Button>
         )}
         <Button
@@ -134,19 +134,19 @@ function Menu({
             update.mutate({ isEstimate: !template.isEstimate }, done);
           }}
         >
-          {template.isEstimate ? 'Confirm the amount' : 'Flag as an estimate'}
+          {template.isEstimate ? 'Confirmar o valor' : 'Marcar como estimativa'}
         </Button>
       </div>
 
       <div className="flex flex-col gap-2 border-t border-zinc-100 pt-3">
         <Field
-          label="End after cycle"
+          label="Encerrar após o ciclo"
           placeholder="2026-12"
           value={endMonth}
           onChange={(event) => {
             setEndMonth(event.target.value);
           }}
-          hint="Stops future generation. History is kept."
+          hint="Interrompe a geração futura. O histórico é mantido."
         />
         <Button
           disabled={update.isPending || endMonth.trim() === ''}
@@ -154,7 +154,7 @@ function Menu({
             update.mutate({ endMonth: endMonth.trim() }, done);
           }}
         >
-          End it
+          Encerrar
         </Button>
       </div>
     </div>
@@ -184,12 +184,12 @@ function AmountForm({
     const cents = parseBRL(amount);
 
     if (cents === null) {
-      setError('Enter an amount like 1.234,56.');
+      setError('Digite um valor como 1.234,56.');
       return;
     }
     if (scope === undefined) {
       setError(
-        'Choose whether this applies to one cycle or to every cycle from here on.',
+        'Escolha se isso vale para um ciclo ou para todos os ciclos a partir de agora.',
       );
       return;
     }
@@ -203,38 +203,38 @@ function AmountForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
       <Field
-        label="New amount"
+        label="Novo valor"
         value={amount}
         onChange={(event) => {
           setAmount(event.target.value);
         }}
-        hint={`From ${currentMonth} onward`}
+        hint={`A partir de ${currentMonth}`}
       />
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-xs font-medium text-zinc-600">
-          What does this change?
+          O que isso muda?
         </legend>
         <Scope
           checked={scope === 'THIS_CYCLE_ONLY'}
           onSelect={() => {
             setScope('THIS_CYCLE_ONLY');
           }}
-          title="This cycle only"
-          body="Only this cycle changes. Every other cycle keeps the amount it has."
+          title="Só neste ciclo"
+          body="Só este ciclo muda. Todos os outros ciclos mantêm o valor que já têm."
         />
         <Scope
           checked={scope === 'THIS_AND_FUTURE'}
           onSelect={() => {
             setScope('THIS_AND_FUTURE');
           }}
-          title="This cycle and all future"
-          body="This cycle and every one after it use the new amount, carried as one value schedule."
+          title="Neste ciclo e nos futuros"
+          body="Este ciclo e todos os seguintes passam a usar o novo valor, registrado como uma tabela de valores."
         />
       </fieldset>
 
       <p className="text-xs text-zinc-500">
-        Past cycles are never touched, whichever you choose.
+        Os ciclos passados nunca são alterados, seja qual for a opção escolhida.
       </p>
       {error !== undefined && (
         <span role="alert" className="text-xs text-red-700">
@@ -243,7 +243,7 @@ function AmountForm({
       )}
 
       <Button variant="primary" type="submit" disabled={change.isPending}>
-        Apply
+        Aplicar
       </Button>
     </form>
   );

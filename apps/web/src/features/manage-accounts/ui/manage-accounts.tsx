@@ -10,9 +10,9 @@ import {
 } from '../api/use-manage-accounts.js';
 
 const types = {
-  Checking: 'CHECKING',
-  Savings: 'SAVINGS',
-  Cash: 'CASH',
+  Corrente: 'CHECKING',
+  Poupança: 'SAVINGS',
+  Dinheiro: 'CASH',
 } as const;
 
 type TypeLabel = keyof typeof types;
@@ -27,7 +27,7 @@ export function ManageAccounts({ accounts }: { accounts: AccountResponse[] }) {
       {accounts.map((account) => (
         <Button
           key={account.id}
-          aria-label={`Edit ${account.name}`}
+          aria-label={`Editar ${account.name}`}
           onClick={() => {
             setEditing(account);
           }}
@@ -41,12 +41,12 @@ export function ManageAccounts({ accounts }: { accounts: AccountResponse[] }) {
           setAdding(true);
         }}
       >
-        Add account
+        Adicionar conta
       </Button>
 
       <Dialog
         open={adding}
-        title="Add an account"
+        title="Adicionar conta"
         onClose={() => {
           setAdding(false);
         }}
@@ -90,7 +90,7 @@ function AddForm({ onDone }: { onDone: () => void }) {
     const cents = parseBRL(balance);
 
     if (cents === null) {
-      setError('Enter an amount like 1.234,56.');
+      setError('Digite um valor como 1.234,56.');
       return;
     }
 
@@ -103,14 +103,14 @@ function AddForm({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
       <Field
-        label="Name"
+        label="Nome"
         value={name}
         onChange={(event) => {
           setName(event.target.value);
         }}
       />
       <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600">
-        Type
+        Tipo
         <select
           value={labelOf(type)}
           onChange={(event) => {
@@ -124,7 +124,7 @@ function AddForm({ onDone }: { onDone: () => void }) {
         </select>
       </label>
       <Field
-        label="Balance"
+        label="Saldo"
         value={balance}
         placeholder="1.234,56"
         onChange={(event) => {
@@ -137,7 +137,7 @@ function AddForm({ onDone }: { onDone: () => void }) {
         type="submit"
         disabled={openAccount.isPending || name.trim() === ''}
       >
-        Add
+        Adicionar
       </Button>
     </form>
   );
@@ -160,7 +160,7 @@ function EditForm({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Field
-          label="Name"
+          label="Nome"
           value={name}
           onChange={(event) => {
             setName(event.target.value);
@@ -172,14 +172,14 @@ function EditForm({
             rename.mutate(name.trim(), done);
           }}
         >
-          Rename
+          Renomear
         </Button>
       </div>
 
       <div className="flex flex-col gap-2 border-t border-zinc-100 pt-3">
         {/* Balances drift; correcting one is expected, not exceptional. */}
         <Field
-          label="Balance"
+          label="Saldo"
           value={balance}
           onChange={(event) => {
             setBalance(event.target.value);
@@ -192,13 +192,13 @@ function EditForm({
             const cents = parseBRL(balance);
 
             if (cents === null) {
-              setError('Enter an amount like 1.234,56.');
+              setError('Digite um valor como 1.234,56.');
               return;
             }
             correct.mutate(cents, done);
           }}
         >
-          Correct the balance
+          Corrigir o saldo
         </Button>
       </div>
 
@@ -210,7 +210,7 @@ function EditForm({
             remove.mutate(undefined, done);
           }}
         >
-          Remove
+          Remover
         </Button>
       </div>
     </div>
@@ -221,7 +221,7 @@ function labelOf(type: AccountType): TypeLabel {
   return (
     (Object.keys(types) as TypeLabel[]).find(
       (label) => types[label] === type,
-    ) ?? 'Checking'
+    ) ?? 'Corrente'
   );
 }
 

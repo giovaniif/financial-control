@@ -20,7 +20,9 @@ function lastBody(): unknown {
 const open = async () => {
   stubApi({});
   renderWithProviders(<CreateBucketButton existingCount={0} />);
-  await userEvent.click(screen.getByRole('button', { name: 'Add a bucket' }));
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Adicionar caixinha' }),
+  );
 };
 
 describe('CreateBucketButton', () => {
@@ -31,36 +33,48 @@ describe('CreateBucketButton', () => {
    */
   it('will not create a goal without a target and a target date', async () => {
     await open();
-    await userEvent.type(screen.getByLabelText('Name'), 'Apartment');
+    await userEvent.type(screen.getByLabelText('Nome'), 'Apartment');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
-    expect(screen.getByText('A goal needs a target.')).toBeInTheDocument();
     expect(
-      screen.getByText('A goal needs the date you want it by.'),
+      screen.getByText('Uma meta precisa de um valor do objetivo.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Uma meta precisa de uma data para ser alcançada.'),
     ).toBeInTheDocument();
   });
 
   it('asks an ongoing bucket for neither', async () => {
     await open();
-    await userEvent.click(screen.getByRole('radio', { name: /Ongoing/ }));
+    await userEvent.click(screen.getByRole('radio', { name: /Contínua/ }));
 
-    expect(screen.queryByLabelText('Target')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Target date')).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Valor do objetivo'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Data do objetivo')).not.toBeInTheDocument();
   });
 
   it('creates a goal with its target and rule', async () => {
     await open();
-    await userEvent.type(screen.getByLabelText('Name'), 'Apartment');
-    await userEvent.type(screen.getByLabelText('Target'), '150.000,00');
-    await userEvent.type(screen.getByLabelText('Target date'), '2031-03-31');
-    await userEvent.clear(screen.getByLabelText('Percent of Expected Surplus'));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Apartment');
     await userEvent.type(
-      screen.getByLabelText('Percent of Expected Surplus'),
+      screen.getByLabelText('Valor do objetivo'),
+      '150.000,00',
+    );
+    await userEvent.type(
+      screen.getByLabelText('Data do objetivo'),
+      '2031-03-31',
+    );
+    await userEvent.clear(
+      screen.getByLabelText('Percentual da Sobra Esperada'),
+    );
+    await userEvent.type(
+      screen.getByLabelText('Percentual da Sobra Esperada'),
       '20',
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
     expect(lastBody()).toEqual({
       mode: 'GOAL',
@@ -74,14 +88,12 @@ describe('CreateBucketButton', () => {
 
   it('creates an ongoing bucket with a fixed amount', async () => {
     await open();
-    await userEvent.click(screen.getByRole('radio', { name: /Ongoing/ }));
-    await userEvent.type(screen.getByLabelText('Name'), 'Investments');
-    await userEvent.click(
-      screen.getByRole('radio', { name: 'A fixed amount' }),
-    );
-    await userEvent.type(screen.getByLabelText('Amount per cycle'), '1.778,00');
+    await userEvent.click(screen.getByRole('radio', { name: /Contínua/ }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Investments');
+    await userEvent.click(screen.getByRole('radio', { name: 'Um valor fixo' }));
+    await userEvent.type(screen.getByLabelText('Valor por ciclo'), '1.778,00');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
     expect(lastBody()).toEqual({
       mode: 'ONGOING',
@@ -95,11 +107,13 @@ describe('CreateBucketButton', () => {
   it('lands after the buckets that already exist', async () => {
     stubApi({});
     renderWithProviders(<CreateBucketButton existingCount={3} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Add a bucket' }));
-    await userEvent.click(screen.getByRole('radio', { name: /Ongoing/ }));
-    await userEvent.type(screen.getByLabelText('Name'), 'Reserve');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Adicionar caixinha' }),
+    );
+    await userEvent.click(screen.getByRole('radio', { name: /Contínua/ }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Reserve');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
     expect(lastBody()).toMatchObject({ priority: 4 });
   });
