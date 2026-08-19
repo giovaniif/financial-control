@@ -272,7 +272,7 @@ describe('OnboardingPage', () => {
     // single monthly total.
     it('says why every template needs a due day', async () => {
       stubApi({});
-      await goTo('The bills that repeat');
+      await goTo('What repeats every cycle');
 
       expect(screen.getByText(/running balance/)).toBeInTheDocument();
     });
