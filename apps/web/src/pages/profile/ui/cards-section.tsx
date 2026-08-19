@@ -1,14 +1,14 @@
-import type { CardResponse } from '@fin/contracts';
-
 import { useAccounts } from '@/entities/account';
 import { useCards } from '@/entities/card';
 import { AddCardButton } from '@/features/configure-card';
-import { Amount, Card, CardTitle, EmptyState, Skeleton } from '@/shared/ui';
+import { CardTitle, EmptyState, Skeleton } from '@/shared/ui';
+
+import { CardSummary } from './card-summary.js';
 
 /**
  * UC-1.3 and UC-5.8 — the closing/due day pair that decides which cycle a
  * purchase is paid from, and what is already committed to future invoices.
- * Purchases themselves are registered by asking (UC-8.3), not here.
+ * Purchases themselves are registered by asking, not here.
  */
 export function CardsSection() {
   const { data, isPending } = useCards();
@@ -20,9 +20,14 @@ export function CardsSection() {
   }
 
   return (
-    <section className="flex flex-col gap-3">
+    <section aria-label="Credit cards" className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-4">
-        <CardTitle>Credit cards</CardTitle>
+        <div className="flex flex-col gap-0.5">
+          <CardTitle>Credit cards</CardTitle>
+          <p className="text-xs text-zinc-500">
+            The closing and due days decide which cycle a purchase is paid from.
+          </p>
+        </div>
         <AddCardButton accounts={accounts?.accounts ?? []} />
       </div>
 
@@ -39,37 +44,5 @@ export function CardsSection() {
         </div>
       )}
     </section>
-  );
-}
-
-function CardSummary({ card }: { card: CardResponse }) {
-  return (
-    <Card className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between">
-        <span className="font-medium">{card.name}</span>
-        <span className="font-mono text-xs text-zinc-500">
-          closes {card.closingDay} · due {card.dueDay}
-        </span>
-      </div>
-      <dl className="grid grid-cols-3 gap-2 text-xs">
-        <Figure label="Limit" cents={card.limit} />
-        {/* The figure the spreadsheet could not produce. */}
-        <Figure label="Committed" cents={card.committedToFuture} />
-        <Figure label="Available" cents={card.available} />
-      </dl>
-    </Card>
-  );
-}
-
-function Figure({ label, cents }: { label: string; cents: number }) {
-  return (
-    <div className="flex flex-col">
-      <dt className="text-[10px] tracking-wide text-zinc-400 uppercase">
-        {label}
-      </dt>
-      <dd>
-        <Amount cents={cents} className="text-xs" />
-      </dd>
-    </div>
   );
 }

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatDate, formatDayMonth, formatRange } from './date.js';
+import {
+  formatDate,
+  formatDayMonth,
+  formatMonthLabel,
+  formatRange,
+} from './date.js';
 
 describe('formatDate', () => {
   it('renders dd/MM/yyyy', () => {
@@ -21,5 +26,18 @@ describe('formatRange', () => {
 
   it('formats a single day as day and short month', () => {
     expect(formatDayMonth('2026-02-28')).toBe('28 Feb');
+  });
+});
+
+describe('formatMonthLabel', () => {
+  // A cycle is named for the month it is spent in, so `2026-10` has to read
+  // back as the name the rest of the app calls that cycle by.
+  it('names a cycle month in full', () => {
+    expect(formatMonthLabel('2026-10')).toBe('October 2026');
+  });
+
+  it('does not shift the month across a timezone', () => {
+    expect(formatMonthLabel('2026-01')).toBe('January 2026');
+    expect(formatMonthLabel('2026-12')).toBe('December 2026');
   });
 });

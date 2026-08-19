@@ -250,7 +250,9 @@ describe('the setup conversation', () => {
     );
 
     expect(await screen.findByText(/2 accounts/)).toBeInTheDocument();
-    expect(screen.getByText(/4 recurring templates/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/4 recurring bills and income/),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open Main' })).toHaveAttribute(
       'href',
       '/',

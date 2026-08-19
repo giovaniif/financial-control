@@ -7,7 +7,7 @@ export function AccountsSection() {
   const { data, isPending } = useAccounts();
 
   return (
-    <Card className="flex flex-col gap-3">
+    <Card label="Accounts" className="flex flex-col gap-3">
       <CardTitle>Accounts</CardTitle>
       {isPending || data === undefined ? (
         <Skeleton className="h-16 w-full" />
