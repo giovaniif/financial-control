@@ -6,6 +6,7 @@ import type {
   BucketTarget,
 } from '../../domain/goals/bucket.js';
 import type { HolidayCalendar } from '../../domain/ports/holiday-calendar.js';
+import type { IdSource } from '../../domain/ports/id-source.js';
 import { DomainError } from '../../domain/shared/domain-error.js';
 import type { Money } from '../../domain/shared/money.js';
 
@@ -19,6 +20,9 @@ export class InvalidSetupRecord extends DomainError {}
 export class DueDayOutsideCycle extends DomainError {}
 
 export class SectionCannotBeSkipped extends DomainError {}
+
+/** A correction naming a record the draft never established. */
+export class SetupRecordNotFound extends DomainError {}
 
 export const SetupSection = {
   Anchor: 'ANCHOR',
@@ -44,12 +48,14 @@ export const SETUP_SECTIONS = [
 ] as const;
 
 export interface DraftAccount {
+  readonly id: string;
   readonly name: string;
   readonly type: AccountType;
   readonly balance: Money;
 }
 
 export interface DraftBill {
+  readonly id: string;
   readonly name: string;
   /** Outgoing, so negative — the sign the ledger and the templates use. */
   readonly amount: Money;
@@ -58,6 +64,7 @@ export interface DraftBill {
 }
 
 export interface DraftCard {
+  readonly id: string;
   readonly name: string;
   readonly limit: Money;
   readonly closingDay: number;
@@ -75,6 +82,7 @@ export interface DraftCard {
 export type DraftBucket =
   | {
       readonly mode: 'GOAL';
+      readonly id: string;
       readonly name: string;
       readonly rule: AllocationRule;
       readonly priority: number;
@@ -82,14 +90,54 @@ export type DraftBucket =
     }
   | {
       readonly mode: 'ONGOING';
+      readonly id: string;
       readonly name: string;
       readonly rule: AllocationRule;
       readonly priority: number;
     };
 
+export interface ProposedBill {
+  readonly name: string;
+  readonly amount: Money;
+  readonly dueDayOfMonth: number;
+  readonly isEstimate?: boolean;
+}
+
+export interface ProposedCard {
+  readonly name: string;
+  readonly limit: Money;
+  readonly closingDay: number;
+  readonly dueDay: number;
+  readonly paymentAccountName: string;
+}
+
+export interface ProposedBucket {
+  readonly name: string;
+  readonly rule: AllocationRule;
+  readonly priority: number;
+}
+
+export interface ProposedGoalBucket extends ProposedBucket {
+  readonly target: BucketTarget;
+}
+
+/**
+ * One record the draft holds, tagged with the section that asked for it, so a
+ * correction can be addressed by id alone — the caller does not have to know
+ * what kind of thing it is naming, and cannot rewrite the wrong row by
+ * guessing.
+ */
+export type DraftRecord =
+  | { readonly section: 'ACCOUNTS'; readonly record: DraftAccount }
+  | { readonly section: 'FIXED_BILLS'; readonly record: DraftBill }
+  | { readonly section: 'VARIABLE_BILLS'; readonly record: DraftBill }
+  | { readonly section: 'CARDS'; readonly record: DraftCard }
+  | { readonly section: 'BUCKETS'; readonly record: DraftBucket };
+
 interface DraftState {
   readonly startMonth: string;
   readonly holidays: HolidayCalendar;
+  readonly ids: IdSource;
   readonly anchor: PaydayAnchor | undefined;
   readonly accounts: readonly DraftAccount[];
   readonly salary: Money | undefined;
@@ -125,7 +173,11 @@ export class SetupDraft {
    * `startMonth` is the cycle the setup begins in: it dates every template the
    * draft will compose, and it fixes the window a due day has to fit.
    */
-  static empty(startMonth: string, holidays: HolidayCalendar): SetupDraft {
+  static empty(
+    startMonth: string,
+    holidays: HolidayCalendar,
+    ids: IdSource,
+  ): SetupDraft {
     if (!MONTH.test(startMonth)) {
       throw new InvalidSetupRecord(`Not a YYYY-MM month: "${startMonth}".`);
     }
@@ -133,6 +185,7 @@ export class SetupDraft {
     return new SetupDraft({
       startMonth,
       holidays,
+      ids,
       anchor: undefined,
       accounts: [],
       salary: undefined,
@@ -184,6 +237,36 @@ export class SetupDraft {
     return this.state.buckets;
   }
 
+  /** Everything a correction can address, in the order it was established. */
+  get records(): readonly DraftRecord[] {
+    return [
+      ...this.state.accounts.map((record): DraftRecord => ({
+        section: 'ACCOUNTS',
+        record,
+      })),
+      ...this.state.fixedBills.map((record): DraftRecord => ({
+        section: 'FIXED_BILLS',
+        record,
+      })),
+      ...this.state.variableBills.map((record): DraftRecord => ({
+        section: 'VARIABLE_BILLS',
+        record,
+      })),
+      ...this.state.cards.map((record): DraftRecord => ({
+        section: 'CARDS',
+        record,
+      })),
+      ...this.state.buckets.map((record): DraftRecord => ({
+        section: 'BUCKETS',
+        record,
+      })),
+    ];
+  }
+
+  find(id: string): DraftRecord | undefined {
+    return this.records.find((held) => held.record.id === id);
+  }
+
   /** What the conversation still has to ask about, in the order it asks. */
   get remainingSections(): readonly SetupSection[] {
     return SETUP_SECTIONS.filter(
@@ -221,18 +304,27 @@ export class SetupDraft {
     type: AccountType;
     balance: Money;
   }): SetupDraft {
-    const name = requireUnusedName(
-      'account',
-      proposed.name,
-      this.state.accounts.map((account) => account.name),
-    );
+    const account = this.readAccount(this.state.ids.next(), proposed);
 
-    // An account may be overdrawn, so any balance is a legal one.
+    return this.with({ accounts: [...this.state.accounts, account] });
+  }
+
+  replaceAccount(
+    id: string,
+    proposed: { name: string; type: AccountType; balance: Money },
+  ): SetupDraft {
+    const previous = existing(this.state.accounts, id, 'account');
+    const account = this.readAccount(id, proposed);
+
     return this.with({
-      accounts: [
-        ...this.state.accounts,
-        { name, type: proposed.type, balance: proposed.balance },
-      ],
+      accounts: replacing(this.state.accounts, account),
+      // A card names the account that pays it, and the draft holds no ids for
+      // the conversation to use, so a corrected name has to travel with it.
+      cards: this.state.cards.map((card) =>
+        card.paymentAccountName === previous.name
+          ? { ...card, paymentAccountName: account.name }
+          : card,
+      ),
     });
   }
 
@@ -240,15 +332,21 @@ export class SetupDraft {
     return this.with({ salary: requirePositive('A salary', amount) });
   }
 
-  addFixedBill(proposed: {
-    name: string;
-    amount: Money;
-    dueDayOfMonth: number;
-    isEstimate?: boolean;
-  }): SetupDraft {
-    const bill = this.readBill(proposed, false);
+  addFixedBill(proposed: ProposedBill): SetupDraft {
+    const bill = this.readBill(this.state.ids.next(), proposed, false);
 
     return this.with({ fixedBills: [...this.state.fixedBills, bill] });
+  }
+
+  replaceFixedBill(id: string, proposed: ProposedBill): SetupDraft {
+    existing(this.state.fixedBills, id, 'fixed bill');
+
+    return this.with({
+      fixedBills: replacing(
+        this.state.fixedBills,
+        this.readBill(id, proposed, false),
+      ),
+    });
   }
 
   /**
@@ -256,110 +354,95 @@ export class SetupDraft {
    * estimate unless the user says otherwise, so a forecast never quietly
    * mixes a guess in with a known bill (UC-2.6).
    */
-  addVariableBill(proposed: {
-    name: string;
-    amount: Money;
-    dueDayOfMonth: number;
-    isEstimate?: boolean;
-  }): SetupDraft {
-    const bill = this.readBill(proposed, true);
+  addVariableBill(proposed: ProposedBill): SetupDraft {
+    const bill = this.readBill(this.state.ids.next(), proposed, true);
 
     return this.with({ variableBills: [...this.state.variableBills, bill] });
   }
 
-  addCard(proposed: {
-    name: string;
-    limit: Money;
-    closingDay: number;
-    dueDay: number;
-    paymentAccountName: string;
-  }): SetupDraft {
-    const name = requireUnusedName(
-      'card',
-      proposed.name,
-      this.state.cards.map((card) => card.name),
-    );
-    if (proposed.limit.isNegative()) {
-      throw new InvalidSetupRecord(
-        `${name} cannot have a limit of ${proposed.limit.toReais()}.`,
-      );
-    }
-    requireDayOfMonth('closing day', proposed.closingDay);
-    requireDayOfMonth('due day', proposed.dueDay);
-
-    // An invoice due date is a real date and cycles tile the calendar, so it
-    // always lands in one: the gap that catches a bill's due day cannot catch
-    // a card's, and checking for it here would refuse a card that works.
-    const paymentAccount = this.state.accounts.find(
-      (account) =>
-        account.name.toLowerCase() ===
-        proposed.paymentAccountName.trim().toLowerCase(),
-    );
-    if (paymentAccount === undefined) {
-      throw new InvalidSetupRecord(
-        `${name} is paid from an account called "${proposed.paymentAccountName}", which the setup does not hold.`,
-      );
-    }
+  replaceVariableBill(id: string, proposed: ProposedBill): SetupDraft {
+    existing(this.state.variableBills, id, 'variable bill');
 
     return this.with({
-      cards: [
-        ...this.state.cards,
-        {
-          name,
-          limit: proposed.limit,
-          closingDay: proposed.closingDay,
-          dueDay: proposed.dueDay,
-          paymentAccountName: paymentAccount.name,
-        },
-      ],
+      variableBills: replacing(
+        this.state.variableBills,
+        this.readBill(id, proposed, true),
+      ),
     });
   }
 
-  addGoalBucket(proposed: {
-    name: string;
-    rule: AllocationRule;
-    priority: number;
-    target: BucketTarget;
-  }): SetupDraft {
-    const name = this.readBucketName(proposed.name);
-    requireRuleAsksForSomething(name, proposed.rule);
-    this.requireUnusedPriority(name, proposed.priority);
-    requirePositive(`${name} is a goal, so its target`, proposed.target.amount);
+  addCard(proposed: ProposedCard): SetupDraft {
+    const card = this.readCard(this.state.ids.next(), proposed);
+
+    return this.with({ cards: [...this.state.cards, card] });
+  }
+
+  replaceCard(id: string, proposed: ProposedCard): SetupDraft {
+    existing(this.state.cards, id, 'card');
 
     return this.with({
-      buckets: [
-        ...this.state.buckets,
-        {
-          mode: 'GOAL',
-          name,
-          rule: proposed.rule,
-          priority: proposed.priority,
-          target: proposed.target,
-        },
-      ],
+      cards: replacing(this.state.cards, this.readCard(id, proposed)),
     });
   }
 
-  addOngoingBucket(proposed: {
-    name: string;
-    rule: AllocationRule;
-    priority: number;
-  }): SetupDraft {
-    const name = this.readBucketName(proposed.name);
-    requireRuleAsksForSomething(name, proposed.rule);
-    this.requireUnusedPriority(name, proposed.priority);
+  addGoalBucket(proposed: ProposedGoalBucket): SetupDraft {
+    const bucket = this.readGoalBucket(this.state.ids.next(), proposed);
+
+    return this.with({ buckets: [...this.state.buckets, bucket] });
+  }
+
+  replaceGoalBucket(id: string, proposed: ProposedGoalBucket): SetupDraft {
+    existing(this.state.buckets, id, 'bucket');
 
     return this.with({
-      buckets: [
-        ...this.state.buckets,
-        {
-          mode: 'ONGOING',
-          name,
-          rule: proposed.rule,
-          priority: proposed.priority,
-        },
-      ],
+      buckets: replacing(this.state.buckets, this.readGoalBucket(id, proposed)),
     });
+  }
+
+  addOngoingBucket(proposed: ProposedBucket): SetupDraft {
+    const bucket = this.readOngoingBucket(this.state.ids.next(), proposed);
+
+    return this.with({ buckets: [...this.state.buckets, bucket] });
+  }
+
+  replaceOngoingBucket(id: string, proposed: ProposedBucket): SetupDraft {
+    existing(this.state.buckets, id, 'bucket');
+
+    return this.with({
+      buckets: replacing(
+        this.state.buckets,
+        this.readOngoingBucket(id, proposed),
+      ),
+    });
+  }
+
+  /**
+   * Dropped, not skipped: the user is saying one record was wrong, never that
+   * they have none of that kind. A section left empty by a removal is asked
+   * about again; a skipped one is settled.
+   */
+  remove(id: string): SetupDraft {
+    const held = this.locate(id);
+
+    switch (held.section) {
+      case 'ACCOUNTS':
+        this.assertNoCardIsPaidFrom(held.record);
+        return this.with({ accounts: without(this.state.accounts, id) });
+      case 'FIXED_BILLS':
+        return this.with({ fixedBills: without(this.state.fixedBills, id) });
+      case 'VARIABLE_BILLS':
+        return this.with({
+          variableBills: without(this.state.variableBills, id),
+        });
+      case 'CARDS':
+        return this.with({ cards: without(this.state.cards, id) });
+      case 'BUCKETS':
+        return this.with({ buckets: without(this.state.buckets, id) });
+      default: {
+        const unreachable: never = held;
+        return unreachable;
+      }
+    }
   }
 
   /** Settles a section the user had nothing to say about. */
@@ -387,13 +470,49 @@ export class SetupDraft {
     return answered[section];
   }
 
+  private locate(id: string): DraftRecord {
+    const held = this.find(id);
+    if (held === undefined) {
+      throw new SetupRecordNotFound(
+        `The setup holds nothing recorded as "${id}".`,
+      );
+    }
+    return held;
+  }
+
+  private assertNoCardIsPaidFrom(account: DraftAccount): void {
+    const card = this.state.cards.find(
+      (held) => held.paymentAccountName === account.name,
+    );
+    if (card !== undefined) {
+      throw new InvalidSetupRecord(
+        `${card.name} is paid from ${account.name}, so the card has to go or be corrected first.`,
+      );
+    }
+  }
+
+  private readAccount(
+    id: string,
+    proposed: { name: string; type: AccountType; balance: Money },
+  ): DraftAccount {
+    const name = requireUnusedName(
+      'account',
+      proposed.name,
+      namesOthersHold(this.state.accounts, id),
+    );
+
+    // An account may be overdrawn, so any balance is a legal one.
+    return { id, name, type: proposed.type, balance: proposed.balance };
+  }
+
+  /**
+   * A correction is read exactly as an addition is, `id` and all: the record
+   * it replaces having been valid says nothing about the one replacing it,
+   * and the rule a mis-extracted due day breaks is the one below (FIN-93).
+   */
   private readBill(
-    proposed: {
-      name: string;
-      amount: Money;
-      dueDayOfMonth: number;
-      isEstimate?: boolean;
-    },
+    id: string,
+    proposed: ProposedBill,
     isEstimateByDefault: boolean,
   ): DraftBill {
     const anchor = this.state.anchor;
@@ -404,8 +523,8 @@ export class SetupDraft {
     }
 
     const name = requireUnusedName('bill', proposed.name, [
-      ...this.state.fixedBills.map((bill) => bill.name),
-      ...this.state.variableBills.map((bill) => bill.name),
+      ...namesOthersHold(this.state.fixedBills, id),
+      ...namesOthersHold(this.state.variableBills, id),
     ]);
     requireDayOfMonth('due day', proposed.dueDayOfMonth);
     if (proposed.amount.isZero()) {
@@ -417,10 +536,76 @@ export class SetupDraft {
     // same statement about a bill, and a correction prompt about which one the
     // model happened to produce would be a prompt about nothing.
     return {
+      id,
       name,
       amount: proposed.amount.abs().negate(),
       dueDayOfMonth: proposed.dueDayOfMonth,
       isEstimate: proposed.isEstimate ?? isEstimateByDefault,
+    };
+  }
+
+  private readCard(id: string, proposed: ProposedCard): DraftCard {
+    const name = requireUnusedName(
+      'card',
+      proposed.name,
+      namesOthersHold(this.state.cards, id),
+    );
+    if (proposed.limit.isNegative()) {
+      throw new InvalidSetupRecord(
+        `${name} cannot have a limit of ${proposed.limit.toReais()}.`,
+      );
+    }
+    requireDayOfMonth('closing day', proposed.closingDay);
+    requireDayOfMonth('due day', proposed.dueDay);
+
+    // An invoice due date is a real date and cycles tile the calendar, so it
+    // always lands in one: the gap that catches a bill's due day cannot catch
+    // a card's, and checking for it here would refuse a card that works.
+    const paymentAccount = this.state.accounts.find(
+      (account) =>
+        account.name.toLowerCase() ===
+        proposed.paymentAccountName.trim().toLowerCase(),
+    );
+    if (paymentAccount === undefined) {
+      throw new InvalidSetupRecord(
+        `${name} is paid from an account called "${proposed.paymentAccountName}", which the setup does not hold.`,
+      );
+    }
+
+    return {
+      id,
+      name,
+      limit: proposed.limit,
+      closingDay: proposed.closingDay,
+      dueDay: proposed.dueDay,
+      paymentAccountName: paymentAccount.name,
+    };
+  }
+
+  private readGoalBucket(
+    id: string,
+    proposed: ProposedGoalBucket,
+  ): DraftBucket {
+    const name = this.readBucketName(id, proposed);
+    requirePositive(`${name} is a goal, so its target`, proposed.target.amount);
+
+    return {
+      mode: 'GOAL',
+      id,
+      name,
+      rule: proposed.rule,
+      priority: proposed.priority,
+      target: proposed.target,
+    };
+  }
+
+  private readOngoingBucket(id: string, proposed: ProposedBucket): DraftBucket {
+    return {
+      mode: 'ONGOING',
+      id,
+      name: this.readBucketName(id, proposed),
+      rule: proposed.rule,
+      priority: proposed.priority,
     };
   }
 
@@ -452,22 +637,30 @@ export class SetupDraft {
     }
   }
 
-  private readBucketName(name: string): string {
-    return requireUnusedName(
+  private readBucketName(id: string, proposed: ProposedBucket): string {
+    const name = requireUnusedName(
       'bucket',
-      name,
-      this.state.buckets.map((bucket) => bucket.name),
+      proposed.name,
+      namesOthersHold(this.state.buckets, id),
     );
+    requireRuleAsksForSomething(name, proposed.rule);
+    this.requireUnusedPriority(id, name, proposed.priority);
+
+    return name;
   }
 
-  private requireUnusedPriority(name: string, priority: number): void {
+  private requireUnusedPriority(
+    id: string,
+    name: string,
+    priority: number,
+  ): void {
     if (!Number.isSafeInteger(priority) || priority < 1) {
       throw new InvalidSetupRecord(
         `A priority is a whole number of at least 1; received ${String(priority)}.`,
       );
     }
     const taken = this.state.buckets.find(
-      (bucket) => bucket.priority === priority,
+      (bucket) => bucket.id !== id && bucket.priority === priority,
     );
     if (taken !== undefined) {
       throw new InvalidSetupRecord(
@@ -479,6 +672,40 @@ export class SetupDraft {
   private with(changes: Partial<DraftState>): SetupDraft {
     return new SetupDraft({ ...this.state, ...changes });
   }
+}
+
+/** What everything but the record being written holds, so a correction may
+ * keep the name it already has. */
+function namesOthersHold(
+  held: readonly { id: string; name: string }[],
+  id: string,
+): string[] {
+  return held.filter((record) => record.id !== id).map((record) => record.name);
+}
+
+function existing<T extends { id: string }>(
+  held: readonly T[],
+  id: string,
+  what: string,
+): T {
+  const found = held.find((record) => record.id === id);
+  if (found === undefined) {
+    throw new SetupRecordNotFound(
+      `The setup holds no ${what} recorded as "${id}".`,
+    );
+  }
+  return found;
+}
+
+function replacing<T extends { id: string }>(held: readonly T[], next: T): T[] {
+  return held.map((record) => (record.id === next.id ? next : record));
+}
+
+function without<T extends { id: string }>(
+  held: readonly T[],
+  id: string,
+): T[] {
+  return held.filter((record) => record.id !== id);
 }
 
 function requireUnusedName(

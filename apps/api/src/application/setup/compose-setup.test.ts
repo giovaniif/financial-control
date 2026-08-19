@@ -10,6 +10,7 @@ import { Percentage } from '../../domain/shared/percentage.js';
 import { BackupRestore } from '../backup/uc-1-6-backup-restore.js';
 import {
   FakeSetupConversationStore,
+  SequentialIdSource,
   InMemoryAccountRepository,
   InMemoryBucketRepository,
   InMemoryCardRepository,
@@ -33,7 +34,7 @@ const NOW = '2026-08-19T09:00:00.000Z';
 const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
 
 const complete = (): SetupDraft =>
-  SetupDraft.empty('2026-09', noHolidays)
+  SetupDraft.empty('2026-09', noHolidays, new SequentialIdSource('rec'))
     .withAnchor(anchor)
     .addAccount({
       name: 'Checking',
@@ -66,7 +67,11 @@ const complete = (): SetupDraft =>
 
 describe('composeSetup', () => {
   it('refuses a draft with a section still unanswered', () => {
-    const draft = SetupDraft.empty('2026-09', noHolidays).withAnchor(anchor);
+    const draft = SetupDraft.empty(
+      '2026-09',
+      noHolidays,
+      new SequentialIdSource('rec'),
+    ).withAnchor(anchor);
 
     expect(() => composeSetup(draft, NOW)).toThrow(SetupNotComplete);
   });
@@ -195,7 +200,11 @@ describe('composeSetup', () => {
   });
 
   it('leaves out the salary template when the section was skipped', () => {
-    const draft = SetupDraft.empty('2026-09', noHolidays)
+    const draft = SetupDraft.empty(
+      '2026-09',
+      noHolidays,
+      new SequentialIdSource('rec'),
+    )
       .withAnchor(anchor)
       .addAccount({
         name: 'Checking',

@@ -44,6 +44,11 @@ export interface SetupTurnRequest {
 /** One thing the turn established, in the user's own terms. */
 export interface EstablishedRecordResponse {
   section: SetupSection;
+  /**
+   * What a correction names it by — `null` for the sections holding a single
+   * value, which are answered again rather than corrected.
+   */
+  id: string | null;
   summary: string;
 }
 
@@ -51,6 +56,8 @@ export interface SetupTurnResponse {
   conversationId: string;
   message: string;
   established: EstablishedRecordResponse[];
+  /** The ids of the records the turn dropped, which are shown back no more. */
+  removed: string[];
   /** What the turn would not accept, and why. */
   corrections: string[];
   /** `null` once every section has been answered or skipped. */

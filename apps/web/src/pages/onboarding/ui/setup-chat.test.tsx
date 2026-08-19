@@ -25,6 +25,7 @@ const turn = (over: Partial<SetupTurnResponse> = {}): SetupTurnResponse => ({
   conversationId: 'conv-1',
   message: 'And where do you keep your money?',
   established: [],
+  removed: [],
   corrections: [],
   nextSection: 'ACCOUNTS',
   isComplete: false,
@@ -114,6 +115,7 @@ describe('the setup conversation', () => {
           established: [
             {
               section: 'FIXED_BILLS',
+              id: 'rec-1',
               summary: 'Health plan — R$ 320,00 on day 8.',
             },
           ],
@@ -138,6 +140,7 @@ describe('the setup conversation', () => {
           established: [
             {
               section: 'BUCKETS',
+              id: 'rec-1',
               summary:
                 'Apartment — 20% each cycle toward R$ 150.000,00 by 2031-03-05, funded #1.',
             },
@@ -236,7 +239,11 @@ describe('the setup conversation', () => {
           isComplete: true,
           message: 'That is everything I need.',
           established: [
-            { section: 'BUCKETS', summary: 'Reserve — 20% each cycle.' },
+            {
+              section: 'BUCKETS',
+              id: 'rec-1',
+              summary: 'Reserve — 20% each cycle.',
+            },
           ],
         }),
       ),

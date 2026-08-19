@@ -95,7 +95,11 @@ const anchorTurn: ScriptedTurn = {
 
 /** A conversation with every section answered or skipped, ready to apply. */
 function completedState(): SetupState {
-  const draft = SetupDraft.empty('2026-09', noHolidays)
+  const draft = SetupDraft.empty(
+    '2026-09',
+    noHolidays,
+    new SequentialIdSource('rec'),
+  )
     .withAnchor(PaydayAnchor.of(5, ShiftPolicy.Preceding))
     .addAccount({
       name: 'Checking',
@@ -178,9 +182,11 @@ describe('POST /setup/conversation', () => {
       established: [
         {
           section: 'ANCHOR',
+          id: null,
           summary: expect.stringContaining('Paid on day 5') as string,
         },
       ],
+      removed: [],
       corrections: [],
       nextSection: 'ACCOUNTS',
       isComplete: false,
@@ -314,7 +320,11 @@ describe('POST /setup/conversation/:id/apply', () => {
       id: 'conv-1',
       transcript: [],
       state: {
-        draft: SetupDraft.empty('2026-09', noHolidays),
+        draft: SetupDraft.empty(
+          '2026-09',
+          noHolidays,
+          new SequentialIdSource('rec'),
+        ),
         section: 'ANCHOR',
       },
       records: [],
