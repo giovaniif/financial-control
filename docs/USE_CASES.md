@@ -150,8 +150,10 @@ a complete dataset and needs none of the conversation.
 
 ### UC-2 — Recurring templates
 
-The engine that fills future cycles. Lives on **Profile**, where the user meets them as *fixed bills* and
-*variable bills* — the word "template" is the domain's, and the UI does not borrow it.
+The engine that fills future cycles. Lives on **Profile**, where the user meets them as *bills* — the word
+"template" is the domain's, and the UI does not borrow it. There is one list of them, in due-day order: a bill
+whose amount is still a guess is tagged `~estimate` (UC-2.6) rather than filed somewhere of its own, so
+confirming an amount changes the amount and the tag and moves nothing.
 
 **UC-2.1 — Create a recurring outcome**
 Name, amount, **due day of month**, start cycle, optional end cycle. The app generates one entry per cycle
@@ -505,8 +507,9 @@ progress; the upcoming list with inline settle; bucket chips; alerts; and the as
 
 ### Profile
 Everything the user configures, in the order the first run asked for it: the payday anchor with its change
-preview and weekend rule, accounts, salary, fixed bills, variable bills, credit cards with their
-committed-future figure, the formatting reference, the setup checklist, backup and restore.
+preview and weekend rule, accounts, salary, the bills in due-day order with the unconfirmed ones tagged
+`~estimate`, credit cards with their committed-future figure, the formatting reference, the setup checklist,
+backup and restore.
 *Primary action:* edit a bill. *Secondary:* re-enter the setup conversation. → UC-1, UC-2, UC-5.8
 
 ### Investments & Savings — *the answer to Q2*
@@ -586,7 +589,7 @@ looks like an oversight:
 |---|---|
 | **Cycle Ledger** | The chain strip and the figures moved to Main; settling moved to Main's upcoming list; the dated entry list with its running balance is produced on request (UC-8.4). Ad-hoc entries, overrides, closing and reopening are proposals (UC-8.3) |
 | **Cards & Invoices** | Card configuration and the committed-future figure moved to Profile; registering a purchase, splitting instalments, refunds, early payoff and viewing an invoice are asked for (UC-5, UC-8.3, UC-8.4); paying an invoice is settling an entry on Main |
-| **Recurring Templates** | Moved to Profile in full, as *fixed bills* and *variable bills* |
+| **Recurring Templates** | Moved to Profile in full, as the *salary* and the *bills* |
 | **Wealth Projection** | Merged into Investments & Savings, beneath the buckets that feed it |
 
 No use case was dropped in the move. What changed is that the two screens read least often — the full ledger

@@ -3,7 +3,7 @@ import type {
   InvoiceResponse,
   TemplateResponse,
 } from '@fin/contracts';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -56,6 +56,13 @@ const electricity = template({
   isEstimate: true,
 });
 
+const internet = template({
+  id: 'internet',
+  name: 'Internet',
+  amount: -12_000,
+  dueDayOfMonth: 20,
+});
+
 const invoice = (
   overrides: Partial<InvoiceResponse> = {},
 ): InvoiceResponse => ({
@@ -103,6 +110,11 @@ const renderPage = () =>
 
 const region = (name: string) => screen.getByRole('region', { name });
 
+const billRows = () => within(region('Bills')).getAllByRole('row').slice(1);
+
+const positionOf = (name: string) =>
+  billRows().findIndex((row) => within(row).queryByText(name) !== null);
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -126,8 +138,7 @@ describe('ProfilePage', () => {
       'Accounts',
       'Commitments per cycle',
       'Salary',
-      'Fixed bills',
-      'Variable bills',
+      'Bills',
       'Credit cards',
       'Setup',
       'Formatting',
@@ -235,8 +246,12 @@ describe('ProfilePage', () => {
     expect(screen.queryAllByText(/template/i)).toEqual([]);
   });
 
-  // The conversation asked for salary, fixed bills and variable bills apart.
-  it('separates the salary, the fixed bills and the variable bills', async () => {
+  /**
+   * The salary is income, not a bill, so it keeps its own section. Everything
+   * that goes out is one list — a bill whose amount is a guess is still a
+   * bill, and `isEstimate` already says which ones those are.
+   */
+  it('keeps the salary apart and carries every bill in one list', async () => {
     stubApi({
       '/api/settings/anchor': anchor,
       '/api/templates': withTemplates([salary, template(), electricity]),
@@ -248,14 +263,66 @@ describe('ProfilePage', () => {
       within(region('Salary')).getByRole('button', { name: 'Edit Salary' }),
     ).toBeInTheDocument();
     expect(
-      within(region('Fixed bills')).getByText('Health Plan'),
+      within(region('Bills')).getByText('Health Plan'),
     ).toBeInTheDocument();
     expect(
-      within(region('Variable bills')).getByText('Electricity'),
+      within(region('Bills')).getByText('Electricity'),
     ).toBeInTheDocument();
-    expect(
-      within(region('Fixed bills')).getByText('day 8'),
-    ).toBeInTheDocument();
+    expect(within(region('Bills')).getByText('day 8')).toBeInTheDocument();
+    expect(within(region('Salary')).queryByText('Health Plan')).toBeNull();
+  });
+
+  // The order is the order the money leaves, so a cycle reads front to back.
+  it('lists the bills in due-day order', async () => {
+    stubApi({
+      '/api/settings/anchor': anchor,
+      '/api/templates': withTemplates([internet, electricity, template()]),
+    });
+    renderPage();
+    await screen.findByText('Health Plan');
+
+    expect(['Health Plan', 'Electricity', 'Internet'].map(positionOf)).toEqual([
+      0, 1, 2,
+    ]);
+  });
+
+  /**
+   * FIN-121 — the two lists were computed from `isEstimate`, so confirming an
+   * amount made the bill vanish from one and reappear in the other. The tag
+   * changes; the row stays exactly where it was.
+   */
+  it('leaves a bill where it is when its amount is confirmed', async () => {
+    let confirmed = false;
+    stubApi({
+      '/api/settings/anchor': anchor,
+      '/api/templates': () =>
+        withTemplates([
+          template(),
+          confirmed ? { ...electricity, isEstimate: false } : electricity,
+          internet,
+        ]),
+      '/api/templates/electricity': () => {
+        confirmed = true;
+        return { ...electricity, isEstimate: false };
+      },
+    });
+    renderPage();
+    await screen.findByText('Electricity');
+
+    const before = positionOf('Electricity');
+    expect(within(region('Bills')).getByText('~estimate')).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Edit Electricity' }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Confirm the amount' }),
+    );
+
+    await waitFor(() => {
+      expect(within(region('Bills')).queryByText('~estimate')).toBeNull();
+    });
+    expect(positionOf('Electricity')).toBe(before);
   });
 
   // UC-2.6 — a guess must never read as a known bill.
@@ -267,12 +334,12 @@ describe('ProfilePage', () => {
     renderPage();
     await screen.findByText('Electricity');
 
+    const bills = region('Bills');
+
+    expect(within(bills).getAllByText('~estimate')).toHaveLength(1);
     expect(
-      within(region('Variable bills')).getByText('~estimate'),
-    ).toBeInTheDocument();
-    expect(
-      within(region('Fixed bills')).queryByText('~estimate'),
-    ).not.toBeInTheDocument();
+      within(bills).getByRole('row', { name: /Electricity/ }),
+    ).toHaveTextContent('~estimate');
   });
 
   // UC-2.7 — the four figures that summarise what the user is committed to.
@@ -324,19 +391,24 @@ describe('ProfilePage', () => {
     ).toBeInTheDocument();
   });
 
-  it('offers to add income, a fixed bill and a variable bill', async () => {
+  /**
+   * One button, and the estimate is a flag on the form — two buttons made a
+   * guessed amount look like a different kind of bill.
+   */
+  it('offers to add income and a bill, with the estimate as a flag', async () => {
     stubApi({ '/api/settings/anchor': anchor });
     renderPage();
 
     expect(
       await screen.findByRole('button', { name: 'Add income' }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /variable bill/ })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add a bill' }));
+
     expect(
-      screen.getByRole('button', { name: 'Add a fixed bill' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Add a variable bill' }),
-    ).toBeInTheDocument();
+      screen.getByRole('checkbox', { name: 'Unconfirmed estimate' }),
+    ).not.toBeChecked();
   });
 
   // UC-5.8 — the figure the spreadsheet could not produce.

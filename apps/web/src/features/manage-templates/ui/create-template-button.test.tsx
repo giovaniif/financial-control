@@ -124,25 +124,47 @@ describe('CreateTemplateButton', () => {
     });
   });
 
-  // A bill whose amount moves is a guess until the user confirms it.
-  it('flags an item as an estimate by default when the caller says so', async () => {
+  /**
+   * A bill whose amount moves is not a different kind of bill — it is this
+   * one flag, on the one form, so nothing has to be filed elsewhere.
+   */
+  it('records a bill as an estimate when the flag is ticked', async () => {
     const fetchMock = stubPost();
     renderWithProviders(
       <CreateTemplateButton
         currentMonth="2026-08"
-        label="Add a variable bill"
+        label="Add a bill"
         direction="OUT"
-        isEstimateByDefault
       />,
     );
 
-    await open('Add a variable bill');
+    await open('Add a bill');
     await userEvent.type(screen.getByLabelText('Name'), 'Electricity');
     await userEvent.type(screen.getByLabelText('Amount'), '280');
+    await userEvent.click(
+      screen.getByRole('checkbox', { name: 'Unconfirmed estimate' }),
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toMatchObject({ isEstimate: true });
+    });
+  });
+
+  // The default is the confirmed one: a guess is something the user says.
+  it('records a bill as confirmed unless the flag is ticked', async () => {
+    const fetchMock = stubPost();
+    renderWithProviders(
+      <CreateTemplateButton currentMonth="2026-08" direction="OUT" />,
+    );
+
+    await open();
+    await userEvent.type(screen.getByLabelText('Name'), 'Rent');
+    await userEvent.type(screen.getByLabelText('Amount'), '2.500');
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      expect(bodyOf(fetchMock)).toMatchObject({ isEstimate: false });
     });
   });
 
