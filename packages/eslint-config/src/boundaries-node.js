@@ -4,17 +4,21 @@ import tseslint from 'typescript-eslint';
 /**
  * Classical DDD layering for `apps/api`, from .claude/architecture.md.
  *
- * `prisma-adapter` is listed before `infrastructure` because
- * eslint-plugin-boundaries resolves an element to the first pattern that
- * matches, and `src/infrastructure/prisma/**` sits inside
- * `src/infrastructure/**`. It is the only element allowed to import
- * `@prisma/client`.
+ * `prisma-adapter` and `anthropic-adapter` are listed before `infrastructure`
+ * because eslint-plugin-boundaries resolves an element to the first pattern
+ * that matches, and both directories sit inside `src/infrastructure/**`. Each
+ * is the only element allowed to import its vendor SDK.
  */
 const elements = [
   {
     type: 'prisma-adapter',
     mode: 'file',
     pattern: 'src/infrastructure/prisma/**/*',
+  },
+  {
+    type: 'anthropic-adapter',
+    mode: 'file',
+    pattern: 'src/infrastructure/anthropic/**/*',
   },
   { type: 'infrastructure', mode: 'file', pattern: 'src/infrastructure/**/*' },
   { type: 'domain', mode: 'file', pattern: 'src/domain/**/*' },
@@ -46,15 +50,17 @@ export const boundariesNodeConfig = tseslint.config({
               'application',
               'infrastructure',
               'prisma-adapter',
+              'anthropic-adapter',
             ],
           },
           {
-            from: 'prisma-adapter',
+            from: ['prisma-adapter', 'anthropic-adapter'],
             allow: [
               'domain',
               'application',
               'infrastructure',
               'prisma-adapter',
+              'anthropic-adapter',
             ],
           },
           { from: 'interface', allow: ['domain', 'application', 'interface'] },
@@ -68,6 +74,7 @@ export const boundariesNodeConfig = tseslint.config({
               'application',
               'infrastructure',
               'prisma-adapter',
+              'anthropic-adapter',
               'interface',
             ],
           },
@@ -90,6 +97,16 @@ export const boundariesNodeConfig = tseslint.config({
             disallow: ['@prisma/client'],
             message:
               "'@prisma/client' may only be imported under src/infrastructure/prisma/",
+          },
+          {
+            // The model is reached through the LanguageModel port, so that
+            // every interactor above it is testable with no key and no
+            // network. One file knows the vendor; everything else knows the
+            // port.
+            from: ['application', 'infrastructure', 'interface'],
+            disallow: ['@anthropic-ai/sdk'],
+            message:
+              "'@anthropic-ai/sdk' may only be imported under src/infrastructure/anthropic/",
           },
         ],
       },

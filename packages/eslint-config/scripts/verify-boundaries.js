@@ -27,6 +27,7 @@ const expected = {
       'boundaries/element-types',
     ],
     ['src/interface/http/imports-prisma.ts', 'boundaries/external'],
+    ['src/application/budgeting/imports-anthropic.ts', 'boundaries/external'],
   ],
   web: [
     ['src/entities/cycle/imports-features.ts', 'boundaries/element-types'],
