@@ -82,6 +82,13 @@ export type ModelStreamEvent =
  */
 export class LanguageModelUnavailable extends DomainError {}
 
+/**
+ * Raised when the model was reachable but the call failed — a transport
+ * error, a rejected request, an overloaded upstream. Typed so the interface
+ * layer can map it to a status code without the domain learning about HTTP.
+ */
+export class LanguageModelFailed extends DomainError {}
+
 export type JsonValue =
   string | number | boolean | null | JsonValue[] | JsonObject;
 export interface JsonObject {

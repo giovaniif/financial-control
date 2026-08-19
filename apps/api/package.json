@@ -17,6 +17,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.117.1",
     "@fin/contracts": "workspace:*",
     "@prisma/client": "^6.19.1",
     "fastify": "^5.6.1"

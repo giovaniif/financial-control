@@ -1,0 +1,33 @@
+import type {
+  LanguageModel,
+  ModelResponse,
+  ModelStreamEvent,
+} from '../../domain/ports/language-model.js';
+import { LanguageModelUnavailable } from '../../domain/ports/language-model.js';
+
+const REASON =
+  'No ANTHROPIC_API_KEY is configured, so the assistant is switched off. Everything else in the app works without it.';
+
+/**
+ * The model when there is no key.
+ *
+ * Wired by the composition root instead of the real adapter, so that running
+ * without a key fails one call with a typed error the UI explains — rather
+ * than failing at startup, which would make the key a precondition for
+ * reading your own numbers.
+ */
+export class UnavailableLanguageModel implements LanguageModel {
+  complete(): Promise<ModelResponse> {
+    return Promise.reject(new LanguageModelUnavailable(REASON));
+  }
+
+  /** Rejects on the first read, so a caller's `for await` fails as it would
+   *  against a real model that could not be reached. */
+  stream(): AsyncIterable<ModelStreamEvent> {
+    return {
+      [Symbol.asyncIterator]: (): AsyncIterator<ModelStreamEvent> => ({
+        next: () => Promise.reject(new LanguageModelUnavailable(REASON)),
+      }),
+    };
+  }
+}
