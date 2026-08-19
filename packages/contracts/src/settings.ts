@@ -11,6 +11,23 @@ export interface AnchorChangeRequest {
   shiftPolicy: ShiftPolicy;
 }
 
+/** One cycle as a proposed anchor would slice it. Nothing is persisted. */
+export interface ResolvedCycleResponse {
+  month: string;
+  label: string;
+  /** ISO dates; the frontend owns the dd/MM/yyyy rendering. */
+  start: string;
+  end: string;
+  /** Payday landed on a weekend or holiday and moved by the policy. */
+  shifted: boolean;
+  /** The anchor day ran past the month's length and clamped onto its end. */
+  clamped: boolean;
+}
+
+export interface AnchorResolveResponse {
+  cycles: ResolvedCycleResponse[];
+}
+
 /** One open cycle's boundaries before and after a proposed anchor change. */
 export interface CycleShiftResponse {
   month: string;

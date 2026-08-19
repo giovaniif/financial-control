@@ -38,5 +38,7 @@ export const queryKeys = {
     ['cards', cardId, 'billing-preview', purchasedOn] as const,
   buckets: () => ['buckets'] as const,
   anchor: () => ['settings', 'anchor'] as const,
+  anchorResolve: (anchorDay: number, shiftPolicy: string) =>
+    ['settings', 'anchor', 'resolve', anchorDay, shiftPolicy] as const,
   setup: () => ['setup'] as const,
 } as const;

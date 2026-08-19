@@ -12,6 +12,7 @@ export function stubApi(routes: Record<string, unknown>): void {
     '/api/buckets': [],
     '/api/cards': [],
     '/api/cycles': { estimates: 'included', cycles: [] },
+    '/api/settings/anchor/resolve': { cycles: [] },
     '/api/setup': {
       anchorConfigured: false,
       accounts: 0,
