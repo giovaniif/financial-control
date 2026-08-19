@@ -7,6 +7,8 @@ import { noHolidays } from '../../domain/ports/holiday-calendar.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
 import { Percentage } from '../../domain/shared/percentage.js';
+import { SequentialIdSource } from '../testing/fakes.js';
+
 import {
   AnchorNotChosen,
   DueDayOutsideCycle,
@@ -14,6 +16,7 @@ import {
   SectionCannotBeSkipped,
   SETUP_SECTIONS,
   SetupDraft,
+  SetupRecordNotFound,
   SetupSection,
 } from './setup-draft.js';
 
@@ -24,7 +27,7 @@ const anchor = (day: number, policy: ShiftPolicy = ShiftPolicy.Preceding) =>
   PaydayAnchor.of(day, policy);
 
 const empty = (startMonth = '2026-09') =>
-  SetupDraft.empty(startMonth, noHolidays);
+  SetupDraft.empty(startMonth, noHolidays, new SequentialIdSource('rec'));
 
 const withAnchor = (day = 5) => empty().withAnchor(anchor(day));
 
@@ -158,9 +161,7 @@ describe('SetupDraft sections', () => {
   });
 
   it('rejects a start month that is not a YYYY-MM month', () => {
-    expect(() => SetupDraft.empty('September', noHolidays)).toThrow(
-      InvalidSetupRecord,
-    );
+    expect(() => empty('September')).toThrow(InvalidSetupRecord);
   });
 
   it('keeps the month the setup starts from, which dates every template', () => {
@@ -191,7 +192,12 @@ describe('SetupDraft immutability', () => {
 describe('SetupDraft accounts', () => {
   it('keeps the account it was given', () => {
     expect(withAnchor().addAccount(account()).accounts).toEqual([
-      { name: 'Checking', type: 'CHECKING', balance: Money.fromCents(216_000) },
+      {
+        id: 'rec-1',
+        name: 'Checking',
+        type: 'CHECKING',
+        balance: Money.fromCents(216_000),
+      },
     ]);
   });
 
@@ -541,5 +547,302 @@ describe('SetupDraft buckets', () => {
 
   it.each(refused)('rejects %s', (_name, build) => {
     expect(build).toThrow(InvalidSetupRecord);
+  });
+});
+
+describe('SetupDraft record identity', () => {
+  it('gives every record it establishes an id of its own', () => {
+    const draft = withAnchor().addAccount(account()).addFixedBill(bill());
+
+    expect(draft.accounts[0]?.id).toBe('rec-1');
+    expect(draft.fixedBills[0]?.id).toBe('rec-2');
+  });
+
+  /** `settled()` establishes one of each, in the order the sections are asked. */
+  const kinds: readonly [string, string, SetupSection][] = [
+    ['an account', 'rec-1', SetupSection.Accounts],
+    ['a fixed bill', 'rec-2', SetupSection.FixedBills],
+    ['a variable bill', 'rec-3', SetupSection.VariableBills],
+    ['a card', 'rec-4', SetupSection.Cards],
+    ['a bucket', 'rec-5', SetupSection.Buckets],
+  ];
+
+  it.each(kinds)('finds %s by its id', (_name, recordId, section) => {
+    const found = settled().find(recordId);
+
+    expect(found?.section).toBe(section);
+    expect(found?.record.id).toBe(recordId);
+  });
+
+  it('holds every record it can be asked to correct in one list', () => {
+    expect(settled().records.map((held) => held.record.id)).toEqual([
+      'rec-1',
+      'rec-2',
+      'rec-3',
+      'rec-4',
+      'rec-5',
+    ]);
+  });
+
+  it('finds nothing under an id it never issued', () => {
+    expect(settled().find('rec-9')).toBeUndefined();
+  });
+});
+
+describe('SetupDraft corrections', () => {
+  it('takes a corrected amount without moving the record', () => {
+    const corrected = settled().replaceFixedBill('rec-2', {
+      ...bill(),
+      amount: Money.fromCents(35_000),
+    });
+
+    expect(corrected.fixedBills).toHaveLength(1);
+    expect(corrected.fixedBills[0]?.id).toBe('rec-2');
+    expect(corrected.fixedBills[0]?.amount.cents).toBe(-35_000);
+  });
+
+  it('returns a new draft rather than changing the one it was given', () => {
+    const before = settled();
+    const after = before.replaceFixedBill('rec-2', {
+      ...bill(),
+      amount: Money.fromCents(35_000),
+    });
+
+    expect(before.fixedBills[0]?.amount.cents).toBe(-32_000);
+    expect(after).not.toBe(before);
+  });
+
+  /**
+   * FIN-93 and FIN-117: the placement rule is what a mis-extracted due day
+   * gets wrong, so a correction is checked exactly as an addition is. Trusting
+   * it because the record it replaces was valid is the whole bug.
+   */
+  it('re-runs the placement rule on a corrected due day', () => {
+    const before = withAnchor(31).addFixedBill(bill('Rent', 31));
+
+    expect(() => before.replaceFixedBill('rec-1', bill('Rent', 30))).toThrow(
+      DueDayOutsideCycle,
+    );
+  });
+
+  it('leaves the record it could not replace exactly as it was', () => {
+    const before = withAnchor(31).addFixedBill(bill('Rent', 31));
+
+    expect(() => before.replaceFixedBill('rec-1', bill('Rent', 30))).toThrow(
+      DueDayOutsideCycle,
+    );
+    expect(before.fixedBills).toHaveLength(1);
+    expect(before.fixedBills[0]?.dueDayOfMonth).toBe(31);
+  });
+
+  it('corrects the record named and leaves the others where they are', () => {
+    const corrected = withAnchor()
+      .addFixedBill(bill())
+      .addFixedBill(bill('Internet', 20))
+      .replaceFixedBill('rec-1', {
+        ...bill(),
+        amount: Money.fromCents(35_000),
+      });
+
+    expect(corrected.fixedBills.map((held) => held.name)).toEqual([
+      'Health Plan',
+      'Internet',
+    ]);
+    expect(corrected.fixedBills[0]?.amount.cents).toBe(-35_000);
+    expect(corrected.fixedBills[1]?.amount.cents).toBe(-32_000);
+  });
+
+  it('leaves a card alone when the account corrected is not the one paying it', () => {
+    const corrected = settled()
+      .addAccount(account('Nubank'))
+      .replaceAccount('rec-6', account('Nu'));
+
+    expect(corrected.cards[0]?.paymentAccountName).toBe('Checking');
+    expect(corrected.accounts[1]?.name).toBe('Nu');
+  });
+
+  it('lets a record keep the name it already holds', () => {
+    const corrected = settled().replaceVariableBill('rec-3', {
+      ...bill('Electricity', 15),
+      amount: Money.fromCents(31_000),
+    });
+
+    expect(corrected.variableBills[0]?.name).toBe('Electricity');
+  });
+
+  it('refuses a correction onto a name another record already holds', () => {
+    expect(() =>
+      settled().replaceVariableBill('rec-3', bill('health plan', 8)),
+    ).toThrow(InvalidSetupRecord);
+  });
+
+  it('takes a corrected account, its kind and its balance', () => {
+    const corrected = settled().replaceAccount('rec-1', {
+      name: 'Nubank',
+      type: AccountType.Savings,
+      balance: Money.fromCents(500_000),
+    });
+
+    expect(corrected.accounts[0]?.name).toBe('Nubank');
+    expect(corrected.accounts[0]?.type).toBe(AccountType.Savings);
+    expect(corrected.accounts[0]?.balance.cents).toBe(500_000);
+  });
+
+  /**
+   * A card names the account that pays it, and the draft holds no ids for the
+   * conversation to use — so a corrected account name has to travel with it or
+   * the card would be left naming an account nothing holds.
+   */
+  it('carries a renamed account through to the card it pays', () => {
+    const corrected = settled().replaceAccount('rec-1', {
+      ...account('Nubank'),
+    });
+
+    expect(corrected.cards[0]?.paymentAccountName).toBe('Nubank');
+  });
+
+  it('takes a corrected card and the account that pays it', () => {
+    const corrected = settled()
+      .addAccount(account('Nubank'))
+      .replaceCard('rec-4', { ...card(), paymentAccountName: 'Nubank' });
+
+    expect(corrected.cards).toHaveLength(1);
+    expect(corrected.cards[0]?.paymentAccountName).toBe('Nubank');
+  });
+
+  it('refuses a card corrected onto an account nothing holds', () => {
+    expect(() =>
+      settled().replaceCard('rec-4', {
+        ...card(),
+        paymentAccountName: 'Nubank',
+      }),
+    ).toThrow(InvalidSetupRecord);
+  });
+
+  it('takes a corrected rule and keeps the funding order it had', () => {
+    const corrected = settled().replaceOngoingBucket('rec-5', {
+      ...ongoing(),
+      rule: Allocation.fixed(Money.fromCents(177_800)),
+    });
+
+    expect(corrected.buckets[0]?.rule).toEqual(
+      Allocation.fixed(Money.fromCents(177_800)),
+    );
+    expect(corrected.buckets[0]?.priority).toBe(1);
+  });
+
+  it('takes a corrected target on a goal', () => {
+    const corrected = withAnchor()
+      .addGoalBucket(goal())
+      .replaceGoalBucket('rec-1', {
+        ...goal(),
+        target: {
+          amount: Money.fromCents(20_000_000),
+          date: LocalDate.parse('2032-03-31'),
+        },
+      });
+
+    const [bucket] = corrected.buckets;
+
+    expect(bucket?.mode === 'GOAL' ? bucket.target.amount.cents : 0).toBe(
+      20_000_000,
+    );
+  });
+
+  const unknown: readonly Attempt[] = [
+    ['an account', () => settled().replaceAccount('rec-9', account())],
+    ['a fixed bill', () => settled().replaceFixedBill('rec-9', bill())],
+    [
+      'a variable bill',
+      () => settled().replaceVariableBill('rec-9', bill('Water', 12)),
+    ],
+    ['a card', () => settled().replaceCard('rec-9', card('Nu'))],
+    [
+      'an ongoing bucket',
+      () => settled().replaceOngoingBucket('rec-9', ongoing('Reserve', 2)),
+    ],
+    [
+      'a goal bucket',
+      () => settled().replaceGoalBucket('rec-9', goal('Reserve', 2)),
+    ],
+    ['anything at all', () => settled().remove('rec-9')],
+  ];
+
+  it.each(unknown)(
+    'refuses to correct %s it is not holding',
+    (_name, build) => {
+      expect(build).toThrow(SetupRecordNotFound);
+    },
+  );
+});
+
+describe('SetupDraft removals', () => {
+  const drops: readonly [
+    string,
+    () => SetupDraft,
+    string,
+    (draft: SetupDraft) => number,
+  ][] = [
+    // The card is dropped first: an account paying one cannot be dropped.
+    [
+      'an account',
+      () => settled().remove('rec-4'),
+      'rec-1',
+      (draft) => draft.accounts.length,
+    ],
+    ['a fixed bill', settled, 'rec-2', (draft) => draft.fixedBills.length],
+    [
+      'a variable bill',
+      settled,
+      'rec-3',
+      (draft) => draft.variableBills.length,
+    ],
+    ['a card', settled, 'rec-4', (draft) => draft.cards.length],
+    ['a bucket', settled, 'rec-5', (draft) => draft.buckets.length],
+  ];
+
+  it.each(drops)(
+    'drops %s and nothing else with it',
+    (_name, build, recordId, count) => {
+      const before = build();
+      const after = before.remove(recordId);
+
+      expect(count(after)).toBe(count(before) - 1);
+      expect(after.records).toHaveLength(before.records.length - 1);
+      expect(after.find(recordId)).toBeUndefined();
+    },
+  );
+
+  it('returns a new draft rather than changing the one it was given', () => {
+    const before = settled();
+    const after = before.remove('rec-2');
+
+    expect(before.fixedBills).toHaveLength(1);
+    expect(after).not.toBe(before);
+  });
+
+  /**
+   * A card is paid from an account by name, so dropping the account under it
+   * would leave the card naming nothing — and composition would quietly drop
+   * the card rather than say so.
+   */
+  it('refuses to drop an account a card is paid from', () => {
+    expect(() => settled().remove('rec-1')).toThrow(InvalidSetupRecord);
+    expect(settled().accounts).toHaveLength(1);
+  });
+
+  /**
+   * Skipping says the user has nothing in a section; dropping says one record
+   * was wrong. The first settles the section, the second leaves it to ask
+   * about again.
+   */
+  it('tells dropping the only bill apart from having none', () => {
+    const dropped = withAnchor().addFixedBill(bill()).remove('rec-1');
+    const skipped = withAnchor().skip(SetupSection.FixedBills);
+
+    expect(dropped.fixedBills).toEqual([]);
+    expect(skipped.fixedBills).toEqual([]);
+    expect(dropped.remainingSections).toContain(SetupSection.FixedBills);
+    expect(skipped.remainingSections).not.toContain(SetupSection.FixedBills);
   });
 });

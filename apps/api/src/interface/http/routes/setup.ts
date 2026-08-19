@@ -93,8 +93,10 @@ function toTurn(turn: SetupTurn): SetupTurnResponse {
     message: turn.message,
     established: turn.established.map((record) => ({
       section: record.section,
+      id: record.id ?? null,
       summary: record.summary,
     })),
+    removed: [...turn.removed],
     corrections: [...turn.corrections],
     nextSection: turn.nextSection ?? null,
     isComplete: turn.isComplete,

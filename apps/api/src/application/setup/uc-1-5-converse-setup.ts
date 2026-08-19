@@ -24,6 +24,11 @@ import { Money } from '../../domain/shared/money.js';
 import { Percentage } from '../../domain/shared/percentage.js';
 import { calendarMonthOf, monthOf } from '../budgeting/month.js';
 
+import type {
+  DraftRecord,
+  ProposedBucket,
+  ProposedGoalBucket,
+} from './setup-draft.js';
 import { SETUP_SECTIONS, SetupDraft, SetupSection } from './setup-draft.js';
 
 export class SetupConversationNotFound extends DomainError {}
@@ -31,6 +36,12 @@ export class SetupConversationNotFound extends DomainError {}
 /** One thing the conversation established, in the user's own terms. */
 export interface EstablishedRecord {
   readonly section: SetupSection;
+  /**
+   * What a correction names it by. Absent for the sections that hold a single
+   * value — the anchor and the salary are answered again rather than
+   * corrected, so there is never a second one to tell apart.
+   */
+  readonly id: string | undefined;
   readonly summary: string;
 }
 
@@ -55,6 +66,8 @@ export interface SetupTurn {
   /** What to say next: the correction when there is one, else the model's. */
   readonly message: string;
   readonly established: readonly EstablishedRecord[];
+  /** The ids of the records this turn dropped — UC-1.5. */
+  readonly removed: readonly string[];
   readonly corrections: readonly string[];
   readonly nextSection: SetupSection | undefined;
   readonly isComplete: boolean;
@@ -105,10 +118,11 @@ export class ConverseSetup {
       { role: 'user', text: input.message },
     ];
 
+    const tools = toolsFor(stored.state);
     const response = await this.model.complete({
-      system: systemPrompt(stored.state.section),
+      system: systemPrompt(stored.state, tools),
       messages: asked,
-      tools: toolsFor(stored.state.section),
+      tools,
     });
 
     const transcript: ModelMessage[] = [
@@ -123,10 +137,11 @@ export class ConverseSetup {
     // A refusal is a well-formed answer the user is shown, not a failure the
     // wizard has to recover from.
     if (response.stopReason === 'refusal') {
-      await this.save(stored, transcript, stored.state, []);
+      await this.save(stored, transcript, stored.state, [], []);
       return this.turn(stored.id, stored.state, {
         message: response.text,
         established: [],
+        removed: [],
         corrections: [],
         wasRefused: true,
       });
@@ -137,11 +152,18 @@ export class ConverseSetup {
       transcript.push({ role: 'toolResults', results: outcome.results });
     }
 
-    await this.save(stored, transcript, outcome.state, outcome.established);
+    await this.save(
+      stored,
+      transcript,
+      outcome.state,
+      outcome.established,
+      outcome.removed,
+    );
 
     return this.turn(stored.id, outcome.state, {
       message: this.say(response.text, outcome),
       established: outcome.established,
+      removed: outcome.removed,
       corrections: outcome.corrections,
       wasRefused: false,
     });
@@ -160,7 +182,11 @@ export class ConverseSetup {
           // The cycle a due day has to fit is only knowable once the anchor
           // is, so the draft opens on today's calendar month and is rebuilt
           // on the resolved one the moment the anchor arrives.
-          draft: SetupDraft.empty(calendarMonthOf(today), this.holidays),
+          draft: SetupDraft.empty(
+            calendarMonthOf(today),
+            this.holidays,
+            this.ids,
+          ),
           section: SetupSection.Anchor,
         },
         records: [],
@@ -181,6 +207,7 @@ export class ConverseSetup {
     calls: readonly ToolCall[],
   ): TurnOutcome {
     const established: EstablishedRecord[] = [];
+    const removed: string[] = [];
     const corrections: string[] = [];
     const results: ToolResult[] = [];
     let current = state;
@@ -191,6 +218,50 @@ export class ConverseSetup {
     };
 
     for (const call of calls) {
+      if (call.name === CORRECT_TOOL.name || call.name === REMOVE_TOOL.name) {
+        try {
+          const outcome =
+            call.name === CORRECT_TOOL.name
+              ? correct(current.draft, call.arguments)
+              : drop(current.draft, call.arguments);
+
+          if (outcome.kind === 'missing') {
+            refuse(call, outcome.question);
+            continue;
+          }
+
+          // The cursor stays where it is. The record being corrected may
+          // belong to a section already settled, and going back to it would
+          // restart the conversation the correction is meant to fit into.
+          current = { ...current, draft: outcome.draft };
+
+          if (outcome.kind === 'dropped') {
+            removed.push(outcome.id);
+            results.push({
+              callId: call.id,
+              content: `Dropped ${outcome.summary}.`,
+              isError: false,
+            });
+            continue;
+          }
+
+          established.push({
+            section: outcome.section,
+            id: outcome.id,
+            summary: outcome.summary,
+          });
+          results.push({
+            callId: call.id,
+            content: `Corrected. ${outcome.summary}`,
+            isError: false,
+          });
+        } catch (error) {
+          if (!(error instanceof DomainError)) throw error;
+          refuse(call, error.message);
+        }
+        continue;
+      }
+
       const section = current.section;
       if (section === undefined) {
         refuse(call, 'Everything is already recorded.');
@@ -220,7 +291,7 @@ export class ConverseSetup {
           call,
           spec === undefined
             ? `There is nothing called ${call.name} to call here.`
-            : `${LABELS[spec.section]} is already settled, so nothing changed. Say explicitly that you want it changed and I will.`,
+            : `${LABELS[spec.section]} is already settled, so nothing changed. I can correct or drop a record already recorded — tell me which one.`,
         );
         continue;
       }
@@ -231,6 +302,7 @@ export class ConverseSetup {
           args: call.arguments,
           holidays: this.holidays,
           clock: this.clock,
+          ids: this.ids,
         });
 
         if (extraction.kind === 'missing') {
@@ -238,14 +310,20 @@ export class ConverseSetup {
           continue;
         }
 
+        const id = establishedId(current.draft, extraction.draft);
         current = {
           draft: extraction.draft,
           section: SINGULAR.includes(section) ? after(section) : section,
         };
-        established.push({ section, summary: extraction.summary });
+        established.push({ section, id, summary: extraction.summary });
         results.push({
           callId: call.id,
-          content: `Recorded. ${extraction.summary}`,
+          // The id travels back so the model can name the record in a
+          // correction: nothing else in the conversation carries one.
+          content:
+            id === undefined
+              ? `Recorded. ${extraction.summary}`
+              : `Recorded as ${id}. ${extraction.summary}`,
           isError: false,
         });
       } catch (error) {
@@ -256,7 +334,13 @@ export class ConverseSetup {
       }
     }
 
-    return { state: current, established, corrections, results };
+    return {
+      state: withSomethingLeftToAsk(current),
+      established,
+      removed,
+      corrections,
+      results,
+    };
   }
 
   private say(text: string, outcome: TurnOutcome): string {
@@ -272,6 +356,7 @@ export class ConverseSetup {
     said: {
       message: string;
       established: readonly EstablishedRecord[];
+      removed: readonly string[];
       corrections: readonly string[];
       wasRefused: boolean;
     },
@@ -280,6 +365,7 @@ export class ConverseSetup {
       conversationId: id,
       message: said.message,
       established: said.established,
+      removed: said.removed,
       corrections: said.corrections,
       nextSection: state.section,
       isComplete: state.section === undefined && state.draft.isComplete,
@@ -292,12 +378,13 @@ export class ConverseSetup {
     transcript: readonly ModelMessage[],
     state: SetupState,
     established: readonly EstablishedRecord[],
+    removed: readonly string[],
   ): Promise<void> {
     await this.conversations.save({
       id: stored.id,
       transcript,
       state,
-      records: [...stored.records, ...established],
+      records: accumulate(stored.records, established, removed),
     });
   }
 }
@@ -305,8 +392,38 @@ export class ConverseSetup {
 interface TurnOutcome {
   readonly state: SetupState;
   readonly established: readonly EstablishedRecord[];
+  readonly removed: readonly string[];
   readonly corrections: readonly string[];
   readonly results: readonly ToolResult[];
+}
+
+/**
+ * A correction updates the record it corrects rather than adding a second
+ * account of it, and a removal takes it out: what the client shows back has to
+ * be what the draft actually holds.
+ */
+function accumulate(
+  existing: readonly EstablishedRecord[],
+  established: readonly EstablishedRecord[],
+  removed: readonly string[],
+): EstablishedRecord[] {
+  const kept = existing.filter(
+    (record) => record.id === undefined || !removed.includes(record.id),
+  );
+  const corrected = kept.map(
+    (record) =>
+      established.find((next) => keyOf(next) === keyOf(record)) ?? record,
+  );
+  const added = established.filter(
+    (next) => !kept.some((record) => keyOf(record) === keyOf(next)),
+  );
+
+  return [...corrected, ...added];
+}
+
+/** The anchor and the salary hold one record each, so their section is it. */
+function keyOf(record: EstablishedRecord): string {
+  return record.id ?? `section:${record.section}`;
 }
 
 /**
@@ -327,6 +444,7 @@ interface ApplyContext {
   readonly args: JsonObject;
   readonly holidays: HolidayCalendar;
   readonly clock: Clock;
+  readonly ids: IdSource;
 }
 
 interface ToolSpec {
@@ -373,6 +491,70 @@ const RULE_FIELDS: JsonObject = {
   },
 };
 
+/**
+ * UC-1.5 — extraction is a model reading prose, so a record is shown back to
+ * be corrected. Both tools address a record by the id the draft gave it: a
+ * name would be ambiguous the moment there are two bills called the same
+ * thing, and a mis-hearing would rewrite the wrong row.
+ */
+const CORRECT_TOOL: ToolDeclaration = {
+  name: 'correct_record',
+  description:
+    'Change something about a record already recorded — its amount, its day, its name. Name it by the id the recording came back with and pass only the fields that change. Works for a record from any section, including one already finished.',
+  inputSchema: schema(
+    {
+      recordId: {
+        type: 'string',
+        description: 'the id the record was recorded under',
+      },
+      name: { type: 'string', description: "the record's name" },
+      type: {
+        type: 'string',
+        enum: [AccountType.Checking, AccountType.Savings, AccountType.Cash],
+        description: 'for an account: what kind of account it is',
+      },
+      balanceInCents: centsField('for an account: what is in it right now'),
+      amountInCents: centsField('for a bill: what it costs each cycle'),
+      dueDayOfMonth: dayField('for a bill: the day of the month it falls due'),
+      isEstimate: {
+        type: 'boolean',
+        description:
+          'for a bill: true when the amount is a guess rather than a known figure',
+      },
+      limitInCents: centsField('for a card: the credit limit'),
+      closingDay: dayField('for a card: the day the invoice closes'),
+      dueDay: dayField('for a card: the day the invoice falls due'),
+      paymentAccountName: {
+        type: 'string',
+        description: 'for a card: the account the invoice is paid from',
+      },
+      ...RULE_FIELDS,
+      targetAmountInCents: centsField('for a goal bucket: the amount to reach'),
+      targetDate: {
+        type: 'string',
+        description:
+          'for a goal bucket: the date to reach it by, as YYYY-MM-DD',
+      },
+    },
+    ['recordId'],
+  ),
+};
+
+const REMOVE_TOOL: ToolDeclaration = {
+  name: 'remove_record',
+  description:
+    'Drop a record that should not be there at all, by the id it was recorded under. This is not the same as the user having none of that kind: for that, call finish_section.',
+  inputSchema: schema(
+    {
+      recordId: {
+        type: 'string',
+        description: 'the id the record was recorded under',
+      },
+    },
+    ['recordId'],
+  ),
+};
+
 const TOOLS: readonly ToolSpec[] = [
   {
     section: SetupSection.Anchor,
@@ -392,7 +574,7 @@ const TOOLS: readonly ToolSpec[] = [
         ['dayOfMonth'],
       ),
     },
-    apply: ({ args, holidays, clock }) => {
+    apply: ({ args, holidays, clock, ids }) => {
       const day = readInteger(args, 'dayOfMonth');
       if (day === undefined) {
         return missing(['the day of the month your salary lands']);
@@ -416,7 +598,7 @@ const TOOLS: readonly ToolSpec[] = [
 
       return {
         kind: 'record',
-        draft: SetupDraft.empty(startMonth, holidays).withAnchor(anchor),
+        draft: SetupDraft.empty(startMonth, holidays, ids).withAnchor(anchor),
         summary: `Paid on day ${String(day)}, moving to the ${policy === ShiftPolicy.Preceding ? 'preceding' : 'following'} business day when that one is closed. Setup starts in the ${startMonth} cycle.`,
       };
     },
@@ -638,6 +820,296 @@ const TOOLS: readonly ToolSpec[] = [
   },
 ];
 
+/** What a correction turn produced, or the question standing in its way. */
+type Correction =
+  | {
+      readonly kind: 'corrected';
+      readonly draft: SetupDraft;
+      readonly section: SetupSection;
+      readonly id: string;
+      readonly summary: string;
+    }
+  | {
+      readonly kind: 'dropped';
+      readonly draft: SetupDraft;
+      readonly id: string;
+      readonly summary: string;
+    }
+  | { readonly kind: 'missing'; readonly question: string };
+
+function correct(draft: SetupDraft, args: JsonObject): Correction {
+  const id = readText(args, 'recordId');
+  if (id === undefined) {
+    return {
+      kind: 'missing',
+      question: 'I need to know which record to change.',
+    };
+  }
+
+  const held = draft.find(id);
+  if (held === undefined) return notHolding(id);
+
+  const corrected = correctRecord(draft, id, held, args);
+  if (corrected === undefined) {
+    return {
+      kind: 'missing',
+      question: `I still need to know what to change about ${held.record.name}.`,
+    };
+  }
+
+  return {
+    kind: 'corrected',
+    draft: corrected.draft,
+    section: held.section,
+    id,
+    summary: corrected.summary,
+  };
+}
+
+function drop(draft: SetupDraft, args: JsonObject): Correction {
+  const id = readText(args, 'recordId');
+  if (id === undefined) {
+    return {
+      kind: 'missing',
+      question: 'I need to know which record to drop.',
+    };
+  }
+
+  const held = draft.find(id);
+  if (held === undefined) return notHolding(id);
+
+  return {
+    kind: 'dropped',
+    draft: draft.remove(id),
+    id,
+    summary: held.record.name,
+  };
+}
+
+function notHolding(id: string): Correction {
+  return {
+    kind: 'missing',
+    question: `I am holding nothing recorded as ${id}, so nothing changed.`,
+  };
+}
+
+/**
+ * The fields the call carries are merged onto the record it names and the
+ * whole thing is offered to the draft again, which validates a correction
+ * exactly as it validates an addition. A field belonging to another kind of
+ * record is not read: the corrected record is read back to the user, so what
+ * did not apply is visible rather than silent.
+ *
+ * `undefined` means nothing that applies was stated — a question, not a
+ * correction that changes nothing.
+ */
+function correctRecord(
+  draft: SetupDraft,
+  id: string,
+  held: DraftRecord,
+  args: JsonObject,
+): { draft: SetupDraft; summary: string } | undefined {
+  const name = readText(args, 'name');
+
+  switch (held.section) {
+    case 'ACCOUNTS': {
+      const type = readChoice(args, 'type', [
+        AccountType.Checking,
+        AccountType.Savings,
+        AccountType.Cash,
+      ]);
+      const balance = readCents(args, 'balanceInCents');
+      if (name === undefined && type === undefined && balance === undefined) {
+        return undefined;
+      }
+
+      const account = {
+        name: name ?? held.record.name,
+        type: type ?? held.record.type,
+        balance: balance ?? held.record.balance,
+      };
+
+      return {
+        draft: draft.replaceAccount(id, account),
+        summary: summariseAccount(account),
+      };
+    }
+    case 'FIXED_BILLS':
+    case 'VARIABLE_BILLS': {
+      const amount = readCents(args, 'amountInCents');
+      const dueDayOfMonth = readInteger(args, 'dueDayOfMonth');
+      const isEstimate = readFlag(args, 'isEstimate');
+      if (
+        name === undefined &&
+        amount === undefined &&
+        dueDayOfMonth === undefined &&
+        isEstimate === undefined
+      ) {
+        return undefined;
+      }
+
+      const bill = {
+        name: name ?? held.record.name,
+        amount: amount ?? held.record.amount,
+        dueDayOfMonth: dueDayOfMonth ?? held.record.dueDayOfMonth,
+        isEstimate: isEstimate ?? held.record.isEstimate,
+      };
+
+      return {
+        draft:
+          held.section === SetupSection.FixedBills
+            ? draft.replaceFixedBill(id, bill)
+            : draft.replaceVariableBill(id, bill),
+        summary: summariseBill(bill),
+      };
+    }
+    case 'CARDS': {
+      const limit = readCents(args, 'limitInCents');
+      const closingDay = readInteger(args, 'closingDay');
+      const dueDay = readInteger(args, 'dueDay');
+      const paymentAccountName = readText(args, 'paymentAccountName');
+      if (
+        name === undefined &&
+        limit === undefined &&
+        closingDay === undefined &&
+        dueDay === undefined &&
+        paymentAccountName === undefined
+      ) {
+        return undefined;
+      }
+
+      const card = {
+        name: name ?? held.record.name,
+        limit: limit ?? held.record.limit,
+        closingDay: closingDay ?? held.record.closingDay,
+        dueDay: dueDay ?? held.record.dueDay,
+        paymentAccountName:
+          paymentAccountName ?? held.record.paymentAccountName,
+      };
+
+      return {
+        draft: draft.replaceCard(id, card),
+        summary: summariseCard(card),
+      };
+    }
+    case 'BUCKETS': {
+      const rule = allocationRule(args);
+      const bucket = held.record;
+      const base = {
+        name: name ?? bucket.name,
+        rule: rule ?? bucket.rule,
+        // The funding order is the draft's to hand out, not a correction's to
+        // take: changing it would renumber a bucket nobody mentioned.
+        priority: bucket.priority,
+      };
+
+      if (bucket.mode === 'ONGOING') {
+        if (name === undefined && rule === undefined) return undefined;
+
+        return {
+          draft: draft.replaceOngoingBucket(id, base),
+          summary: summariseBucket({ mode: 'ONGOING', ...base }),
+        };
+      }
+
+      const amount = readCents(args, 'targetAmountInCents');
+      const date = readDate(args, 'targetDate');
+      if (
+        name === undefined &&
+        rule === undefined &&
+        amount === undefined &&
+        date === undefined
+      ) {
+        return undefined;
+      }
+
+      const goal = {
+        ...base,
+        target: {
+          amount: amount ?? bucket.target.amount,
+          date: date ?? bucket.target.date,
+        },
+      };
+
+      return {
+        draft: draft.replaceGoalBucket(id, goal),
+        summary: summariseBucket({ mode: 'GOAL', ...goal }),
+      };
+    }
+    default: {
+      const unreachable: never = held;
+      return unreachable;
+    }
+  }
+}
+
+function summariseAccount(account: {
+  name: string;
+  type: AccountType;
+  balance: Money;
+}): string {
+  return `${account.name} — a ${account.type.toLowerCase()} account holding R$ ${account.balance.toReais()}.`;
+}
+
+function summariseBill(bill: {
+  name: string;
+  amount: Money;
+  dueDayOfMonth: number;
+  isEstimate: boolean;
+}): string {
+  return `${bill.name} — R$ ${bill.amount.abs().toReais()} on day ${String(bill.dueDayOfMonth)}${bill.isEstimate ? ', an estimate' : ''}.`;
+}
+
+function summariseCard(card: {
+  name: string;
+  limit: Money;
+  closingDay: number;
+  dueDay: number;
+  paymentAccountName: string;
+}): string {
+  return `${card.name} — limit R$ ${card.limit.toReais()}, closing on day ${String(card.closingDay)}, due on day ${String(card.dueDay)}, paid from ${card.paymentAccountName}.`;
+}
+
+/** The two shapes a bucket has, with the id the draft has yet to give it. */
+type SummarisedBucket =
+  | ({ readonly mode: 'GOAL' } & ProposedGoalBucket)
+  | ({ readonly mode: 'ONGOING' } & ProposedBucket);
+
+function summariseBucket(bucket: SummarisedBucket): string {
+  const opening = `${bucket.name} — ${describeRule(bucket.rule)} each cycle`;
+  const order = `funded #${String(bucket.priority)}.`;
+
+  return bucket.mode === 'GOAL'
+    ? `${opening} toward R$ ${bucket.target.amount.toReais()} by ${bucket.target.date.toISO()}, ${order}`
+    : `${opening}, ${order}`;
+}
+
+/**
+ * The record the draft did not hold before. The specs hand the draft a record
+ * without an id — the draft issues it — so this is where the turn learns what
+ * a later correction has to name.
+ */
+function establishedId(
+  before: SetupDraft,
+  after: SetupDraft,
+): string | undefined {
+  const known = new Set(before.records.map((held) => held.record.id));
+
+  return after.records.find((held) => !known.has(held.record.id))?.record.id;
+}
+
+/**
+ * Dropping the last record of a section the conversation has already passed
+ * leaves it unanswered again. The cursor never moves backwards while there is
+ * still something ahead of it, but a conversation with nothing left to ask and
+ * a draft that cannot compose would otherwise be stuck.
+ */
+function withSomethingLeftToAsk(state: SetupState): SetupState {
+  return state.section === undefined && !state.draft.isComplete
+    ? { ...state, section: state.draft.nextSection }
+    : state;
+}
+
 function billSpec(
   section: SetupSection,
   tool: { name: string; description: string },
@@ -742,14 +1214,24 @@ function after(section: SetupSection): SetupSection | undefined {
   return SETUP_SECTIONS[SETUP_SECTIONS.indexOf(section) + 1];
 }
 
-function toolsFor(section: SetupSection | undefined): ToolDeclaration[] {
-  if (section === undefined) return [];
+/**
+ * The correction tools are offered only once the draft holds something to
+ * correct, which keeps them out of the first turns — where there is nothing
+ * they could name.
+ */
+function toolsFor(state: SetupState): ToolDeclaration[] {
+  const corrections =
+    state.draft.records.length > 0 ? [CORRECT_TOOL, REMOVE_TOOL] : [];
+  const section = state.section;
+  if (section === undefined) return corrections;
 
   const offered = TOOLS.filter((spec) => spec.section === section).map(
     (spec) => spec.tool,
   );
 
-  return section === SetupSection.Anchor ? offered : [...offered, FINISH_TOOL];
+  return section === SetupSection.Anchor
+    ? [...offered, ...corrections]
+    : [...offered, FINISH_TOOL, ...corrections];
 }
 
 function missing(what: readonly string[], subject?: string): Extraction {
@@ -863,6 +1345,8 @@ Ask about one thing at a time and keep every message short. Record what the user
 
 Leave a field out when the user has not said it, and ask about it instead — never fill one in from what is typical. Amounts are Brazilian Real in whole cents: R$ 1.234,56 is 123456.`;
 
+const CORRECTIONS = `Every record you take comes back with an id. When the user says something already recorded is wrong, call correct_record with that id and only the fields that change; when it should not be there at all, call remove_record with it. Both work for a record from any section, including one already finished, and neither goes back to it.`;
+
 const BRIEFINGS: Record<SetupSection, string> = {
   ANCHOR:
     'You are on the payday anchor: the day of the month the salary lands. Every cycle in the app is measured from it, and it cannot be skipped.',
@@ -890,10 +1374,19 @@ const QUESTIONS: Record<SetupSection, string> = {
   BUCKETS: 'What are you saving toward, and how much goes in each cycle?',
 };
 
-function systemPrompt(section: SetupSection | undefined): string {
-  return section === undefined
-    ? `${ROLE}\n\nEverything is recorded. Tell the user you are ready to set the app up.`
-    : `${ROLE}\n\n${BRIEFINGS[section]}`;
+function systemPrompt(
+  state: SetupState,
+  tools: readonly ToolDeclaration[],
+): string {
+  const corrections = tools.some((tool) => tool.name === CORRECT_TOOL.name)
+    ? `\n\n${CORRECTIONS}`
+    : '';
+  const briefing =
+    state.section === undefined
+      ? 'Everything is recorded. Tell the user you are ready to set the app up.'
+      : BRIEFINGS[state.section];
+
+  return `${ROLE}\n\n${briefing}${corrections}`;
 }
 
 function nextQuestion(section: SetupSection | undefined): string {
