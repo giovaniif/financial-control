@@ -17,12 +17,17 @@ import { ManageBuckets } from './application/goals/uc-6-manage-buckets.js';
 import { BuildDashboard } from './application/projection/uc-4-build-dashboard.js';
 import { ReadSetupState } from './application/projection/uc-1-5-read-setup-state.js';
 import { CompleteSetup } from './application/setup/compose-setup.js';
+import { CorrectSetupRecord } from './application/setup/uc-1-5-correct-record.js';
 import type { SetupConversations } from './application/setup/uc-1-5-converse-setup.js';
 import { ConverseSetup } from './application/setup/uc-1-5-converse-setup.js';
 import { ProjectWealth } from './application/projection/uc-7-project-wealth.js';
 import { ListCycles } from './application/budgeting/uc-3-3-list-cycles.js';
 import { createLanguageModel } from './infrastructure/anthropic/create-language-model.js';
-import { ASSISTANT_LIMITS, MODELS } from './infrastructure/anthropic/models.js';
+import {
+  ASSISTANT_LIMITS,
+  MODELS,
+  SPEND_RATE_LIMITS,
+} from './infrastructure/anthropic/models.js';
 import { SystemClock } from './infrastructure/clock/system-clock.js';
 import { UuidIdSource } from './infrastructure/ids/uuid-id-source.js';
 import { BrazilianHolidayCalendar } from './infrastructure/holidays/brazilian-holiday-calendar.js';
@@ -144,6 +149,7 @@ export function createApp(): FastifyInstance {
       holidays,
       clock,
     ),
+    correctSetupRecord: new CorrectSetupRecord(conversations),
     completeSetup: new CompleteSetup(conversations, backup, clock),
     converseAssistant: new AssistantConversation(
       new AskAssistant(
@@ -173,5 +179,6 @@ export function createApp(): FastifyInstance {
       manageBuckets,
       clock,
     ),
+    spendLimits: SPEND_RATE_LIMITS,
   });
 }

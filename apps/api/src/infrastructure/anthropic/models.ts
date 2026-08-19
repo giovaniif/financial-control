@@ -55,3 +55,26 @@ export const ASSISTANT_LIMITS: AssistantLimits = {
   maxTurnsPerConversation: 20,
   maxToolRoundTrips: MAX_TOOL_ROUND_TRIPS,
 };
+
+/**
+ * How often one caller may reach a route that spends money — FIN-114.
+ *
+ * Here rather than in the route file because it belongs to the same question
+ * as everything above: what a request to the model is allowed to cost. Two
+ * windows, because they catch different things — the short one stops a hot
+ * loop within a minute, and the daily one bounds the worst case even when
+ * every short window is respected.
+ *
+ * The figures are sized to one person using the app by hand. Ten in a minute
+ * is more than anybody types; two hundred in a day is ten full assistant
+ * conversations at the turn cap above. Anything past either is a client
+ * looping, not a user asking.
+ *
+ * With no authentication the key can only be the address, so this guards
+ * against a runaway client and nothing else. It is not what would make the
+ * app safe to expose — that is authentication, and it comes first.
+ */
+export const SPEND_RATE_LIMITS = {
+  burst: { max: 10, windowMs: 60_000 },
+  daily: { max: 200, windowMs: 24 * 60 * 60 * 1_000 },
+} as const;

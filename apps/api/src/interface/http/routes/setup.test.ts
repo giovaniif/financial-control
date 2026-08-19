@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ReadSetupState } from '../../../application/projection/uc-1-5-read-setup-state.js';
 import { CompleteSetup } from '../../../application/setup/compose-setup.js';
+import { CorrectSetupRecord } from '../../../application/setup/uc-1-5-correct-record.js';
 import { SetupDraft } from '../../../application/setup/setup-draft.js';
 import type {
   SetupConversations,
@@ -28,6 +29,7 @@ import {
 } from '../../../application/testing/fakes.js';
 import { FixedClock } from '../../../application/testing/fixed-clock.js';
 import { Account } from '../../../domain/budgeting/account.js';
+import { Allocation } from '../../../domain/goals/bucket.js';
 import {
   PaydayAnchor,
   ShiftPolicy,
@@ -77,10 +79,52 @@ function wire(model: FakeLanguageModel) {
         noHolidays,
         clock,
       ),
+      correctSetupRecord: new CorrectSetupRecord(conversations),
       completeSetup: new CompleteSetup(conversations, backup, clock),
     }),
   };
 }
+
+/** A conversation as far as bills, holding the ids a correction names. */
+function establishedState(): SetupState {
+  const draft = SetupDraft.empty(
+    '2026-09',
+    noHolidays,
+    new SequentialIdSource('rec'),
+  )
+    .withAnchor(PaydayAnchor.of(5, ShiftPolicy.Preceding))
+    .addAccount({
+      name: 'Checking',
+      type: 'CHECKING',
+      balance: Money.fromCents(216_000),
+    })
+    .withSalary(Money.fromCents(1_800_000))
+    .addFixedBill({
+      name: 'Health Plan',
+      amount: Money.fromCents(32_000),
+      dueDayOfMonth: 8,
+    });
+
+  return { draft, section: 'FIXED_BILLS' };
+}
+
+async function holding(
+  conversations: SetupConversations,
+  state: SetupState = establishedState(),
+): Promise<void> {
+  await conversations.save({
+    id: 'conv-1',
+    transcript: [],
+    state,
+    records: state.draft.records.map((held) => ({
+      section: held.section,
+      id: held.record.id,
+      summary: held.record.name,
+    })),
+  });
+}
+
+const BILL_ID = 'rec-2';
 
 const anchorTurn: ScriptedTurn = {
   text: 'Noted.',
@@ -337,5 +381,195 @@ describe('POST /setup/conversation/:id/apply', () => {
 
     expect(response.statusCode).toBe(409);
     expect(response.json<{ error: string }>().error).toContain('ANCHOR');
+  });
+});
+
+/**
+ * The structured path — UC-1.5, FIN-122. Every test here holds a model that
+ * would throw if it were asked anything, and the point of the suite is that
+ * none of them ever is.
+ */
+describe('PATCH /setup/conversation/:id/records/:recordId', () => {
+  it('corrects a record without asking the model anything', async () => {
+    const model = new FakeLanguageModel([]);
+    const { app, conversations } = wire(model);
+    await holding(conversations);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/setup/conversation/conv-1/records/${BILL_ID}`,
+      payload: { amount: 35_000 },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(model.requests).toEqual([]);
+    expect(response.json<SetupTurnResponse>()).toEqual({
+      conversationId: 'conv-1',
+      message: expect.stringContaining('350,00') as string,
+      established: [
+        {
+          section: 'FIXED_BILLS',
+          id: BILL_ID,
+          summary: expect.stringContaining('350,00') as string,
+        },
+      ],
+      removed: [],
+      corrections: [],
+      nextSection: 'FIXED_BILLS',
+      isComplete: false,
+      wasRefused: false,
+    });
+  });
+
+  it('answers an unknown conversation id with 404', async () => {
+    const { app } = wire(new FakeLanguageModel([]));
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/setup/conversation/nope/records/${BILL_ID}`,
+      payload: { amount: 35_000 },
+    });
+
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('answers an unknown record id with 404', async () => {
+    const { app, conversations } = wire(new FakeLanguageModel([]));
+    await holding(conversations);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/setup/conversation/conv-1/records/rec-99',
+      payload: { amount: 35_000 },
+    });
+
+    expect(response.statusCode).toBe(404);
+  });
+
+  /** The same rule the conversational path refuses, at the same status. */
+  it('answers a refused correction with 400 naming the rule', async () => {
+    const { app, conversations } = wire(new FakeLanguageModel([]));
+    const draft = SetupDraft.empty(
+      '2026-09',
+      noHolidays,
+      new SequentialIdSource('rec'),
+    )
+      .withAnchor(PaydayAnchor.of(31, ShiftPolicy.Preceding))
+      .addFixedBill({
+        name: 'Rent',
+        amount: Money.fromCents(250_000),
+        dueDayOfMonth: 31,
+      });
+    await holding(conversations, { draft, section: 'FIXED_BILLS' });
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/setup/conversation/conv-1/records/rec-1',
+      payload: { dueDayOfMonth: 30 },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ error: string }>().error).toContain('never reaches');
+  });
+
+  it('answers a correction stating nothing that applies with 400', async () => {
+    const { app, conversations } = wire(new FakeLanguageModel([]));
+    await holding(conversations);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/setup/conversation/conv-1/records/${BILL_ID}`,
+      payload: { closingDay: 25 },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('rejects a field of the wrong type rather than reading past it', async () => {
+    const { app, conversations } = wire(new FakeLanguageModel([]));
+    await holding(conversations);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/setup/conversation/conv-1/records/${BILL_ID}`,
+      payload: { amount: '35000' },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('reads a bucket rule as a percentage of Expected Surplus', async () => {
+    const { app, conversations } = wire(new FakeLanguageModel([]));
+    const draft = establishedState().draft.addOngoingBucket({
+      name: 'Investments',
+      rule: Allocation.fixed(Money.fromCents(100_000)),
+      priority: 1,
+    });
+    await holding(conversations, { draft, section: 'BUCKETS' });
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/setup/conversation/conv-1/records/rec-3',
+      payload: { rule: { kind: 'PERCENT', percent: 20 } },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json<SetupTurnResponse>().message).toContain(
+      'Expected Surplus',
+    );
+  });
+});
+
+describe('DELETE /setup/conversation/:id/records/:recordId', () => {
+  it('drops a record without asking the model anything', async () => {
+    const model = new FakeLanguageModel([]);
+    const { app, conversations } = wire(model);
+    await holding(conversations);
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/setup/conversation/conv-1/records/${BILL_ID}`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(model.requests).toEqual([]);
+    expect(response.json<SetupTurnResponse>()).toMatchObject({
+      conversationId: 'conv-1',
+      removed: [BILL_ID],
+      established: [],
+    });
+  });
+
+  it('answers an unknown record id with 404', async () => {
+    const { app, conversations } = wire(new FakeLanguageModel([]));
+    await holding(conversations);
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/setup/conversation/conv-1/records/rec-99',
+    });
+
+    expect(response.statusCode).toBe(404);
+  });
+
+  /** The card that is paid from it has to go or be corrected first. */
+  it('answers a removal the draft refuses with 400', async () => {
+    const { app, conversations } = wire(new FakeLanguageModel([]));
+    const draft = establishedState().draft.addCard({
+      name: 'Inter',
+      limit: Money.fromCents(1_000_000),
+      closingDay: 28,
+      dueDay: 10,
+      paymentAccountName: 'Checking',
+    });
+    await holding(conversations, { draft, section: 'CARDS' });
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/setup/conversation/conv-1/records/rec-1',
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ error: string }>().error).toContain('Inter');
   });
 });
