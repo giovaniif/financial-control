@@ -187,3 +187,44 @@ describe('CycleRef equality', () => {
     );
   });
 });
+
+describe('CycleRef.dateForDayOfMonth', () => {
+  const refFor = (month: string, day: number) =>
+    CycleRef.forMonth(month, anchor(day), noHolidays);
+
+  /**
+   * A day past the end of a short month falls on that month's last day — the
+   * same clamping the anchor itself uses. Refusing it would make an anchor of
+   * 31 unusable, because half its cycles open in a 30-day month.
+   */
+  it.each([
+    ['clamps onto a 30-day month', '2026-10', 31, '2026-09-30'],
+    ['clamps onto February', '2027-03', 31, '2027-02-28'],
+    [
+      'takes the day as written when the month is long enough',
+      '2026-11',
+      31,
+      '2026-10-31',
+    ],
+    ['finds the day in the closing month', '2026-10', 29, '2026-10-29'],
+  ])('%s', (_name, month, day, expected) => {
+    expect(refFor(month, 31).dateForDayOfMonth(day)?.toISO()).toBe(expected);
+  });
+
+  /**
+   * A genuine gap: the August cycle runs 31 Aug – 29 Sep, so a 30th belongs to
+   * neither month it spans. Placing it anyway would move a bill into a cycle
+   * the user did not choose, so it has none.
+   */
+  it('has no date for a day the cycle never reaches', () => {
+    expect(refFor('2026-09', 31).dateForDayOfMonth(30)).toBeUndefined();
+  });
+
+  it('resolves every day of the month for a mid-month anchor', () => {
+    const ref = refFor('2026-08', 5);
+
+    for (let day = 1; day <= 31; day += 1) {
+      expect(ref.dateForDayOfMonth(day)).toBeDefined();
+    }
+  });
+});

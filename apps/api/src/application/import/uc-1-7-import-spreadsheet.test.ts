@@ -349,6 +349,21 @@ describe('ImportSpreadsheet', () => {
      * With pay on the 30th the August 2026 cycle runs 30 Jul – 27 Aug, so day
      * 28 exists in neither month the cycle spans.
      */
+    /**
+     * An anchor of 31 opens half its cycles in a 30-day month, so a day of 31
+     * has to clamp onto the month's last day exactly as the anchor does.
+     * Refusing it left the import with nothing the user could pick: the day
+     * being complained about was the anchor they had just chosen.
+     */
+    it('accepts a due day that only fits once it is clamped', async () => {
+      const report = await applyWith({
+        anchor: { anchorDay: 31, shiftPolicy: 'PRECEDING' },
+        dueDays: { Convênio: 31, 'Evoluçao Obra': 15 },
+      });
+
+      expect(report.imported.templates).toBeGreaterThan(0);
+    });
+
     it('refuses a due day that lands in a gap the cycle never reaches', async () => {
       await expect(
         applyWith({

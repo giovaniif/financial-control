@@ -12,7 +12,6 @@ import { BACKUP_VERSION } from '@fin/contracts';
 import { CycleRef, PaydayAnchor } from '../../domain/budgeting/cycle-ref.js';
 import type { HolidayCalendar } from '../../domain/ports/holiday-calendar.js';
 import { DomainError } from '../../domain/shared/domain-error.js';
-import { LocalDate } from '../../domain/shared/local-date.js';
 import type {
   MonthReading,
   SpreadsheetReading,
@@ -214,28 +213,15 @@ function assertDueDayFits(
 ): void {
   for (const month of months) {
     const ref = CycleRef.forMonth(month.month, anchor, holidays);
-    if (!containsDay(ref, template.dueDayOfMonth)) {
+    // The same question the generator asks, asked the same way: a check that
+    // is stricter than what generation does refuses imports that would have
+    // worked.
+    if (ref.dateForDayOfMonth(template.dueDayOfMonth) === undefined) {
       throw new DueDayOutsideCycle(
         `${template.name} falls due on day ${String(template.dueDayOfMonth)}, which the ${ref.label} cycle (${ref.range.toString()}) never reaches. Pick another day, or use the cycle's last day.`,
       );
     }
   }
-}
-
-function containsDay(ref: CycleRef, day: number): boolean {
-  for (const candidate of [ref.start, ref.end]) {
-    const clamped = Math.min(
-      day,
-      LocalDate.lastDayOfMonth(candidate.year, candidate.month),
-    );
-    if (
-      clamped === day &&
-      ref.contains(LocalDate.of(candidate.year, candidate.month, day))
-    ) {
-      return true;
-    }
-  }
-  return false;
 }
 
 /**
