@@ -1,5 +1,5 @@
 import { DomainError } from '../shared/domain-error.js';
-import { LocalDate } from '../shared/local-date.js';
+import type { LocalDate } from '../shared/local-date.js';
 import type { Money } from '../shared/money.js';
 import type { CycleRef } from './cycle-ref.js';
 import { EntryKind } from './ledger-entry.js';
@@ -195,18 +195,7 @@ export class RecurringTemplate {
    * next, and whichever lands inside the cycle wins.
    */
   dueDateIn(ref: CycleRef): LocalDate | undefined {
-    const candidates = [ref.start, ref.end].map((bound) =>
-      LocalDate.of(
-        bound.year,
-        bound.month,
-        Math.min(
-          this.state.dueDayOfMonth,
-          LocalDate.lastDayOfMonth(bound.year, bound.month),
-        ),
-      ),
-    );
-
-    return candidates.find((candidate) => ref.contains(candidate));
+    return ref.dateForDayOfMonth(this.state.dueDayOfMonth);
   }
 
   /** Appends a step, so the new amount applies from that cycle onward. */

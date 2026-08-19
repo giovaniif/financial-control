@@ -167,6 +167,36 @@ export class CycleRef {
     return this.range.contains(date);
   }
 
+  /**
+   * Where a day of the month lands inside this cycle, or nothing when the
+   * cycle never reaches it.
+   *
+   * A day past the end of a short month falls on that month's last day — the
+   * same clamping the anchor itself uses, so an anchor of 31 stays usable in
+   * the months that have only 30 days. A day that belongs to neither month
+   * the cycle spans has no date at all: the August cycle running 31 Aug –
+   * 29 Sep never reaches a 30th, and moving one onto a boundary would file it
+   * in a cycle nobody chose.
+   *
+   * Stated once here because two callers need it — generating a cycle from
+   * its templates, and refusing an import that would generate nothing.
+   */
+  dateForDayOfMonth(day: number): LocalDate | undefined {
+    for (const bound of [this.start, this.end]) {
+      const clamped = Math.min(
+        day,
+        LocalDate.lastDayOfMonth(bound.year, bound.month),
+      );
+      const candidate = LocalDate.of(bound.year, bound.month, clamped);
+
+      if (this.contains(candidate)) {
+        return candidate;
+      }
+    }
+
+    return undefined;
+  }
+
   get range(): DateRange {
     return DateRange.of(this.start, this.end);
   }
