@@ -10,6 +10,7 @@ import { LedgerActions } from '../../../application/budgeting/uc-3-ledger-action
 import { ManageCards } from '../../../application/cards/uc-5-manage-cards.js';
 import { ManageBuckets } from '../../../application/goals/uc-6-manage-buckets.js';
 import { BuildDashboard } from '../../../application/projection/uc-4-build-dashboard.js';
+import { ReadSetupState } from '../../../application/projection/uc-1-5-read-setup-state.js';
 import { ProjectWealth } from '../../../application/projection/uc-7-project-wealth.js';
 import { ListCycles } from '../../../application/budgeting/uc-3-3-list-cycles.js';
 import {
@@ -89,6 +90,13 @@ export function buildTestServer(
       clock,
     ),
     projectWealth: new ProjectWealth(buckets),
+    readSetupState: new ReadSetupState(
+      settings,
+      accounts,
+      templates,
+      cards,
+      buckets,
+    ),
     ...overrides,
   });
 }

@@ -93,14 +93,21 @@ export class InMemoryCycleRepository implements CycleRepository {
 }
 
 export class InMemorySettingsRepository implements SettingsRepository {
+  private configured = false;
+
   constructor(private anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding)) {}
 
   load(): Promise<PaydayAnchor> {
     return Promise.resolve(this.anchor);
   }
 
+  isConfigured(): Promise<boolean> {
+    return Promise.resolve(this.configured);
+  }
+
   save(anchor: PaydayAnchor): Promise<void> {
     this.anchor = anchor;
+    this.configured = true;
     return Promise.resolve();
   }
 }

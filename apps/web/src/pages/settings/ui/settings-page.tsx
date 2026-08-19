@@ -10,7 +10,7 @@ import { useTemplates } from '@/entities/template';
 import { BackupRestore } from '@/features/backup-restore';
 import { ChangeAnchor } from '@/features/configure-anchor';
 import { ManageAccounts } from '@/features/manage-accounts';
-import { api, queryKeys } from '@/shared/api';
+import { api, queryKeys, useSetupState } from '@/shared/api';
 import { Amount, Badge, Card, CardTitle, Skeleton } from '@/shared/ui';
 import { AppShell } from '@/widgets/app-shell';
 
@@ -110,35 +110,43 @@ function Accounts() {
  * ordered checklist: each step depends on the ones before it.
  */
 function FirstRun() {
-  const accounts = useAccounts();
-  const cards = useCards();
-  const templates = useTemplates();
-  const buckets = useBuckets();
+  const { data } = useSetupState();
+  const counts = {
+    accounts: data?.accounts ?? 0,
+    cards: data?.cards ?? 0,
+    templates: data?.templates ?? 0,
+    buckets: data?.buckets ?? 0,
+  };
 
   const steps = [
-    { label: 'Payday anchor', state: 'configured', done: true, to: null },
+    {
+      label: 'Payday anchor',
+      state: data?.anchorConfigured === true ? 'configured' : 'not set yet',
+      done: data?.anchorConfigured === true,
+      to: null,
+    },
     {
       label: 'Accounts',
-      state: `${String(accounts.data?.accounts.length ?? 0)} accounts`,
-      done: (accounts.data?.accounts.length ?? 0) > 0,
+      state: `${String(counts.accounts)} accounts`,
+      done: counts.accounts > 0,
       to: null,
     },
     {
       label: 'Credit cards',
-      state: `${String(cards.data?.length ?? 0)} cards`,
-      done: (cards.data?.length ?? 0) > 0,
+      state: `${String(counts.cards)} cards`,
+      done: counts.cards > 0,
       to: '/cards',
     },
     {
       label: 'Recurring templates',
-      state: `${String(templates.data?.templates.length ?? 0)} templates`,
-      done: (templates.data?.templates.length ?? 0) > 0,
+      state: `${String(counts.templates)} templates`,
+      done: counts.templates > 0,
       to: '/templates',
     },
     {
       label: 'Buckets',
-      state: `${String(buckets.data?.length ?? 0)} buckets`,
-      done: (buckets.data?.length ?? 0) > 0,
+      state: `${String(counts.buckets)} buckets`,
+      done: counts.buckets > 0,
       to: '/buckets',
     },
   ];

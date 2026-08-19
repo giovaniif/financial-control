@@ -14,7 +14,10 @@ export function useOpenCard() {
         body: JSON.stringify(card),
       }),
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: queryKeys.cards() });
+      await Promise.all([
+        client.invalidateQueries({ queryKey: queryKeys.cards() }),
+        client.invalidateQueries({ queryKey: queryKeys.setup() }),
+      ]);
     },
   });
 }

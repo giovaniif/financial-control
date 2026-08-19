@@ -33,6 +33,7 @@ export function useChangeAnchor() {
         client.invalidateQueries({ queryKey: queryKeys.anchor() }),
         client.invalidateQueries({ queryKey: queryKeys.cycles() }),
         client.invalidateQueries({ queryKey: queryKeys.dashboard() }),
+        client.invalidateQueries({ queryKey: queryKeys.setup() }),
       ]);
     },
   });

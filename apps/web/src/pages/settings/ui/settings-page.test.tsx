@@ -8,6 +8,15 @@ import { SettingsPage } from './settings-page.js';
 
 const anchor = { anchorDay: 5, shiftPolicy: 'PRECEDING' };
 
+const pristine = {
+  anchorConfigured: false,
+  accounts: 0,
+  cards: 0,
+  templates: 0,
+  buckets: 0,
+  isPristine: true,
+};
+
 const renderPage = () =>
   renderWithProviders(
     <RouterProvider
@@ -69,6 +78,27 @@ describe('SettingsPage', () => {
     expect(await screen.findByText('First run')).toBeInTheDocument();
     expect(screen.getByText('0 accounts')).toBeInTheDocument();
     expect(screen.getByText('0 templates')).toBeInTheDocument();
+  });
+
+  /**
+   * The anchor reads back a default whether or not anyone chose it, so the
+   * checklist used to claim step one was done on a completely empty app.
+   */
+  it('leaves the anchor step outstanding until it has been configured', async () => {
+    stubApi({ '/api/settings/anchor': anchor });
+    renderPage();
+
+    expect(await screen.findByText('not set yet')).toBeInTheDocument();
+  });
+
+  it('marks the anchor step done once it has been configured', async () => {
+    stubApi({
+      '/api/settings/anchor': anchor,
+      '/api/setup': { ...pristine, anchorConfigured: true },
+    });
+    renderPage();
+
+    expect(await screen.findByText('configured')).toBeInTheDocument();
   });
 
   it('states the formatting conventions explicitly', async () => {

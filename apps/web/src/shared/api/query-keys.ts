@@ -38,4 +38,5 @@ export const queryKeys = {
     ['cards', cardId, 'billing-preview', purchasedOn] as const,
   buckets: () => ['buckets'] as const,
   anchor: () => ['settings', 'anchor'] as const,
+  setup: () => ['setup'] as const,
 } as const;

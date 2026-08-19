@@ -39,6 +39,12 @@ export interface CycleRepository {
 export interface SettingsRepository {
   /** The configured payday anchor, or the default when none is stored yet. */
   load(): Promise<PaydayAnchor>;
+  /**
+   * Whether the anchor was ever explicitly set. `load` cannot answer this: it
+   * defaults to day 5, so a stored day 5 and an untouched app read alike, and
+   * the first run has no way to tell an unconfigured app from a configured one.
+   */
+  isConfigured(): Promise<boolean>;
   save(anchor: PaydayAnchor): Promise<void>;
 }
 
