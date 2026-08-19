@@ -10,11 +10,11 @@ describe('questionFor', () => {
     const alert: AlertResponse = {
       severity: 'CRITICAL',
       title: 'Projected negative balance on 2026-09-28',
-      body: 'September 2026 runs to -R$ 2.013,22 after Contractor Costs.',
+      body: 'Setembro de 2026 runs to -R$ 2.013,22 after Contractor Costs.',
     };
 
     expect(questionFor(alert)).toBe(
-      'Sobre “Projected negative balance on 2026-09-28”: September 2026 ' +
+      'Sobre “Projected negative balance on 2026-09-28”: Setembro de 2026 ' +
         'runs to -R$ 2.013,22 after Contractor Costs. Por que isso acontece, ' +
         'e o que mudaria isso?',
     );

@@ -175,8 +175,8 @@ describe('ProfilePage', () => {
         shifts: [
           {
             month: '2026-08',
-            currentRange: '5 Aug – 3 Sep',
-            proposedRange: '7 Aug – 6 Sep',
+            currentRange: '5 ago – 3 set',
+            proposedRange: '7 ago – 6 set',
             entriesLeaving: 3,
           },
         ],
@@ -461,7 +461,7 @@ describe('ProfilePage', () => {
 
     expect(
       await screen.findByText(
-        'As compras de 29 Jul a 28 Aug entram na fatura com vencimento em 10 Sep — ciclo October 2026.',
+        'As compras de 29 jul a 28 ago entram na fatura com vencimento em 10 set — ciclo Outubro de 2026.',
       ),
     ).toBeInTheDocument();
   });
@@ -579,7 +579,9 @@ describe('ProfilePage', () => {
 
     expect(await screen.findByText('R$ 1.234,56')).toBeInTheDocument();
     expect(screen.getByText('dd/MM/yyyy')).toBeInTheDocument();
-    expect(screen.getByText('August 2026 (5 Aug – 3 Sep)')).toBeInTheDocument();
+    expect(
+      screen.getByText('Agosto de 2026 (5 ago – 3 set)'),
+    ).toBeInTheDocument();
   });
 
   // UC-1.6 — nothing else takes snapshots, so this is the only way back.

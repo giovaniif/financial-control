@@ -1,6 +1,7 @@
 import type { DownstreamShiftResponse } from '@fin/contracts';
 import { useState } from 'react';
 
+import { formatMonthLabel } from '@/shared/lib';
 import { Amount, Button, Dialog, Skeleton } from '@/shared/ui';
 
 import {
@@ -161,7 +162,7 @@ function Reopen({ month, label }: { month: string; label: string }) {
 function Shift({ shift }: { shift: DownstreamShiftResponse }) {
   return (
     <li className="flex items-baseline justify-between gap-3">
-      <span>{labelOf(shift.month)}</span>
+      <span>{formatMonthLabel(shift.month)}</span>
       <span className="flex items-baseline gap-2">
         <Amount
           cents={shift.currentOpening}
@@ -171,16 +172,4 @@ function Shift({ shift }: { shift: DownstreamShiftResponse }) {
       </span>
     </li>
   );
-}
-
-/** `2026-07` as `July 2026` — a cycle is named for the month it opens in. */
-function labelOf(month: string): string {
-  const [year, index = '01'] = month.split('-');
-
-  return `${new Intl.DateTimeFormat('en-GB', {
-    month: 'long',
-    timeZone: 'UTC',
-  }).format(
-    new Date(`${String(year)}-${index}-01T00:00:00.000Z`),
-  )} ${String(year)}`;
 }

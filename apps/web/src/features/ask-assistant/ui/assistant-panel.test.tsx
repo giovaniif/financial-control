@@ -191,11 +191,11 @@ describe('AssistantPanel', () => {
       await screen.findByText('Adicionar um lançamento'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Add “Dentist” to the September 2026 cycle/),
+      screen.getByText(/Add “Dentist” to the Setembro de 2026 cycle/),
     ).toBeInTheDocument();
     expect(screen.getByText(/due on 20\/09\/2026/)).toBeInTheDocument();
     expect(
-      screen.getByText('Cai no ciclo September 2026.'),
+      screen.getByText('Cai no ciclo Setembro de 2026.'),
     ).toBeInTheDocument();
   });
 

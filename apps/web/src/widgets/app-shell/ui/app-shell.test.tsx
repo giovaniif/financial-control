@@ -13,7 +13,7 @@ const window_: CycleWindowResponse = {
   cycles: [
     {
       month: '2026-07',
-      label: 'July 2026',
+      label: 'Julho de 2026',
       start: '2026-07-03',
       end: '2026-08-04',
       position: 'current',
@@ -25,7 +25,7 @@ const window_: CycleWindowResponse = {
     },
     {
       month: '2026-08',
-      label: 'August 2026',
+      label: 'Agosto de 2026',
       start: '2026-08-05',
       end: '2026-09-04',
       position: 'next',
@@ -179,8 +179,8 @@ describe('AppShell', () => {
     stubApi({ '/api/cycles': window_ });
     renderShell();
 
-    expect(await screen.findByText('July 2026')).toBeInTheDocument();
-    expect(screen.getByText('3 Jul – 4 Aug')).toBeInTheDocument();
+    expect(await screen.findByText('Julho de 2026')).toBeInTheDocument();
+    expect(screen.getByText('3 jul – 4 ago')).toBeInTheDocument();
     expect(screen.getByText('atual')).toBeInTheDocument();
   });
 
@@ -201,7 +201,7 @@ describe('AppShell', () => {
       await screen.findByRole('button', { name: 'Próximo ciclo' }),
     );
 
-    expect(await screen.findByText('August 2026')).toBeInTheDocument();
+    expect(await screen.findByText('Agosto de 2026')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Próximo ciclo' }),
     ).toBeDisabled();
@@ -211,7 +211,7 @@ describe('AppShell', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('July 2026')).toBeInTheDocument();
+      expect(screen.getByText('Julho de 2026')).toBeInTheDocument();
     });
   });
 
@@ -220,7 +220,7 @@ describe('AppShell', () => {
     stubApi({ '/api/cycles': window_ });
     renderShell('/?cycle=2026-08');
 
-    expect(await screen.findByText('August 2026')).toBeInTheDocument();
+    expect(await screen.findByText('Agosto de 2026')).toBeInTheDocument();
     expect(screen.getByText('próximo')).toBeInTheDocument();
   });
 

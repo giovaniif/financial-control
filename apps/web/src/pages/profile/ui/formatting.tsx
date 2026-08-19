@@ -7,7 +7,7 @@ export function Formatting() {
     ['Datas', 'dd/MM/yyyy'],
     ['Dinheiro que sai', 'negativo, exibido em vermelho'],
     // Cycle labels come from the API, which still names months in English.
-    ['Nome do ciclo', 'August 2026 (5 Aug – 3 Sep)'],
+    ['Nome do ciclo', 'Agosto de 2026 (5 ago – 3 set)'],
   ];
 
   return (

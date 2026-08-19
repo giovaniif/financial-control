@@ -15,8 +15,8 @@ const preview = (
   shifts: [
     {
       month: '2026-08',
-      currentRange: '5 Aug – 3 Sep',
-      proposedRange: '7 Aug – 6 Sep',
+      currentRange: '5 ago – 3 set',
+      proposedRange: '7 ago – 6 set',
       entriesLeaving: 3,
     },
   ],
@@ -70,7 +70,7 @@ describe('ChangeAnchor', () => {
       await screen.findByText(/3 lançamentos mudariam de ciclo/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/5 Aug – 3 Sep → 7 Aug – 6 Sep/),
+      screen.getByText(/5 ago – 3 set → 7 ago – 6 set/),
     ).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/settings/anchor/preview',
