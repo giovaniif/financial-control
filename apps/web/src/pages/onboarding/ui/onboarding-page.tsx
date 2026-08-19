@@ -3,13 +3,18 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
 import { useChangeAnchor } from '@/features/configure-anchor';
+import { useSelectedCycle } from '@/features/navigate-cycle';
 import { skipSetup } from '@/shared/model';
 import { Button, Stepper } from '@/shared/ui';
 
 import { STEPS, type StepId } from '../model/steps.js';
 import { useWizard } from '../model/use-wizard.js';
 import { AccountsStep } from './steps/accounts-step.js';
+import { BucketsStep } from './steps/buckets-step.js';
+import { CardsStep } from './steps/cards-step.js';
 import { CycleStep } from './steps/cycle-step.js';
+import { DoneStep } from './steps/done-step.js';
+import { TemplatesStep } from './steps/templates-step.js';
 import { WhyStep } from './steps/why-step.js';
 
 /** Salary on the 5th, moving back off a closed bank — the app's default. */
@@ -38,6 +43,7 @@ export function OnboardingPage() {
   const location = useLocation();
   const [anchor, setAnchor] = useState(DEFAULT_ANCHOR);
   const changeAnchor = useChangeAnchor();
+  const { selectedMonth } = useSelectedCycle();
 
   // Leaving lands on whatever the user originally asked for, not on the
   // dashboard they never chose.
@@ -105,6 +111,12 @@ export function OnboardingPage() {
           <CycleStep anchor={anchor} onChange={setAnchor} />
         )}
         {wizard.stepId === 'accounts' && <AccountsStep />}
+        {wizard.stepId === 'cards' && <CardsStep />}
+        {wizard.stepId === 'templates' && (
+          <TemplatesStep currentMonth={selectedMonth ?? ''} />
+        )}
+        {wizard.stepId === 'buckets' && <BucketsStep />}
+        {wizard.stepId === 'done' && <DoneStep />}
       </main>
 
       <footer className="flex items-center justify-between border-t border-zinc-200 pt-4">

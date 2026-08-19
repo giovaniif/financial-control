@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { hasSkippedSetup } from '@/shared/model';
 import { renderWithProviders, stubApi } from '@/shared/testing';
 
+import { STEPS } from '../model/steps.js';
 import { OnboardingPage } from './onboarding-page.js';
 
 const renderPage = () =>
@@ -233,6 +234,87 @@ describe('OnboardingPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     expect(await screen.findByLabelText('Salary lands on day')).toHaveValue(12);
+  });
+
+  describe('the later steps', () => {
+    const goTo = async (title: string) => {
+      const target = STEPS.findIndex((step) => step.title === title);
+      renderPage();
+      await screen.findByRole('heading', { level: 1 });
+
+      for (let clicked = 0; clicked < target; clicked += 1) {
+        await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      }
+      await screen.findByRole('heading', { level: 1, name: title });
+    };
+
+    // UC-5.4 — the app's one genuinely counter-intuitive rule.
+    it('teaches that an invoice lands in the cycle of its due date', async () => {
+      stubApi({});
+      await goTo('Credit cards and their invoices');
+
+      expect(
+        screen.getByText(/a whole cycle apart in cash/),
+      ).toBeInTheDocument();
+    });
+
+    it('does not trap a user who has no credit card', async () => {
+      stubApi({});
+      await goTo('Credit cards and their invoices');
+
+      expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled();
+      expect(
+        screen.getByText(/Skip this step if you do not use one/),
+      ).toBeInTheDocument();
+    });
+
+    // The due day is what gives the ledger a running balance rather than a
+    // single monthly total.
+    it('says why every template needs a due day', async () => {
+      stubApi({});
+      await goTo('The bills that repeat');
+
+      expect(screen.getByText(/running balance/)).toBeInTheDocument();
+    });
+
+    it('explains goal against ongoing as a real distinction', async () => {
+      stubApi({});
+      await goTo('What you are saving for');
+
+      expect(
+        screen.getByText(/asking an ongoing bucket how complete it is/i),
+      ).toBeInTheDocument();
+    });
+
+    it('reports what was set up and opens the app', async () => {
+      stubApi({
+        '/api/setup': {
+          anchorConfigured: true,
+          accounts: 2,
+          cards: 1,
+          templates: 4,
+          buckets: 3,
+          isPristine: false,
+        },
+      });
+      await goTo('You are set up');
+
+      expect(
+        await screen.findByRole('link', { name: 'Open the Dashboard' }),
+      ).toHaveAttribute('href', '/');
+      expect(screen.getByText('configured')).toBeInTheDocument();
+      // Scoped to the summary row: the step indicator also renders a "4".
+      expect(
+        screen.getByText('Recurring templates').closest('div'),
+      ).toHaveTextContent('4');
+    });
+
+    it('has nowhere further to go from the last step', async () => {
+      stubApi({});
+      await goTo('You are set up');
+
+      expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    });
   });
 
   // A step change that only swaps the body leaves a screen reader on the old
