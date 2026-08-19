@@ -18,7 +18,10 @@ import { BuildDashboard } from '../../../application/projection/uc-4-build-dashb
 import { ReadSetupState } from '../../../application/projection/uc-1-5-read-setup-state.js';
 import { CompleteSetup } from '../../../application/setup/compose-setup.js';
 import { CorrectSetupRecord } from '../../../application/setup/uc-1-5-correct-record.js';
-import type { SetupConversations } from '../../../application/setup/uc-1-5-converse-setup.js';
+import type {
+  SetupConversations,
+  SetupLimits,
+} from '../../../application/setup/uc-1-5-converse-setup.js';
 import { ConverseSetup } from '../../../application/setup/uc-1-5-converse-setup.js';
 import { FakeLanguageModel } from '../../../application/testing/fake-language-model.js';
 import { ProjectWealth } from '../../../application/projection/uc-7-project-wealth.js';
@@ -124,6 +127,14 @@ export function buildTestServer(
     maxToolRoundTrips: 5,
   };
 
+  // Wide enough that no route test trips them by accident; a test about the
+  // caps passes its own. These numbers are this double's, not the app's
+  // tuning — see SETUP_LIMITS for those.
+  const setupLimits: SetupLimits = {
+    maxMessageCharacters: 10_000,
+    maxTurnsPerConversation: 1_000,
+  };
+
   return buildServer({
     clock,
     configureAnchor,
@@ -155,6 +166,7 @@ export function buildTestServer(
       new SequentialIdSource('conv'),
       noHolidays,
       clock,
+      setupLimits,
     ),
     correctSetupRecord: new CorrectSetupRecord(conversations),
     completeSetup: new CompleteSetup(conversations, backup, clock),

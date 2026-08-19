@@ -13,6 +13,7 @@ import { SpendCeiling } from '../../../application/spend/spend-ceiling.js';
 import { SetupDraft } from '../../../application/setup/setup-draft.js';
 import type {
   SetupConversations,
+  SetupLimits,
   SetupState,
 } from '../../../application/setup/uc-1-5-converse-setup.js';
 import { ConverseSetup } from '../../../application/setup/uc-1-5-converse-setup.js';
@@ -63,11 +64,24 @@ function readSetupState(accounts: InMemoryAccountRepository): ReadSetupState {
 /** Far above anything this suite spends, unless a test says otherwise. */
 const NO_CEILING = 1_000_000;
 
-function wire(model: FakeLanguageModel, maxTokensPerDay = NO_CEILING) {
+/** Far above anything this suite sends, unless the test is about the caps. */
+const NO_LIMITS: SetupLimits = {
+  maxMessageCharacters: 10_000,
+  maxTurnsPerConversation: 1_000,
+};
+
+function wire(
+  model: FakeLanguageModel,
+  budget: { maxTokensPerDay?: number; limits?: SetupLimits } = {},
+) {
   const clock = FixedClock.at(NOW);
   const conversations: SetupConversations = new FakeSetupConversationStore();
   const ledger = new FakeSpendLedger();
-  const spend = new SpendCeiling(ledger, clock, maxTokensPerDay);
+  const spend = new SpendCeiling(
+    ledger,
+    clock,
+    budget.maxTokensPerDay ?? NO_CEILING,
+  );
   const backup = new BackupRestore(
     new InMemoryCycleRepository(),
     new InMemoryAccountRepository(),
@@ -90,6 +104,7 @@ function wire(model: FakeLanguageModel, maxTokensPerDay = NO_CEILING) {
         new SequentialIdSource('conv'),
         noHolidays,
         clock,
+        budget.limits ?? NO_LIMITS,
       ),
       correctSetupRecord: new CorrectSetupRecord(conversations),
       completeSetup: new CompleteSetup(conversations, backup, clock),
@@ -653,7 +668,7 @@ describe('POST /setup/conversation — the spend ceiling', () => {
    */
   it('answers 503 past the day’s ceiling, without calling the model', async () => {
     const model = new FakeLanguageModel([{ text: 'never asked for' }]);
-    const { app, ledger } = wire(model, 1_000);
+    const { app, ledger } = wire(model, { maxTokensPerDay: 1_000 });
     await ledger.record(Principal.sole(), LocalDate.parse('2026-08-10'), {
       inputTokens: 1_000,
       outputTokens: 0,
@@ -672,3 +687,80 @@ describe('POST /setup/conversation — the spend ceiling', () => {
     expect(model.requests).toHaveLength(0);
   });
 });
+
+describe('POST /setup/conversation — what one conversation may cost', () => {
+  const TIGHT: SetupLimits = {
+    maxMessageCharacters: 40,
+    maxTurnsPerConversation: 1,
+  };
+
+  /** The same status a question past the assistant's cap answers with. */
+  it('answers 400 to a message past the cap, without calling the model', async () => {
+    const model = new FakeLanguageModel([{ text: 'never asked for' }]);
+    const { app } = wire(model, { limits: TIGHT });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/setup/conversation',
+      payload: {
+        message:
+          'health plan 320 on the 8th, electricity around 280 on the 15th',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(model.requests).toHaveLength(0);
+  });
+
+  it('answers 409 to a turn past the cap', async () => {
+    const model = new FakeLanguageModel([{ text: 'never asked for' }]);
+    const { app, conversations } = wire(model, { limits: TIGHT });
+    await holding(conversations);
+    await spent(conversations);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/setup/conversation',
+      payload: { conversationId: 'conv-1', message: 'and the gym, 120' },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(model.requests).toHaveLength(0);
+  });
+
+  /** Correcting a record reaches no model, so no cap applies to it. */
+  it('leaves the correction routes uncapped at the turn cap', async () => {
+    const { app, conversations } = wire(new FakeLanguageModel([]), {
+      limits: TIGHT,
+    });
+    await holding(conversations);
+    await spent(conversations);
+
+    const corrected = await app.inject({
+      method: 'PATCH',
+      url: `/setup/conversation/conv-1/records/${BILL_ID}`,
+      payload: { amount: 35_000 },
+    });
+    const removed = await app.inject({
+      method: 'DELETE',
+      url: `/setup/conversation/conv-1/records/${BILL_ID}`,
+    });
+
+    expect(corrected.statusCode).toBe(200);
+    expect(removed.statusCode).toBe(200);
+  });
+});
+
+/** Puts the held conversation at the turn cap, as a model turn would. */
+async function spent(conversations: SetupConversations): Promise<void> {
+  const stored = await conversations.load('conv-1');
+  if (stored === undefined) throw new Error('Nothing is held as conv-1.');
+
+  await conversations.save({
+    ...stored,
+    transcript: [
+      { role: 'user', text: 'I am paid on the 5th' },
+      { role: 'assistant', text: 'Noted.', toolCalls: [] },
+    ],
+  });
+}
