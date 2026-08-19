@@ -105,12 +105,10 @@ function requireAnswers(
     );
   }
 
+  // Only the bills. The salary is dated by the payday anchor (UC-1.1), which
+  // the user has already chosen, so asking for it again could only disagree.
   const cardLabels = new Set(answers.cards.map((card) => card.label));
-  const hasSalary = reading.months.some((month) => month.salary !== null);
-  const labels = hasSalary
-    ? [...reading.outcomeLabels, SALARY]
-    : reading.outcomeLabels;
-  const missing = labels.filter(
+  const missing = reading.outcomeLabels.filter(
     (label) => !cardLabels.has(label) && answers.dueDays[label] === undefined,
   );
 
@@ -185,7 +183,10 @@ function composeTemplates(
     id: `tpl-${String(index + 1)}`,
     name: label,
     direction: label === SALARY ? ('IN' as const) : ('OUT' as const),
-    dueDayOfMonth: answers.dueDays[label] ?? answers.anchor.anchorDay,
+    dueDayOfMonth:
+      label === SALARY
+        ? answers.anchor.anchorDay
+        : (answers.dueDays[label] ?? answers.anchor.anchorDay),
     amount: run.first.amount,
     startMonth: run.first.month,
     endMonth: run.last.month === lastMonth ? null : run.last.month,

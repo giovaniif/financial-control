@@ -60,6 +60,33 @@ const compose = (
 ) => composeBackup(read, { ...answers, ...overrides }, EXPORTED_AT, noHolidays);
 
 describe('composeBackup', () => {
+  /**
+   * UC-1.1 — the payday anchor *is* the day the salary arrives, so there is
+   * one salary date in the model and the user has already chosen it.
+   */
+  it('dates the salary from the payday anchor without being told', () => {
+    const composition = compose(reading(), { dueDays: { Convênio: 8 } });
+
+    const salary = composition.document.templates.find(
+      (template) => template.name === 'Salário',
+    );
+
+    expect(salary?.dueDayOfMonth).toBe(5);
+  });
+
+  it('ignores a salary due day that disagrees with the anchor', () => {
+    const composition = compose(reading(), {
+      anchor: { anchorDay: 5, shiftPolicy: 'PRECEDING' },
+      dueDays: { Convênio: 8, Salário: 10 },
+    });
+
+    const salary = composition.document.templates.find(
+      (template) => template.name === 'Salário',
+    );
+
+    expect(salary?.dueDayOfMonth).toBe(5);
+  });
+
   it('imports a month with no salary at all', () => {
     const composition = compose(
       reading({

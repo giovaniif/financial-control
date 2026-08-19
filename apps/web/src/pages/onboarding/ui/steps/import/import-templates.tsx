@@ -34,13 +34,13 @@ function stepsOf(amounts: number[]): number[] {
 interface RowProps {
   label: string;
   amounts: number[];
-  dueDay: string;
-  onDueDay: (day: string) => void;
+  /** Bills only. The salary's day is the payday anchor — see UC-1.1. */
+  dueDay?: { value: string; onChange: (day: string) => void };
   /** Bills only — the salary is what every cycle boundary is measured from. */
   estimate?: { checked: boolean; onToggle: () => void };
 }
 
-function TemplateRow({ label, amounts, dueDay, onDueDay, estimate }: RowProps) {
+function TemplateRow({ label, amounts, dueDay, estimate }: RowProps) {
   const steps = stepsOf(amounts);
   const latest = amounts[amounts.length - 1] ?? 0;
 
@@ -71,18 +71,22 @@ function TemplateRow({ label, amounts, dueDay, onDueDay, estimate }: RowProps) {
         <span />
       )}
 
-      <div className="w-24">
-        <Field
-          label="Due day"
-          type="number"
-          min={1}
-          max={31}
-          value={dueDay}
-          onChange={(event) => {
-            onDueDay(event.target.value);
-          }}
-        />
-      </div>
+      {dueDay !== undefined ? (
+        <div className="w-24">
+          <Field
+            label="Due day"
+            type="number"
+            min={1}
+            max={31}
+            value={dueDay.value}
+            onChange={(event) => {
+              dueDay.onChange(event.target.value);
+            }}
+          />
+        </div>
+      ) : (
+        <span className="w-24" />
+      )}
     </li>
   );
 }
@@ -118,18 +122,11 @@ export function ImportTemplates({
             Money coming in
           </h2>
           <p className="text-sm text-zinc-600">
-            Its due day is the day it arrives — and it carries more weight than
-            any of the others, because the payday cycle is measured from it.
+            Nothing to fill in — the day it arrives is the payday anchor you set
+            earlier, which is the same date every cycle is measured from.
           </p>
           <ul className="flex flex-col gap-2">
-            <TemplateRow
-              label={SALARY}
-              amounts={salary}
-              dueDay={draft.dueDays[SALARY] ?? ''}
-              onDueDay={(day) => {
-                setDueDay(SALARY, day);
-              }}
-            />
+            <TemplateRow label={SALARY} amounts={salary} />
           </ul>
         </section>
       )}
@@ -149,9 +146,11 @@ export function ImportTemplates({
               key={label}
               label={label}
               amounts={seriesOf(reading, label)}
-              dueDay={draft.dueDays[label] ?? ''}
-              onDueDay={(day) => {
-                setDueDay(label, day);
+              dueDay={{
+                value: draft.dueDays[label] ?? '',
+                onChange: (day) => {
+                  setDueDay(label, day);
+                },
               }}
               estimate={{
                 checked: draft.estimates.includes(label),

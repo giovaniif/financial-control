@@ -300,15 +300,20 @@ describe('ImportSpreadsheet', () => {
     };
 
     it('needs a due day for every bill', async () => {
-      await expect(applyWith({ dueDays: { Salário: 5 } })).rejects.toThrow(
+      await expect(applyWith({ dueDays: {} })).rejects.toThrow(
         ImportAnswersIncomplete,
       );
     });
 
     it('names the bills whose due day is missing', async () => {
-      await expect(applyWith({ dueDays: { Salário: 5 } })).rejects.toThrow(
-        /Convênio/,
-      );
+      await expect(applyWith({ dueDays: {} })).rejects.toThrow(/Convênio/);
+    });
+
+    // The payday anchor already says when the salary arrives — UC-1.1.
+    it('does not need one for the salary', async () => {
+      await expect(
+        applyWith({ dueDays: { Convênio: 8, 'Evoluçao Obra': 15 } }),
+      ).resolves.toBeDefined();
     });
 
     it('needs at least one account', async () => {

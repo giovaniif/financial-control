@@ -139,7 +139,7 @@ describe('the wizard with a spreadsheet behind it', () => {
 
     expect(screen.getByText('Convênio')).toBeInTheDocument();
     expect(screen.getByText('Salário')).toBeInTheDocument();
-    expect(screen.getAllByLabelText('Due day')).toHaveLength(4);
+    expect(screen.getAllByLabelText('Due day')).toHaveLength(3);
   });
 
   /**
@@ -192,16 +192,33 @@ describe('the wizard with a spreadsheet behind it', () => {
     expect(bills.getAllByRole('checkbox')).toHaveLength(3);
   });
 
-  it('still asks the salary for the day it lands', async () => {
+  /**
+   * UC-1.1 — the payday anchor set in step 2 already is the day the salary
+   * arrives, so asking again is redundant and lets the two disagree.
+   */
+  it('never asks for the salary due day', async () => {
+    await reach('What repeats every cycle');
+
+    const income = within(
+      screen.getByRole('region', { name: 'Money coming in' }),
+    );
+    const bills = within(
+      screen.getByRole('region', { name: 'The bills that repeat' }),
+    );
+
+    expect(income.queryByLabelText('Due day')).not.toBeInTheDocument();
+    expect(bills.getAllByLabelText('Due day')).toHaveLength(3);
+  });
+
+  it('says the salary is dated from the payday anchor', async () => {
     await reach('What repeats every cycle');
 
     const income = within(
       screen.getByRole('region', { name: 'Money coming in' }),
     );
 
-    await userEvent.type(income.getByLabelText('Due day'), '5');
-
-    expect(income.getByLabelText('Due day')).toHaveValue(5);
+    expect(income.getByText(/payday anchor/i)).toBeInTheDocument();
+    expect(income.getByText('Salário')).toBeInTheDocument();
   });
 
   it('shows no income group when the sheet carries no salary', async () => {
