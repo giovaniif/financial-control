@@ -1,6 +1,6 @@
-# Workflow — Linear and Graphite
+# Workflow — Linear and GitHub stacked PRs
 
-**Rule: no work without a Linear issue, and all GitHub workflow goes through Graphite.**
+**Rule: no work without a Linear issue, and all GitHub workflow goes through `gh stack`.**
 
 ## Linear
 
@@ -36,7 +36,7 @@ Linear's Fibonacci scale, calibrated for this codebase:
 | 1 | One file, no new tests beyond a case or two. Config, constant, copy change |
 | 2 | One layer end to end with its tests. A value object, one repository method, one component |
 | 3 | One vertical slice within one app: use case + its port + tests, or one FSD slice. Typically one PR |
-| 5 | Backend and frontend both, or a new aggregate. **Ships as a Graphite stack**, never one branch |
+| 5 | Backend and frontend both, or a new aggregate. **Ships as a stack**, never one branch |
 | 8 | Touches the Prisma schema or the calculation chain, or spans three or more layers. Split it |
 
 - **5 or more means split.** Break it into issues of 3 or less, in the stack order below.
@@ -53,35 +53,59 @@ When creating issues in bulk, set estimates at creation time.
 One issue = one reviewable unit of behaviour. Work here usually has a backend half and a
 frontend half; make them two issues. That is what lets the work ship as a stack.
 
-## Graphite — stacked PRs
+## GitHub stacked PRs
 
-**All GitHub workflow goes through Graphite.** Do not `git push`, do not `gh pr create`,
-do not force-push a branch by hand. `gt` owns the branch topology and hand-editing it
-desynchronizes the stack's children.
+**All GitHub workflow goes through `gh stack`.** Do not `git push` a stack branch, do not
+`gh pr create`, do not force-push or hand-rebase. The extension owns the branch topology
+and the stack object on GitHub; hand-editing either desynchronizes the layers above.
 
-The repo must be `gt init`-ed against `main` before the first stack.
+GitHub's stacked pull requests are a **native feature, in public preview** since 30 July
+2026. A stack is a real object on GitHub: each PR shows where it sits in the order, layers
+rebase and retarget server-side as lower ones land, and a stack merges atomically.
+
+```bash
+gh extension install github/gh-stack   # once per machine
+```
+
+Merge-queue support was still rolling out when the preview opened. This repo does not use
+a merge queue, so that does not apply here.
 
 ### Standard flow
 
 ```bash
-gt sync                                   # pull main, restack, clean merged branches
-gt create -m "feat: add CycleRef value object"
-# ... next change, stacked on the previous ...
-gt create -m "feat: derive cycle boundaries from the payday anchor"
-gt submit --stack                         # open/update the whole stack as linked PRs
+gh stack sync                                  # fetch, rebase, push, sync PR state
+gh stack init riccog25/fin-12-add-cycle-ref    # first layer, branched off main
+git add -A && git commit -m "feat: add CycleRef value object"
+gh stack add -Am "feat: derive cycle boundaries from the payday anchor" \
+  riccog25/fin-13-derive-cycle-boundaries      # next layer, on top of the previous
+gh stack submit                                # push all branches, open/update the stack
 ```
+
+`init` only creates the branch — it takes no message and stages nothing, so commit the
+first layer with plain `git`. `add` does all three: `-A` stages everything including
+untracked files, `-m` is the commit message, and the branch is created on top of the
+current layer.
+
+Always pass the branch name explicitly. With `-m` and no branch name, `add` invents one
+from the commit message, which loses the `fin-<n>` segment Linear needs to link the PR
+(see the Linear loop above).
+
+`gh stack submit` opens an editor to title and describe each new PR; `--auto` skips it and
+creates drafts, `--auto --open` creates them ready for review.
 
 Iterating after review:
 
 ```bash
-gt modify                      # amend the current branch's commit
-gt modify --commit -m "..."    # or add a follow-up commit
-gt restack                     # propagate up the stack
-gt submit --stack              # push the updated stack
+gh stack down                  # move to the layer under review
+git commit --amend             # or a follow-up commit
+gh stack rebase                # cascade the change up through the layers above
+gh stack submit                # push the updated stack
 ```
 
-Useful: `gt log` for the stack, `gt up` / `gt down` to move, `gt track` to adopt an
-existing branch.
+Useful: `gh stack view` for the stack, `gh stack up` / `gh stack down` to move,
+`gh stack checkout` to jump to a stack by number, PR or branch, `gh stack modify` to
+reorder or drop a layer, and `gh stack init <branch> <branch> ...` to adopt branches that
+already exist.
 
 ### How to slice a stack
 
@@ -98,16 +122,33 @@ Bottom to top. Each PR independently reviewable, each one green on its own:
 Not every change needs seven PRs. But **the seam between backend and frontend is always a
 stack boundary**, and so is the seam between the domain and everything that depends on it.
 
+### Merging
+
+```bash
+gh stack merge                 # the whole stack, atomically
+gh stack merge 79              # everything up to that PR, atomically
+```
+
+The merge is **all-or-nothing**: if any layer cannot be merged, none of them are. That is
+the one real difference from merging by hand — the whole stack can land in one operation
+rather than bottom-up with a sync between each.
+
+Merging only part of a stack is still fine, and is what rule 8 in `CLAUDE.md` is about:
+every state of `main` must be coherent, so cut the partial merge at a layer that stands on
+its own. The layers left open rebase and retarget themselves. Run `gh stack sync`
+afterwards to bring the local stack back in line.
+
 ### Rules for the stack
 
 - Keep PRs small. If a PR's diff needs scrolling to understand, it should have been two.
 - Each PR carries **its own tests**. A stack whose tests all sit in the top PR defeats the
   point and cannot be reviewed incrementally.
 - Each PR must be green on its own. Nothing checks that for you, so `pnpm check`
-  before every `gt submit`.
-- Never hand-rebase or force-push; use `gt restack`.
-- Merge bottom-up, `gt sync` after each merge.
-- If a branch stops being related to the stack, take it out. Stacks are one context.
+  before every `gh stack submit`.
+- Never hand-rebase or force-push; use `gh stack rebase`.
+- After anything lands, `gh stack sync`.
+- If a branch stops being related to the stack, take it out with `gh stack modify`. Stacks
+  are one context.
 
 ## Commits and PRs
 

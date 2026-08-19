@@ -5,7 +5,7 @@ Every row becomes a Linear issue in team **Financial Control** (`FIN-`), estimat
 which is what makes each issue a single reviewable PR.
 
 Phases are dependency-ordered. Within a phase, issues are listed bottom-to-top in **stack order**: the order
-they should be created as Graphite branches, each PR green on its own.
+they should be created as stacked branches, each PR green on its own.
 
 `UC` references point at [`USE_CASES.md`](./USE_CASES.md).
 
