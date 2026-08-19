@@ -62,7 +62,7 @@ export function RecordLine({ record, conversationId, onTurn }: Props) {
           <path d="m5 13 4 4L19 7" />
         </svg>
         <span className="flex-1 text-sm text-zinc-900">
-          <span className="sr-only">Recorded: </span>
+          <span className="sr-only">Registrado: </span>
           {withLocalDates(record.summary)}
         </span>
 
@@ -70,23 +70,23 @@ export function RecordLine({ record, conversationId, onTurn }: Props) {
           <div className="flex shrink-0 gap-3">
             {parsed !== null && (
               <Quiet
-                label={`Edit ${name}`}
+                label={`Editar ${name}`}
                 disabled={pending}
                 onClick={() => {
                   setEditing(true);
                 }}
               >
-                Edit
+                Editar
               </Quiet>
             )}
             <Quiet
-              label={`Drop ${name}`}
+              label={`Descartar ${name}`}
               disabled={pending}
               onClick={() => {
                 drop.mutate(ref, { onSuccess: onTurn });
               }}
             >
-              Drop
+              Descartar
             </Quiet>
           </div>
         )}

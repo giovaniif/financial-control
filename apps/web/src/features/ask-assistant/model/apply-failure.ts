@@ -13,19 +13,19 @@ const SWITCHED_OFF = 503;
  */
 export function explainApplyFailure(error: unknown): string {
   if (!(error instanceof ApiError)) {
-    return 'The confirmation never reached the app. Nothing was written — try again.';
+    return 'A confirmação não chegou ao app. Nada foi escrito — tente de novo.';
   }
 
   switch (error.status) {
     case REFUSED:
-      return `The app refused the change: ${error.message}`;
+      return `O app recusou a mudança: ${error.message}`;
     case GONE:
-      return 'This proposal is no longer on the server — ask again, and confirm the answer that comes back.';
+      return 'Essa proposta não está mais no servidor — pergunte de novo e confirme a resposta que vier.';
     case SWITCHED_OFF:
-      return 'The assistant is switched off, so nothing was applied.';
+      return 'O assistente está desligado, então nada foi aplicado.';
     case MODEL_FAILED:
-      return 'The assistant could not be reached, so nothing was applied.';
+      return 'Não foi possível falar com o assistente, então nada foi aplicado.';
     default:
-      return `The change did not go through: ${error.message}`;
+      return `A mudança não foi aplicada: ${error.message}`;
   }
 }

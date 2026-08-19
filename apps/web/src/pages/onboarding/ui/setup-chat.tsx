@@ -82,7 +82,7 @@ export function SetupChat() {
       <div
         ref={transcript}
         role="log"
-        aria-label="Setup conversation"
+        aria-label="Conversa de configuração"
         tabIndex={0}
         className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6"
       >
@@ -188,7 +188,7 @@ function Line({ entry }: { entry: Exclude<Entry, { kind: 'record' }> }) {
     return (
       <div className="flex justify-end">
         <p className="max-w-[85%] rounded-2xl rounded-br-sm bg-zinc-100 px-4 py-2.5 text-sm whitespace-pre-line text-zinc-900">
-          <span className="sr-only">You</span>
+          <span className="sr-only">Você</span>
           {entry.text}
         </p>
       </div>
@@ -221,43 +221,45 @@ function Thinking() {
         <span className="size-1.5 animate-pulse rounded-full bg-zinc-400 [animation-delay:200ms]" />
         <span className="size-1.5 animate-pulse rounded-full bg-zinc-400 [animation-delay:400ms]" />
       </span>
-      Working out what you just told me…
+      Processando o que você acabou de me contar…
     </p>
   );
 }
 
 function Created({ applied }: { applied: SetupAppliedResponse }) {
-  const shift = applied.shiftPolicy === 'PRECEDING' ? 'preceding' : 'following';
+  const shift = applied.shiftPolicy === 'PRECEDING' ? 'anterior' : 'seguinte';
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold tracking-tight">
-          Your setup is in
+          Sua configuração está pronta
         </h2>
         <p className="max-w-prose leading-7 text-zinc-600">
-          Paid on day {applied.anchorDay}, moving to the {shift} business day
-          when that one is closed.
+          Pago no dia {applied.anchorDay}, movendo para o dia útil {shift}{' '}
+          quando esse estiver fechado.
         </p>
       </div>
       <ul className="flex flex-col gap-1.5 text-sm text-zinc-700">
-        <li>{count(applied.accounts, 'account')}</li>
-        <li>{applied.templates} recurring bills and income</li>
-        <li>{count(applied.cards, 'credit card')}</li>
-        <li>{count(applied.buckets, 'bucket')}</li>
+        <li>{count(applied.accounts, 'conta', 'contas')}</li>
+        <li>{applied.templates} contas e receitas recorrentes</li>
+        <li>
+          {count(applied.cards, 'cartão de crédito', 'cartões de crédito')}
+        </li>
+        <li>{count(applied.buckets, 'caixinha', 'caixinhas')}</li>
       </ul>
       <div>
         <Link
           to="/"
           className="inline-block rounded-lg bg-zinc-900 px-3.5 py-2 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800"
         >
-          Open Main
+          Abrir o Principal
         </Link>
       </div>
     </div>
   );
 }
 
-function count(total: number, noun: string): string {
-  return `${String(total)} ${noun}${total === 1 ? '' : 's'}`;
+function count(total: number, singular: string, plural: string): string {
+  return `${String(total)} ${total === 1 ? singular : plural}`;
 }

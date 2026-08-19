@@ -21,13 +21,13 @@ export function ArchiveBucket({
 
   return (
     <Button
-      aria-label={`Archive ${bucket.name}`}
+      aria-label={`Arquivar ${bucket.name}`}
       disabled={update.isPending}
       onClick={() => {
         update.mutate({ status: 'ARCHIVED' });
       }}
     >
-      Archive
+      Arquivar
     </Button>
   );
 }

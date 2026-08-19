@@ -23,29 +23,29 @@ export function SetupForm() {
   return (
     <div className="flex flex-col gap-8">
       <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
-        Setting up by conversation needs a Claude API key, and this app has none
-        configured. Nothing is missing because of that — the same sections are
-        below as a plain form, and every one of them can be changed later from
-        Profile.
+        Configurar por conversa precisa de uma chave de API do Claude, e este
+        app não tem nenhuma configurada. Nada fica faltando por causa disso — as
+        mesmas seções estão abaixo como um formulário simples, e cada uma delas
+        pode ser alterada depois no Perfil.
       </p>
 
-      <Section title="The payday cycle">
+      <Section title="O ciclo de pagamento">
         <AnchorSection />
       </Section>
-      <Section title="Where your money sits">
+      <Section title="Onde o seu dinheiro está">
         <AccountsSection />
       </Section>
-      <Section title="Salary and what repeats every cycle">
+      <Section title="Salário e o que se repete a cada ciclo">
         <TemplatesSection currentMonth={selectedMonth ?? ''} />
       </Section>
-      <Section title="Credit cards and their invoices">
+      <Section title="Cartões de crédito e suas faturas">
         <CardsSection />
       </Section>
-      <Section title="What you are saving for">
+      <Section title="Para o que você está guardando">
         <BucketsSection />
       </Section>
 
-      <Section title="Where that leaves you">
+      <Section title="Onde isso deixa você">
         <SetupSummary />
       </Section>
     </div>

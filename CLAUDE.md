@@ -25,9 +25,11 @@ This file is about *how we work here*.
 5. **The architecture is enforced by the linter.** Backend layering is classical DDD;
    frontend is Feature-Sliced Design. Import-boundary violations fail the lint run.
    → @.claude/architecture.md · @.claude/linting.md
-6. **Everything is written in English** — identifiers, comments, tests, commits, Linear
-   issues, PR titles and descriptions, all docs, and the entire UI. No exceptions; only
-   currency and date *formatting* are Brazilian. → @.claude/code-style.md
+6. **Everything is written in English, except what the user reads.** Identifiers, types,
+   comments, tests, commits, Linear issues, PR titles and descriptions and everything in
+   `docs/` are English. **User-visible copy is pt-BR** — the one exception, and the only
+   one. Currency and date *formatting* stay Brazilian throughout.
+   → @.claude/code-style.md
 7. **Do not write comments** unless they explain something genuinely un-inferable from the
    code. → @.claude/code-style.md
 8. **Everything runs locally.** No Render, no Vercel, no Supabase, no deployment of

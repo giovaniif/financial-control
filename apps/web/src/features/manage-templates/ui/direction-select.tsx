@@ -14,18 +14,18 @@ export function DirectionSelect({
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className="text-xs font-medium text-zinc-600">
-        Direction
+        Direção
       </label>
       <select
         id={id}
-        value={value === 'IN' ? 'Money in' : 'Money out'}
+        value={value === 'IN' ? 'Entrada' : 'Saída'}
         onChange={(event) => {
-          onChange(event.target.value === 'Money in' ? 'IN' : 'OUT');
+          onChange(event.target.value === 'Entrada' ? 'IN' : 'OUT');
         }}
         className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm"
       >
-        <option>Money out</option>
-        <option>Money in</option>
+        <option>Saída</option>
+        <option>Entrada</option>
       </select>
     </div>
   );

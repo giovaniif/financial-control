@@ -20,12 +20,13 @@ export function CardsSection() {
   }
 
   return (
-    <section aria-label="Credit cards" className="flex flex-col gap-3">
+    <section aria-label="Cartões de crédito" className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col gap-0.5">
-          <CardTitle>Credit cards</CardTitle>
+          <CardTitle>Cartões de crédito</CardTitle>
           <p className="text-xs text-zinc-500">
-            The closing and due days decide which cycle a purchase is paid from.
+            Os dias de fechamento e vencimento decidem em qual ciclo uma compra
+            é paga.
           </p>
         </div>
         <AddCardButton accounts={accounts?.accounts ?? []} />
@@ -33,8 +34,8 @@ export function CardsSection() {
 
       {cards.length === 0 ? (
         <EmptyState
-          title="No cards yet"
-          body="A card needs a limit, a closing day and a due day. Those two days decide which cycle a purchase is paid from."
+          title="Nenhum cartão ainda"
+          body="Um cartão precisa de um limite, um dia de fechamento e um dia de vencimento. Esses dois dias decidem em qual ciclo uma compra é paga."
         />
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">

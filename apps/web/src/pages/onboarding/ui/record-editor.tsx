@@ -19,9 +19,9 @@ interface Props {
 }
 
 const ACCOUNT_TYPES: { value: AccountType; label: string }[] = [
-  { value: 'CHECKING', label: 'Checking' },
-  { value: 'SAVINGS', label: 'Savings' },
-  { value: 'CASH', label: 'Cash' },
+  { value: 'CHECKING', label: 'Corrente' },
+  { value: 'SAVINGS', label: 'Poupança' },
+  { value: 'CASH', label: 'Dinheiro' },
 ];
 
 /**
@@ -56,7 +56,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
     <form onSubmit={submit} className="flex flex-col gap-3 pt-2">
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
-          label="Name"
+          label="Nome"
           value={form.name}
           {...(errors.name === undefined ? {} : { error: errors.name })}
           onChange={(event) => {
@@ -67,7 +67,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
         {parsed.kind === 'ACCOUNT' && (
           <>
             <Choice
-              label="Kind"
+              label="Tipo"
               value={form.type}
               options={ACCOUNT_TYPES}
               onChange={(value) => {
@@ -75,7 +75,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
               }}
             />
             <Money
-              label="Balance"
+              label="Saldo"
               value={form.balance}
               error={errors.balance}
               onChange={(value) => {
@@ -88,7 +88,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
         {parsed.kind === 'BILL' && (
           <>
             <Money
-              label="Amount"
+              label="Valor"
               value={form.amount}
               error={errors.amount}
               onChange={(value) => {
@@ -96,7 +96,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
               }}
             />
             <Day
-              label="Due day of month"
+              label="Dia de vencimento"
               value={form.dueDayOfMonth}
               error={errors.dueDayOfMonth}
               onChange={(value) => {
@@ -109,7 +109,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
         {parsed.kind === 'CARD' && (
           <>
             <Money
-              label="Limit"
+              label="Limite"
               value={form.limit}
               error={errors.limit}
               onChange={(value) => {
@@ -117,7 +117,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
               }}
             />
             <Day
-              label="Closing day"
+              label="Dia de fechamento"
               value={form.closingDay}
               error={errors.closingDay}
               onChange={(value) => {
@@ -125,7 +125,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
               }}
             />
             <Day
-              label="Due day"
+              label="Dia de vencimento"
               value={form.dueDay}
               error={errors.dueDay}
               onChange={(value) => {
@@ -133,7 +133,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
               }}
             />
             <Field
-              label="Paid from"
+              label="Pago da conta"
               value={form.paymentAccountName}
               onChange={(event) => {
                 set('paymentAccountName', event.target.value);
@@ -145,11 +145,11 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
         {parsed.kind === 'BUCKET' && (
           <>
             <Choice
-              label="Each cycle"
+              label="A cada ciclo"
               value={form.ruleKind}
               options={[
-                { value: 'PERCENT', label: 'A share of Expected Surplus' },
-                { value: 'FIXED', label: 'A fixed amount' },
+                { value: 'PERCENT', label: 'Um percentual da Sobra Esperada' },
+                { value: 'FIXED', label: 'Um valor fixo' },
               ]}
               onChange={(value) => {
                 set('ruleKind', value);
@@ -157,7 +157,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
             />
             {form.ruleKind === 'PERCENT' ? (
               <Field
-                label="Share of Expected Surplus (%)"
+                label="Percentual da Sobra Esperada (%)"
                 type="number"
                 step="0.01"
                 min="0"
@@ -171,7 +171,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
               />
             ) : (
               <Money
-                label="Amount each cycle"
+                label="Valor a cada ciclo"
                 value={form.ruleAmount}
                 error={errors.ruleAmount}
                 onChange={(value) => {
@@ -182,7 +182,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
             {parsed.target !== null && (
               <>
                 <Money
-                  label="Target"
+                  label="Objetivo"
                   value={form.target}
                   error={errors.target}
                   onChange={(value) => {
@@ -190,7 +190,7 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
                   }}
                 />
                 <Field
-                  label="Target date"
+                  label="Data do objetivo"
                   type="date"
                   value={form.targetDate}
                   onChange={(event) => {
@@ -212,16 +212,16 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
               set('isEstimate', event.target.checked);
             }}
           />
-          An estimate, not a confirmed figure
+          Uma estimativa, não um valor confirmado
         </label>
       )}
 
       <div className="flex gap-2">
         <Button type="submit" variant="primary" disabled={pending}>
-          Save
+          Salvar
         </Button>
         <Button type="button" onClick={onCancel} disabled={pending}>
-          Cancel
+          Cancelar
         </Button>
       </div>
     </form>

@@ -59,7 +59,7 @@ describe('BackupRestore', () => {
     const { createObjectURL } = stubDownload();
     render();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Export' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Exportar' }));
 
     await waitFor(() => {
       expect(createObjectURL).toHaveBeenCalledOnce();
@@ -77,25 +77,25 @@ describe('BackupRestore', () => {
     stubApiWith();
     render();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Importar' }));
 
     const warning = screen.getByRole('alert');
 
-    expect(warning).toHaveTextContent('3 accounts');
-    expect(warning).toHaveTextContent('4 cycles');
-    expect(warning).toHaveTextContent('12 bills and income');
-    expect(warning).toHaveTextContent('2 cards');
-    expect(warning).toHaveTextContent('5 buckets');
+    expect(warning).toHaveTextContent('3 contas');
+    expect(warning).toHaveTextContent('4 ciclos');
+    expect(warning).toHaveTextContent('12 contas e receitas');
+    expect(warning).toHaveTextContent('2 cartões');
+    expect(warning).toHaveTextContent('5 caixinhas');
   });
 
   it('will not import until a file has been chosen', async () => {
     stubApiWith();
     render();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Importar' }));
 
     expect(
-      screen.getByRole('button', { name: 'Replace everything' }),
+      screen.getByRole('button', { name: 'Substituir tudo' }),
     ).toBeDisabled();
   });
 
@@ -103,13 +103,13 @@ describe('BackupRestore', () => {
     const fetchMock = stubApiWith(null, 204);
     render();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Importar' }));
     await userEvent.upload(
-      screen.getByLabelText('Backup file'),
+      screen.getByLabelText('Arquivo de backup'),
       fileOf(document_),
     );
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Replace everything' }),
+      await screen.findByRole('button', { name: 'Substituir tudo' }),
     );
 
     await waitFor(() => {
@@ -124,13 +124,13 @@ describe('BackupRestore', () => {
     stubApiWith({ error: 'This backup says version 99.' }, 400);
     render();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Importar' }));
     await userEvent.upload(
-      screen.getByLabelText('Backup file'),
+      screen.getByLabelText('Arquivo de backup'),
       fileOf({ ...document_, version: 99 }),
     );
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Replace everything' }),
+      await screen.findByRole('button', { name: 'Substituir tudo' }),
     );
 
     expect(
@@ -144,16 +144,16 @@ describe('BackupRestore', () => {
     const fetchMock = stubApiWith();
     render();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Importar' }));
     await userEvent.upload(
-      screen.getByLabelText('Backup file'),
+      screen.getByLabelText('Arquivo de backup'),
       new File(['{ half a doc'], 'backup.json', {
         type: 'application/json',
       }),
     );
 
     expect(
-      await screen.findByText(/could not be read as a backup/),
+      await screen.findByText(/não pôde ser lido como um backup/),
     ).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -163,7 +163,7 @@ describe('BackupRestore', () => {
     render();
 
     expect(
-      screen.getByText(/nothing takes snapshots behind you/i),
+      screen.getByText(/nada mais tira instantâneos dos seus dados/i),
     ).toBeInTheDocument();
   });
 });

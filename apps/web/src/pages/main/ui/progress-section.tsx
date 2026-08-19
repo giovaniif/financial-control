@@ -9,15 +9,15 @@ export function ProgressSection({
   progress: CycleProgressResponse;
 }) {
   return (
-    <Card label="This cycle so far" className="flex flex-col gap-3">
-      <CardTitle>This cycle so far</CardTitle>
+    <Card label="Este ciclo até agora" className="flex flex-col gap-3">
+      <CardTitle>Este ciclo até agora</CardTitle>
       <Bar
-        label={`Day ${String(progress.dayOfCycle)} of ${String(progress.cycleLength)}`}
+        label={`Dia ${String(progress.dayOfCycle)} de ${String(progress.cycleLength)}`}
         percent={progress.timePercent}
         tone="bg-zinc-900"
       />
       <Bar
-        label="Spent against planned"
+        label="Gasto em relação ao previsto"
         percent={progress.spentPercent}
         tone={
           progress.spentPercent > progress.timePercent
@@ -26,8 +26,8 @@ export function ProgressSection({
         }
       />
       <p className="text-xs text-zinc-500">
-        <Amount cents={progress.spent} /> of{' '}
-        <Amount cents={progress.plannedOut} /> planned.
+        <Amount cents={progress.spent} /> de{' '}
+        <Amount cents={progress.plannedOut} /> previstos.
       </p>
     </Card>
   );

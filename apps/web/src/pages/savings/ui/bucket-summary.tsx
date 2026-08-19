@@ -14,8 +14,10 @@ export function BucketSummary({ bucket }: { bucket: BucketView }) {
         <span className="font-medium">{bucket.name}</span>
         <Badge tone={bucket.mode === 'GOAL' ? 'positive' : 'info'}>
           {bucket.status === 'ARCHIVED'
-            ? 'archived'
-            : bucket.mode.toLowerCase()}
+            ? 'arquivada'
+            : bucket.mode === 'GOAL'
+              ? 'meta'
+              : 'contínua'}
         </Badge>
         <Amount
           cents={bucket.balance}
@@ -31,8 +33,8 @@ export function BucketSummary({ bucket }: { bucket: BucketView }) {
 
       {/* Growth from saving, never confused with growth from returns. */}
       <p className="text-xs text-zinc-400">
-        saved <Amount cents={bucket.contributed} className="text-xs" /> · earned{' '}
-        <Amount cents={bucket.yielded} className="text-xs" />
+        aportado <Amount cents={bucket.contributed} className="text-xs" /> ·
+        rendeu <Amount cents={bucket.yielded} className="text-xs" />
       </p>
     </div>
   );
@@ -55,8 +57,8 @@ function GoalProgress({ bucket }: { bucket: GoalBucket }) {
         />
       </div>
       <p className="text-xs text-zinc-500">
-        {formatPercent(bucket.percentComplete)} of{' '}
-        <Amount cents={bucket.target} className="text-xs" /> by{' '}
+        {formatPercent(bucket.percentComplete)} de{' '}
+        <Amount cents={bucket.target} className="text-xs" /> até{' '}
         {formatDate(bucket.targetDate)}
       </p>
       <p className="text-xs text-zinc-500">
@@ -69,8 +71,8 @@ function GoalProgress({ bucket }: { bucket: GoalBucket }) {
 function OngoingRate({ bucket }: { bucket: OngoingBucket }) {
   return (
     <p className="text-xs text-zinc-500">
-      <Rule rule={bucket.rule} /> — no target to hit, the question is only
-      whether the rate is right.
+      <Rule rule={bucket.rule} /> — sem objetivo a bater, a questão é só se o
+      ritmo está certo.
     </p>
   );
 }
@@ -80,10 +82,10 @@ function Rule({ rule }: { rule: BucketView['rule'] }) {
   if (rule.kind === 'FIXED') {
     return (
       <>
-        <Amount cents={rule.amount} className="text-xs" /> per cycle
+        <Amount cents={rule.amount} className="text-xs" /> por ciclo
       </>
     );
   }
 
-  return <>{formatPercent(rule.percent)} of Expected Surplus per cycle</>;
+  return <>{formatPercent(rule.percent)} da Sobra Esperada por ciclo</>;
 }

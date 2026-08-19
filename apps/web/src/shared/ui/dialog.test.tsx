@@ -37,7 +37,7 @@ describe('Dialog', () => {
       </Dialog>,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Descartar' }));
 
     expect(onClose).toHaveBeenCalledOnce();
   });

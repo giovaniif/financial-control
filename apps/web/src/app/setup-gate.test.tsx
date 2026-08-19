@@ -40,7 +40,7 @@ describe('the first-run gate', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Setting up',
+        name: 'Configurando',
       }),
     ).toBeInTheDocument();
   });
@@ -52,7 +52,7 @@ describe('the first-run gate', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Setting up',
+        name: 'Configurando',
       }),
     ).toBeInTheDocument();
   });
@@ -62,7 +62,7 @@ describe('the first-run gate', () => {
     renderAt('/profile');
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Profile' }),
+      await screen.findByRole('heading', { level: 1, name: 'Perfil' }),
     ).toBeInTheDocument();
   });
 
@@ -87,7 +87,7 @@ describe('the first-run gate', () => {
     renderAt('/profile');
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Profile' }),
+      await screen.findByRole('heading', { level: 1, name: 'Perfil' }),
     ).toBeInTheDocument();
   });
 });

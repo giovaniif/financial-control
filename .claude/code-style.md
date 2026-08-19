@@ -1,19 +1,30 @@
 # Code style
 
-Two rules govern everything: **everything is written in English**, and **comments are the
-exception**.
+Two rules govern everything: **the code is written in English and the screens in pt-BR**,
+and **comments are the exception**.
 
-## 1. English
+## 1. English in the code, pt-BR on screen
 
-Identifiers, types, function names, test names, commit messages, branch names, comments,
-all repository documentation, and everything written *about* the code — Linear issue
-titles and descriptions, PR titles and PR descriptions.
+**English:** identifiers, types, function names, test names, commit messages, branch
+names, comments, all repository documentation, and everything written *about* the code —
+Linear issue titles and descriptions, PR titles and PR descriptions.
 
-**The UI is English too.** There is no Portuguese product copy anywhere: the app has one
-user, and the working agreement is that the whole surface is English.
+**pt-BR:** every string a person reads. Headings, labels, buttons, empty states, alerts,
+badges, placeholders, `aria-label`s, `title`s, `sr-only` text, `alt` text and
+`<html lang="pt-BR">`. Accessible names are read by a person too, so they are copy, not
+code. Write real Brazilian financial Portuguese — what someone would actually say — not
+English run through a dictionary.
 
-The only exception is **formatting**, which is locale rather than language: money renders
+That is the single exception to the English rule, and it is a narrow one: the boundary is
+whether a human reads the string in the running app. A test name describing that copy is
+still code, and stays English.
+
+**Formatting** is locale rather than language and is unchanged either way: money renders
 as `R$ 1.234,56` and dates as `dd/MM/yyyy`.
+
+Strings are replaced in place. There is no i18n layer, no `t()` and no locale files — one
+user, one language, and the indirection would tax every component for a switch nobody is
+going to make.
 
 ### Domain vocabulary
 
@@ -23,18 +34,27 @@ database columns, the API contract and the UI labels, as `docs/USE_CASES.md` §3
 them. Do not invent synonyms — `leftover`, `remaining` and `available` all mean one of
 these three and blur which.
 
-The spreadsheet this replaces was written in Portuguese. None of that vocabulary carries
-over into code:
+The spreadsheet this replaces was written in Portuguese. **None of that vocabulary carries
+over into code** — that ban is unchanged:
 
-| Spreadsheet | Code |
+| Portuguese | Code |
 |---|---|
-| Sobra / Sobra Esperada / Sobra Real | `surplus` / `expectedSurplus` / `netSurplus` |
+| Sobra / Sobra Esperada / Sobra Líquida | `surplus` / `expectedSurplus` / `netSurplus` |
 | Reserva | `reserve` |
 | Investimentos | `investments` |
 | Aposentadoria | `retirement` |
 | Apartamento | `apartment` |
 | Parcela | `installment` |
 | Convênio, Energia, Claro | user-entered data, not identifiers |
+
+**Read the same table right to left and it is the rule for display.** `expectedSurplus` is
+labelled *Sobra Esperada* on screen and nothing else; `installment` is *parcela*. One
+mapping, used in both directions, so a term cannot drift between the code and the screen.
+`docs/USE_CASES.md` §3 carries the full chain in both columns and is the reference.
+
+The three stages still appear in order — *Sobra → Sobra Esperada → Sobra Líquida* — and
+synonyms are still forbidden on either side: `leftover` and *saldo restante* both blur
+which of the three is meant.
 
 Bucket names and entry descriptions are **data**, not code. The user types whatever they like
 there.

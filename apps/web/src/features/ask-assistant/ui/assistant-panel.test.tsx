@@ -90,8 +90,11 @@ function stubStream(stream: SseStub, routes: Record<string, unknown> = {}) {
 }
 
 const ask = async (question: string) => {
-  await userEvent.type(screen.getByLabelText('Ask about your money'), question);
-  await userEvent.click(screen.getByRole('button', { name: 'Ask' }));
+  await userEvent.type(
+    screen.getByLabelText('Pergunte sobre o seu dinheiro'),
+    question,
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'Perguntar' }));
 };
 
 function callsTo(path: string): number {
@@ -137,7 +140,7 @@ describe('AssistantPanel', () => {
     stream.close();
 
     const log = await screen.findByRole('log', {
-      name: 'Assistant conversation',
+      name: 'Conversa com o assistente',
     });
     expect(log).toHaveTextContent('Why is September lower than August?');
     expect(log).toHaveTextContent('Because the Inter invoice lands in it.');
@@ -163,7 +166,7 @@ describe('AssistantPanel', () => {
     // Still named once the answer is finished: what it read is part of the
     // answer, not a spinner that disappears with it.
     const log = await screen.findByRole('log', {
-      name: 'Assistant conversation',
+      name: 'Conversa com o assistente',
     });
     await waitFor(() => {
       expect(log).toHaveTextContent('read_cycle');
@@ -184,13 +187,15 @@ describe('AssistantPanel', () => {
     });
     stream.close();
 
-    expect(await screen.findByText('Add an entry')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Adicionar um lançamento'),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/Add “Dentist” to the September 2026 cycle/),
     ).toBeInTheDocument();
     expect(screen.getByText(/due on 20\/09\/2026/)).toBeInTheDocument();
     expect(
-      screen.getByText('Lands in the September 2026 cycle.'),
+      screen.getByText('Cai no ciclo September 2026.'),
     ).toBeInTheDocument();
   });
 
@@ -217,7 +222,7 @@ describe('AssistantPanel', () => {
     };
 
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Confirm' }),
+      await screen.findByRole('button', { name: 'Confirmar' }),
     );
 
     await waitFor(() => {
@@ -230,7 +235,7 @@ describe('AssistantPanel', () => {
       expect(callsTo(`/api/cycles/${MONTH}`)).toBeGreaterThan(before.cycle);
       expect(callsTo('/api/buckets')).toBeGreaterThan(before.buckets);
     });
-    expect(await screen.findByText('Applied')).toBeInTheDocument();
+    expect(await screen.findByText('Aplicado')).toBeInTheDocument();
   });
 
   /** UC-8.3 — dismissing writes nothing at all. */
@@ -244,10 +249,12 @@ describe('AssistantPanel', () => {
     stream.close();
 
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Dismiss' }),
+      await screen.findByRole('button', { name: 'Descartar' }),
     );
 
-    expect(screen.queryByText('Add an entry')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Adicionar um lançamento'),
+    ).not.toBeInTheDocument();
     expect(callsTo('/api/assistant/proposals')).toBe(0);
   });
 
@@ -266,13 +273,15 @@ describe('AssistantPanel', () => {
     stream.close();
 
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Confirm' }),
+      await screen.findByRole('button', { name: 'Confirmar' }),
     );
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'The app refused the change: The September cycle is closed.',
+      'O app recusou a mudança: The September cycle is closed.',
     );
-    expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Confirmar' }),
+    ).toBeInTheDocument();
   });
 
   /** UC-8.5 — no key is a state the app is expected to be in, not a crash. */
@@ -293,12 +302,12 @@ describe('AssistantPanel', () => {
     renderWithProviders(<Screen />);
 
     expect(
-      await screen.findByText(/The assistant is switched off/),
+      await screen.findByText(/O assistente está desligado/),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Main' })).toBeInTheDocument();
     expect(await screen.findByText('figures ready')).toBeInTheDocument();
     expect(
-      screen.queryByLabelText('Ask about your money'),
+      screen.queryByLabelText('Pergunte sobre o seu dinheiro'),
     ).not.toBeInTheDocument();
   });
 
@@ -348,7 +357,7 @@ describe('AssistantPanel', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'The assistant stopped before it had answered.',
     );
-    const log = screen.getByRole('log', { name: 'Assistant conversation' });
+    const log = screen.getByRole('log', { name: 'Conversa com o assistente' });
     expect(log).toHaveTextContent('Because the Inter');
   });
 
@@ -369,8 +378,8 @@ describe('AssistantPanel', () => {
     });
     stream.close();
 
-    expect(await screen.findByText(/declined to answer/)).toBeInTheDocument();
-    expect(screen.getByText(/stopped reading/)).toBeInTheDocument();
+    expect(await screen.findByText(/recusou responder/)).toBeInTheDocument();
+    expect(screen.getByText(/parou de ler/)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
@@ -390,7 +399,7 @@ describe('AssistantPanel and a question handed to it', () => {
       screen.getByRole('button', { name: 'Ask about this alert' }),
     );
 
-    const composer = screen.getByLabelText('Ask about your money');
+    const composer = screen.getByLabelText('Pergunte sobre o seu dinheiro');
     expect(composer).toHaveValue('Why is September lower than August?');
     expect(composer).toHaveFocus();
     expect(callsTo('/api/assistant/messages')).toBe(0);
@@ -408,8 +417,12 @@ describe('AssistantPanel and a question handed to it', () => {
     await userEvent.click(
       screen.getByRole('button', { name: 'Ask about this alert' }),
     );
-    await userEvent.clear(screen.getByLabelText('Ask about your money'));
+    await userEvent.clear(
+      screen.getByLabelText('Pergunte sobre o seu dinheiro'),
+    );
 
-    expect(screen.getByLabelText('Ask about your money')).toHaveValue('');
+    expect(screen.getByLabelText('Pergunte sobre o seu dinheiro')).toHaveValue(
+      '',
+    );
   });
 });

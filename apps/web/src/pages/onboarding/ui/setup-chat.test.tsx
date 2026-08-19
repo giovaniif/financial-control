@@ -59,8 +59,8 @@ const applied: SetupAppliedResponse = {
 };
 
 const say = async (text: string) => {
-  await userEvent.type(await screen.findByLabelText('Your answer'), text);
-  await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+  await userEvent.type(await screen.findByLabelText('Sua resposta'), text);
+  await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
 };
 
 function urlOf(input: RequestInfo | URL): string {
@@ -105,7 +105,7 @@ describe('the composer', () => {
     renderPage();
 
     await userEvent.type(
-      await screen.findByLabelText('Your answer'),
+      await screen.findByLabelText('Sua resposta'),
       'the 5th{Enter}',
     );
 
@@ -118,7 +118,7 @@ describe('the composer', () => {
     stubApi({ '/api/setup/conversation': conversation(turn()) });
     renderPage();
 
-    const composer = await screen.findByLabelText('Your answer');
+    const composer = await screen.findByLabelText('Sua resposta');
     await userEvent.type(
       composer,
       'health plan 320 on the 8th{Shift>}{Enter}{/Shift}electricity 280 on the 15th',
@@ -138,8 +138,8 @@ describe('the composer', () => {
     stubApi({});
     renderPage();
 
-    expect(await screen.findByLabelText('Your answer')).toBeInTheDocument();
-    expect(screen.queryByText('Your answer')).toBeNull();
+    expect(await screen.findByLabelText('Sua resposta')).toBeInTheDocument();
+    expect(screen.queryByText('Sua resposta')).toBeNull();
   });
 });
 
@@ -154,11 +154,11 @@ describe('the shape of the conversation', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('log', { name: 'Setup conversation' }),
+      await screen.findByRole('log', { name: 'Conversa de configuração' }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText('Your answer')).toBeInTheDocument();
-    expect(screen.queryByText(/Setting up is a conversation/)).toBeNull();
-    expect(screen.queryByText(/seven questions/)).toBeNull();
+    expect(screen.getByLabelText('Sua resposta')).toBeInTheDocument();
+    expect(screen.queryByText(/A configuração é uma conversa/)).toBeNull();
+    expect(screen.queryByText(/sete perguntas/)).toBeNull();
   });
 
   /**
@@ -198,7 +198,7 @@ describe('the shape of the conversation', () => {
       await screen.findByText('And where do you keep your money?'),
     );
 
-    expect(within(answer).getByText('You')).toBeInTheDocument();
+    expect(within(answer).getByText('Você')).toBeInTheDocument();
     expect(within(question).getByText('Claude')).toBeInTheDocument();
   });
 });
@@ -209,8 +209,8 @@ describe('the setup conversation', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('log', { name: 'Setup conversation' }),
-    ).toHaveTextContent(/paid/i);
+      await screen.findByRole('log', { name: 'Conversa de configuração' }),
+    ).toHaveTextContent(/pagamento/i);
   });
 
   it('answers a question and asks the next one', async () => {
@@ -363,7 +363,7 @@ describe('the setup conversation', () => {
       0,
     );
     expect(
-      screen.queryByRole('button', { name: 'Create everything' }),
+      screen.queryByRole('button', { name: 'Criar tudo' }),
     ).not.toBeInTheDocument();
   });
 
@@ -395,17 +395,16 @@ describe('the setup conversation', () => {
 
     await say('20% to the reserve');
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Create everything' }),
+      await screen.findByRole('button', { name: 'Criar tudo' }),
     );
 
-    expect(await screen.findByText(/2 accounts/)).toBeInTheDocument();
+    expect(await screen.findByText(/2 contas/)).toBeInTheDocument();
     expect(
-      screen.getByText(/4 recurring bills and income/),
+      screen.getByText(/4 contas e receitas recorrentes/),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open Main' })).toHaveAttribute(
-      'href',
-      '/',
-    );
+    expect(
+      screen.getByRole('link', { name: 'Abrir o Principal' }),
+    ).toHaveAttribute('href', '/');
     expect(
       requests().filter(
         ({ url, method }) => url.includes('/apply') && method === 'POST',
@@ -446,7 +445,7 @@ const established = (
 
 const openEditor = async (name: string) => {
   await userEvent.click(
-    await screen.findByRole('button', { name: `Edit ${name}` }),
+    await screen.findByRole('button', { name: `Editar ${name}` }),
   );
 };
 
@@ -472,8 +471,8 @@ describe('correcting a record inside the conversation', () => {
 
     await say('health plan 320 on the 8th');
     await openEditor('Health plan');
-    await retype('Amount', '350');
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await retype('Valor', '350');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(
       await screen.findByText('Health plan — R$ 350,00 on day 8.'),
@@ -501,7 +500,7 @@ describe('correcting a record inside the conversation', () => {
 
     await say('health plan 320 on the 8th');
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Drop Health plan' }),
+      await screen.findByRole('button', { name: 'Descartar Health plan' }),
     );
 
     expect(await screen.findByText('Dropped it.')).toBeInTheDocument();
@@ -525,8 +524,8 @@ describe('correcting a record inside the conversation', () => {
 
     await say('health plan 320 on the 8th');
     await openEditor('Health plan');
-    await retype('Due day of month', '31');
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await retype('Dia de vencimento', '31');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Day 31 never reaches the September cycle.',
@@ -606,7 +605,7 @@ describe('the last moment before anything is written', () => {
     await say('20% to the reserve');
 
     const review = within(
-      await screen.findByRole('region', { name: 'Your draft' }),
+      await screen.findByRole('region', { name: 'Seu rascunho' }),
     );
     expect(
       review.getByText('Paid on day 5, moving to the preceding business day.'),
@@ -617,11 +616,9 @@ describe('the last moment before anything is written', () => {
     expect(
       review.getByText('Health plan — R$ 320,00 on day 8.'),
     ).toBeInTheDocument();
+    expect(review.getByRole('heading', { name: 'Contas' })).toBeInTheDocument();
     expect(
-      review.getByRole('heading', { name: 'Accounts' }),
-    ).toBeInTheDocument();
-    expect(
-      review.getByRole('button', { name: 'Create everything' }),
+      review.getByRole('button', { name: 'Criar tudo' }),
     ).toBeInTheDocument();
   });
 
@@ -639,11 +636,11 @@ describe('the last moment before anything is written', () => {
 
     await say('20% to the reserve');
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Drop Checking' }),
+      await screen.findByRole('button', { name: 'Descartar Checking' }),
     );
     await screen.findByText('Dropped it.');
 
-    const review = within(screen.getByRole('region', { name: 'Your draft' }));
+    const review = within(screen.getByRole('region', { name: 'Seu rascunho' }));
     expect(
       review.queryByText('Checking — a checking account holding R$ 2.160,00.'),
     ).toBeNull();
@@ -675,8 +672,8 @@ describe('the fields an edit opens on', () => {
 
     await say('nubank has 2160');
     await openEditor('Nubank');
-    await userEvent.selectOptions(screen.getByLabelText('Kind'), 'SAVINGS');
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await userEvent.selectOptions(screen.getByLabelText('Tipo'), 'SAVINGS');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByText('Changed.')).toBeInTheDocument();
     expect(sentBy('PATCH')[0]?.body).toEqual({ type: 'SAVINGS' });
@@ -699,8 +696,8 @@ describe('the fields an edit opens on', () => {
 
     await say('inter closes on the 28th, due the 10th');
     await openEditor('Inter');
-    await retype('Closing day', '25');
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await retype('Dia de fechamento', '25');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByText('Changed.')).toBeInTheDocument();
     expect(sentBy('PATCH')[0]?.body).toEqual({ closingDay: 25 });
@@ -725,11 +722,11 @@ describe('the fields an edit opens on', () => {
     await say('1778 a cycle to the apartment');
     await openEditor('Apartment');
     await userEvent.selectOptions(
-      screen.getByLabelText('Each cycle'),
+      screen.getByLabelText('A cada ciclo'),
       'PERCENT',
     );
-    await retype('Share of Expected Surplus (%)', '20');
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await retype('Percentual da Sobra Esperada (%)', '20');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByText('Changed.')).toBeInTheDocument();
     expect(sentBy('PATCH')[0]?.body).toEqual({
@@ -749,9 +746,9 @@ describe('the fields an edit opens on', () => {
     await say('contractor costs about 1500 on the 8th');
     await openEditor('Contractor costs');
     await userEvent.click(
-      screen.getByLabelText('An estimate, not a confirmed figure'),
+      screen.getByLabelText('Uma estimativa, não um valor confirmado'),
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByText('Changed.')).toBeInTheDocument();
     expect(sentBy('PATCH')[0]?.body).toEqual({ isEstimate: true });
@@ -762,10 +759,10 @@ describe('the fields an edit opens on', () => {
 
     await say('health plan 320 on the 8th');
     await openEditor('Health plan');
-    await retype('Amount', '350');
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await retype('Valor', '350');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
 
-    expect(screen.queryByLabelText('Amount')).toBeNull();
+    expect(screen.queryByLabelText('Valor')).toBeNull();
     expect(sentBy('PATCH')).toEqual([]);
   });
 });
@@ -777,14 +774,14 @@ describe('the fields an edit opens on', () => {
  * asserted here is which element scrolls, what is mounted and what is focused.
  */
 describe('the chat frame', () => {
-  const EXAMPLE = '18k, always on the 5th';
+  const EXAMPLE = '18 mil, sempre no dia 5';
 
   it('opens on example answers rather than on an empty transcript', async () => {
     stubApi({});
     renderPage();
 
     const examples = within(
-      await screen.findByRole('list', { name: 'Example answers' }),
+      await screen.findByRole('list', { name: 'Respostas de exemplo' }),
     );
     expect(examples.getByRole('button', { name: EXAMPLE })).toBeInTheDocument();
     expect(examples.getAllByRole('button').length).toBeGreaterThanOrEqual(2);
@@ -796,7 +793,7 @@ describe('the chat frame', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: EXAMPLE }));
 
-    expect(screen.getByLabelText('Your answer')).toHaveValue(EXAMPLE);
+    expect(screen.getByLabelText('Sua resposta')).toHaveValue(EXAMPLE);
     expect(
       requests().filter(({ url }) => url.includes('/setup/conversation')),
     ).toHaveLength(0);
@@ -809,7 +806,9 @@ describe('the chat frame', () => {
     await say('the 5th');
     await screen.findByText('And where do you keep your money?');
 
-    expect(screen.queryByRole('list', { name: 'Example answers' })).toBeNull();
+    expect(
+      screen.queryByRole('list', { name: 'Respostas de exemplo' }),
+    ).toBeNull();
   });
 
   it('keeps the focus in the composer after sending', async () => {
@@ -819,7 +818,7 @@ describe('the chat frame', () => {
     await say('the 5th');
     await screen.findByText('And where do you keep your money?');
 
-    expect(screen.getByLabelText('Your answer')).toHaveFocus();
+    expect(screen.getByLabelText('Sua resposta')).toHaveFocus();
   });
 
   it('scrolls the transcript to the newest turn, and reaches it by keyboard', async () => {
@@ -832,7 +831,9 @@ describe('the chat frame', () => {
     renderPage();
 
     await say('the 5th');
-    const log = await screen.findByRole('log', { name: 'Setup conversation' });
+    const log = await screen.findByRole('log', {
+      name: 'Conversa de configuração',
+    });
     expect(log).toHaveAttribute('tabindex', '0');
 
     // jsdom lays nothing out, so the transcript is given a height to scroll.

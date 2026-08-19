@@ -13,8 +13,8 @@ export function BucketChips() {
   }
 
   return (
-    <Card label="Buckets" className="flex flex-col gap-3">
-      <CardTitle>Buckets</CardTitle>
+    <Card label="Caixinhas" className="flex flex-col gap-3">
+      <CardTitle>Caixinhas</CardTitle>
       {buckets.map((bucket) => (
         <Link
           key={bucket.id}
@@ -28,7 +28,7 @@ export function BucketChips() {
           {/* A goal shows progress; an ongoing bucket has nothing to complete. */}
           {bucket.percentComplete === null ? (
             <span className="text-xs text-zinc-500">
-              ongoing — no target to hit
+              contínua — sem objetivo a atingir
             </span>
           ) : (
             <>
@@ -39,7 +39,7 @@ export function BucketChips() {
                 />
               </div>
               <span className="text-xs text-zinc-500">
-                {bucket.percentComplete}% of{' '}
+                {bucket.percentComplete}% de{' '}
                 {bucket.target === null ? (
                   '—'
                 ) : (

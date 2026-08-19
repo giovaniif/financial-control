@@ -10,7 +10,7 @@ describe('EstimatesToggle', () => {
   it('starts on including estimates, the app\u2019s full picture', () => {
     renderWithProviders(<EstimatesToggle />);
 
-    expect(screen.getByRole('button')).toHaveTextContent('Including estimates');
+    expect(screen.getByRole('button')).toHaveTextContent('Com estimativas');
     expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -20,7 +20,7 @@ describe('EstimatesToggle', () => {
 
     await userEvent.click(screen.getByRole('button'));
 
-    expect(screen.getByRole('button')).toHaveTextContent('Confirmed only');
+    expect(screen.getByRole('button')).toHaveTextContent('Somente confirmados');
     expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'false');
   });
 
@@ -30,6 +30,6 @@ describe('EstimatesToggle', () => {
     await userEvent.click(screen.getByRole('button'));
     await userEvent.click(screen.getByRole('button'));
 
-    expect(screen.getByRole('button')).toHaveTextContent('Including estimates');
+    expect(screen.getByRole('button')).toHaveTextContent('Com estimativas');
   });
 });

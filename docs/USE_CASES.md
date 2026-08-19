@@ -63,19 +63,24 @@ in the header, and every screen respects the selected cycle.
 
 The calculation chain, in the order it must always appear:
 
-| Term | Meaning |
-|---|---|
-| **Opening balance** | Cash carried in from the previous cycle |
-| **Fixed income** | Recurring money in — salary |
-| **Fixed outcome** | Recurring money out — bills, subscriptions, instalments, card invoices |
-| **Variables** | One-off money in or out — a reimbursement, a gift, an unusual expense |
-| **Total Outcome** | Sum of all outgoing |
-| **Surplus** | Fixed income − Total Outcome |
-| **Expected Surplus** | Surplus + Variables — *the amount available to allocate* |
-| **Allocations** | Money assigned to buckets |
-| **Net Surplus** | Expected Surplus − Allocations — *free cash* |
-| **Closing balance** | Opening balance + Net Surplus → becomes the next cycle's opening balance |
-| **Bucket** | A pot of savings — either a **goal** with a target, or an **ongoing** monthly commitment |
+| Term | On screen (pt-BR) | Meaning |
+|---|---|---|
+| **Opening balance** | Saldo inicial | Cash carried in from the previous cycle |
+| **Fixed income** | Receita fixa | Recurring money in — salary |
+| **Fixed outcome** | Despesa fixa | Recurring money out — bills, subscriptions, instalments, card invoices |
+| **Variables** | Variáveis | One-off money in or out — a reimbursement, a gift, an unusual expense |
+| **Total Outcome** | Total de saídas | Sum of all outgoing |
+| **Surplus** | Sobra | Fixed income − Total Outcome |
+| **Expected Surplus** | Sobra Esperada | Surplus + Variables — *the amount available to allocate* |
+| **Allocations** | Alocações | Money assigned to buckets |
+| **Net Surplus** | Sobra Líquida | Expected Surplus − Allocations — *free cash* |
+| **Closing balance** | Saldo final | Opening balance + Net Surplus → becomes the next cycle's opening balance |
+| **Bucket** | Caixinha | A pot of savings — either a **goal** with a target, or an **ongoing** monthly commitment |
+
+The left column is what the code is called; the middle column is what the user reads. The
+screens are written in pt-BR and everything else — identifiers, tests, this document — is
+English (`CLAUDE.md` rule 6). The mapping is one-to-one on purpose: a term that means one
+thing in the code cannot come to mean something else on screen.
 
 `Surplus → Expected Surplus → Net Surplus` is one calculation in three stages and the UI must always present it
 in that order. Everything in the app is written in English; only currency and date *formatting* are Brazilian.

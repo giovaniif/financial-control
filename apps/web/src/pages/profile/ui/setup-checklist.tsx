@@ -22,25 +22,25 @@ export function SetupChecklist() {
 
   const steps = [
     {
-      label: 'The payday cycle',
-      state: anchorConfigured ? 'configured' : 'not set yet',
+      label: 'O ciclo de pagamento',
+      state: anchorConfigured ? 'configurado' : 'ainda não definido',
       done: anchorConfigured,
       to: null,
     },
-    countStep('Accounts', data?.accounts ?? 0, 'accounts'),
-    recordedStep('Salary', income.length),
-    recordedStep('Fixed bills', outgoing.length - variable.length),
-    recordedStep('Variable bills', variable.length),
-    countStep('Credit cards', data?.cards ?? 0, 'cards'),
+    countStep('Contas', data?.accounts ?? 0, 'contas'),
+    recordedStep('Salário', income.length),
+    recordedStep('Contas fixas', outgoing.length - variable.length),
+    recordedStep('Contas variáveis', variable.length),
+    countStep('Cartões de crédito', data?.cards ?? 0, 'cartões'),
     {
-      ...countStep('Savings buckets', data?.buckets ?? 0, 'buckets'),
+      ...countStep('Caixinhas', data?.buckets ?? 0, 'caixinhas'),
       to: '/savings',
     },
   ];
 
   return (
-    <Card label="Setup" className="flex flex-col gap-3">
-      <CardTitle>Setup</CardTitle>
+    <Card label="Configuração" className="flex flex-col gap-3">
+      <CardTitle>Configuração</CardTitle>
       <ol className="flex flex-col gap-2 text-sm">
         {steps.map((step, index) => (
           <li key={step.label} className="flex items-center gap-3">
@@ -73,7 +73,7 @@ export function SetupChecklist() {
           onClick={unskipSetup}
           className="text-sm underline-offset-2 hover:underline"
         >
-          Run setup again
+          Executar a configuração novamente
         </Link>
       </div>
     </Card>
@@ -92,7 +92,7 @@ function countStep(label: string, count: number, noun: string) {
 function recordedStep(label: string, count: number) {
   return {
     label,
-    state: `${String(count)} recorded`,
+    state: `${String(count)} registrados`,
     done: count > 0,
     to: null as string | null,
   };

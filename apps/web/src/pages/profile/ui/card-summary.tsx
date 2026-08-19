@@ -12,16 +12,16 @@ export function CardSummary({ card }: { card: CardResponse }) {
       <div className="flex items-baseline justify-between">
         <span className="font-medium">{card.name}</span>
         <span className="font-mono text-xs text-zinc-500">
-          closes {card.closingDay} · due {card.dueDay}
+          fecha {card.closingDay} · vence {card.dueDay}
         </span>
       </div>
 
       <dl className="grid grid-cols-2 gap-2 text-xs">
-        <Figure label="Limit" cents={card.limit} />
-        <Figure label="Open invoice" cents={open?.total ?? 0} />
+        <Figure label="Limite" cents={card.limit} />
+        <Figure label="Fatura aberta" cents={open?.total ?? 0} />
         {/* The figure the spreadsheet could not produce. */}
-        <Figure label="Committed" cents={card.committedToFuture} />
-        <Figure label="Available" cents={card.available} />
+        <Figure label="Comprometido" cents={card.committedToFuture} />
+        <Figure label="Disponível" cents={card.available} />
       </dl>
 
       <p className="rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
@@ -37,18 +37,18 @@ export function CardSummary({ card }: { card: CardResponse }) {
  * cycle. See UC-5.4.
  */
 function billing(invoice: InvoiceResponse): string {
-  return `Purchases from ${formatDayMonth(invoice.periodStart)} to ${formatDayMonth(
+  return `As compras de ${formatDayMonth(invoice.periodStart)} a ${formatDayMonth(
     invoice.periodEnd,
-  )} will be billed on the invoice due ${formatDayMonth(
+  )} entram na fatura com vencimento em ${formatDayMonth(
     invoice.dueDate,
-  )} — the ${formatMonthLabel(invoice.paidInCycle)} cycle.`;
+  )} — ciclo ${formatMonthLabel(invoice.paidInCycle)}.`;
 }
 
 /** Nothing has been bought yet, so there are no dates to name — only the rule. */
 function withoutInvoice(card: CardResponse): string {
-  return `Purchases up to day ${String(card.closingDay)} are billed on the invoice due day ${String(
+  return `As compras feitas até o dia ${String(card.closingDay)} entram na fatura com vencimento no dia ${String(
     card.dueDay,
-  )} of the following month. A purchase one day later waits for the invoice after that — an entire cycle later in cash terms.`;
+  )} do mês seguinte. Uma compra feita um dia depois espera a fatura seguinte — um ciclo inteiro depois, em termos de caixa.`;
 }
 
 function Figure({ label, cents }: { label: string; cents: Cents }) {

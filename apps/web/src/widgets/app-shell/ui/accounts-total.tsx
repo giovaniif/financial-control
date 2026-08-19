@@ -23,7 +23,7 @@ export function AccountsTotal({ layout = 'stacked' }: Props) {
       }`}
     >
       <span className="text-[10px] font-semibold tracking-widest text-zinc-400 uppercase">
-        In accounts now
+        Nas contas agora
       </span>
       {isPending ? (
         <Skeleton className="h-5 w-24" />
@@ -36,7 +36,7 @@ export function AccountsTotal({ layout = 'stacked' }: Props) {
             }
           />
           <span className="text-xs text-zinc-500">
-            {count} account{count === 1 ? '' : 's'}
+            {count} conta{count === 1 ? '' : 's'}
           </span>
         </>
       )}

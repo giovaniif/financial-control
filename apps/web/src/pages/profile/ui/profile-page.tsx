@@ -16,8 +16,8 @@ import { SetupChecklist } from './setup-checklist.js';
 export function ProfilePage() {
   return (
     <AppShell
-      title="Profile"
-      subtitle="Everything you configure — the anchor, the accounts, the bills, the cards"
+      title="Perfil"
+      subtitle="Tudo que você configura — o dia do pagamento, as contas, as contas a pagar e os cartões"
     >
       <div className="flex flex-col gap-6">
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">

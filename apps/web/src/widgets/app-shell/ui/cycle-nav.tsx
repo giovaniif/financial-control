@@ -9,6 +9,13 @@ const tones = {
   projected: 'neutral',
 } as const;
 
+const positionLabels = {
+  past: 'passado',
+  current: 'atual',
+  next: 'próximo',
+  projected: 'projetado',
+} as const;
+
 /** Global, in the header: every screen respects the selected cycle. */
 export function CycleNav() {
   const { selected, isPending, hasPrevious, hasNext, goPrevious, goNext } =
@@ -27,7 +34,7 @@ export function CycleNav() {
         type="button"
         onClick={goPrevious}
         disabled={!hasPrevious}
-        aria-label="Previous cycle"
+        aria-label="Ciclo anterior"
         className="cursor-pointer border-r border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
       >
         ←
@@ -38,13 +45,15 @@ export function CycleNav() {
         <span className="font-mono text-xs text-zinc-500">
           {formatRange(selected.start, selected.end)}
         </span>
-        <Badge tone={tones[selected.position]}>{selected.position}</Badge>
+        <Badge tone={tones[selected.position]}>
+          {positionLabels[selected.position]}
+        </Badge>
       </div>
       <button
         type="button"
         onClick={goNext}
         disabled={!hasNext}
-        aria-label="Next cycle"
+        aria-label="Próximo ciclo"
         className="cursor-pointer border-l border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
       >
         →

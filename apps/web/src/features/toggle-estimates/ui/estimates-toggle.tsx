@@ -23,7 +23,7 @@ export function EstimatesToggle() {
       <span
         className={`size-2 rounded-sm ${including ? 'bg-amber-500' : 'bg-zinc-400'}`}
       />
-      {including ? 'Including estimates' : 'Confirmed only'}
+      {including ? 'Com estimativas' : 'Somente confirmados'}
     </button>
   );
 }

@@ -19,15 +19,15 @@ interface Props {
 export function DraftReview({ sections, disabled, onCreate, error }: Props) {
   return (
     <section
-      aria-label="Your draft"
+      aria-label="Seu rascunho"
       className="flex flex-col gap-4 rounded-xl border border-zinc-900 p-4"
     >
       <div className="flex flex-col gap-1">
-        <h2 className="font-semibold">Everything you told me</h2>
+        <h2 className="font-semibold">Tudo o que você me contou</h2>
         <p className="text-sm text-zinc-600">
-          Nothing has been written yet. Read it through — anything wrong can
-          still be edited above, or said again. Creating applies the whole draft
-          at once, and everything in it stays editable afterwards.
+          Nada foi gravado ainda. Confira tudo — o que estiver errado ainda pode
+          ser editado acima, ou dito de novo. Criar aplica o rascunho inteiro de
+          uma vez, e tudo nele continua editável depois.
         </p>
       </div>
 
@@ -50,7 +50,7 @@ export function DraftReview({ sections, disabled, onCreate, error }: Props) {
 
       <div>
         <Button variant="primary" disabled={disabled} onClick={onCreate}>
-          Create everything
+          Criar tudo
         </Button>
       </div>
 

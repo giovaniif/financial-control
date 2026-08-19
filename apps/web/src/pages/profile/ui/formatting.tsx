@@ -3,15 +3,16 @@ import { Card, CardTitle } from '@/shared/ui';
 /** UC-1.4 — read-only, so the conventions are explicit rather than implied. */
 export function Formatting() {
   const rows = [
-    ['Currency', 'R$ 1.234,56'],
-    ['Dates', 'dd/MM/yyyy'],
-    ['Outgoing money', 'negative, shown in red'],
-    ['Cycle naming', 'August 2026 (5 Aug – 3 Sep)'],
+    ['Moeda', 'R$ 1.234,56'],
+    ['Datas', 'dd/MM/yyyy'],
+    ['Dinheiro que sai', 'negativo, exibido em vermelho'],
+    // Cycle labels come from the API, which still names months in English.
+    ['Nome do ciclo', 'August 2026 (5 Aug – 3 Sep)'],
   ];
 
   return (
-    <Card label="Formatting" className="flex flex-col gap-3">
-      <CardTitle>Formatting</CardTitle>
+    <Card label="Formatação" className="flex flex-col gap-3">
+      <CardTitle>Formatação</CardTitle>
       <dl className="flex flex-col gap-1.5 text-sm">
         {rows.map(([label, value]) => (
           <div key={label} className="flex justify-between">
