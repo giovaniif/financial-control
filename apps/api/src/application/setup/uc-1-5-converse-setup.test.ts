@@ -498,7 +498,7 @@ describe('ConverseSetup', () => {
     expect(turn.message).toContain('day of the month your salary lands');
   });
 
-  it('asks for the kind of account and what is in it', async () => {
+  it('asks what is in an account, and never what kind it is', async () => {
     const { converse } = wire([
       anchorTurn,
       {
@@ -509,9 +509,136 @@ describe('ConverseSetup', () => {
 
     const turn = await runThrough(converse, 2);
 
-    expect(turn.message).toContain('checking, savings or cash');
-    expect(turn.message).toContain('what is in it right now');
-    expect(turn.message).toContain('Nubank');
+    expect(turn.message).toBe(
+      'I still need what is in it right now for Nubank.',
+    );
+  });
+
+  /**
+   * FIN-128 — "a nubank account just for credit, an inter account also just
+   * for credit and an itau account for everything" is one answer, and it met
+   * one question per record. A turn asks once for everything it is missing,
+   * naming each record it is missing it for.
+   */
+  it('asks once for what several incomplete records are missing', async () => {
+    const { converse } = wire([
+      anchorTurn,
+      {
+        text: 'Noted.',
+        toolCalls: [
+          call('record_account', { name: 'Nubank' }),
+          call('record_account', { name: 'Inter' }),
+          call('record_account', { name: 'Itau' }),
+        ],
+      },
+    ]);
+
+    const turn = await runThrough(converse, 2);
+
+    expect(turn.corrections).toEqual([
+      'I still need what is in it right now for Nubank, Inter and Itau.',
+    ]);
+    expect(turn.message).toBe(turn.corrections[0]);
+  });
+
+  it('asks again only for the records still missing something', async () => {
+    const account = (name: string, extra: JsonObject = {}) =>
+      call('record_account', { name, ...extra });
+    const { converse, conversations } = wire([
+      anchorTurn,
+      {
+        text: 'Noted.',
+        toolCalls: [account('Nubank'), account('Inter'), account('Itau')],
+      },
+      {
+        text: 'Noted.',
+        toolCalls: [
+          account('Nubank', { balanceInCents: 216_000 }),
+          account('Inter', { balanceInCents: 12_000 }),
+          account('Itau'),
+        ],
+      },
+    ]);
+
+    const turn = await runThrough(converse, 3);
+
+    expect(turn.established).toHaveLength(2);
+    expect(turn.message).toBe('I still need what is in it right now for Itau.');
+    expect((await draftOf(conversations, 'conv-1')).accounts).toHaveLength(2);
+  });
+
+  it('names each record when they are missing different things', async () => {
+    const { converse } = wire([
+      anchorTurn,
+      {
+        text: 'Noted.',
+        toolCalls: [
+          call('record_account', {}),
+          call('record_account', { name: 'Itau' }),
+        ],
+      },
+    ]);
+
+    const turn = await runThrough(converse, 2);
+
+    expect(turn.message).toBe(
+      "I still need the account's name, and what is in it right now for Itau.",
+    );
+  });
+
+  /**
+   * FIN-128 — nobody describing their money says "checking", so a kind nobody
+   * stated is assumed rather than demanded. It is a label on a record the user
+   * is shown and can correct in one call, which is the whole of why it may be
+   * assumed at all.
+   */
+  it('records an account whose kind nobody stated as a checking one', async () => {
+    const { converse, conversations } = wire([
+      anchorTurn,
+      {
+        text: 'Noted.',
+        toolCalls: [
+          call('record_account', { name: 'Itau', balanceInCents: 216_000 }),
+        ],
+      },
+    ]);
+
+    const turn = await runThrough(converse, 2);
+
+    expect(turn.established[0]?.summary).toContain('a checking account');
+    expect((await draftOf(conversations, 'conv-1')).accounts[0]?.type).toBe(
+      'CHECKING',
+    );
+  });
+
+  /**
+   * FIN-128 — an absent optional field is not one rule, and what a wrong value
+   * costs is what decides. A defaulted account kind is visible on the record
+   * and corrected in a call; a defaulted due day files money into a cycle
+   * nobody chose and nobody sees, which is the error UC-5.4 exists to prevent.
+   */
+  it('assumes an account kind nobody stated but never a bill due day', async () => {
+    const { converse, conversations } = wire([
+      anchorTurn,
+      {
+        text: 'Noted.',
+        toolCalls: [
+          call('record_account', { name: 'Itau', balanceInCents: 216_000 }),
+          done(),
+        ],
+      },
+      salaryTurn,
+      { text: 'Noted.', toolCalls: [healthPlan()] },
+    ]);
+
+    const turn = await runThrough(converse, 4);
+    const draft = await draftOf(conversations, 'conv-1');
+
+    expect(draft.accounts[0]?.type).toBe('CHECKING');
+    expect(draft.fixedBills).toEqual([]);
+    expect(turn.message).toBe(
+      'I still need the day of the month it falls due for Health Plan.',
+    );
   });
 
   it('asks again when the salary did not arrive as whole cents', async () => {

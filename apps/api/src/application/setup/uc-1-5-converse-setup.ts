@@ -256,6 +256,7 @@ export class ConverseSetup {
     const established: EstablishedRecord[] = [];
     const removed: string[] = [];
     const corrections: string[] = [];
+    const gaps: Gap[] = [];
     const results: ToolResult[] = [];
     let current = state;
 
@@ -356,7 +357,14 @@ export class ConverseSetup {
         });
 
         if (extraction.kind === 'missing') {
-          refuse(call, extraction.question);
+          // The user is asked once, at the end of the turn; the model is told
+          // per call, because it is the call it has to make again.
+          gaps.push(extraction.gap);
+          results.push({
+            callId: call.id,
+            content: questionFor([extraction.gap]),
+            isError: true,
+          });
           continue;
         }
 
@@ -394,7 +402,8 @@ export class ConverseSetup {
       state: withSomethingLeftToAsk(current),
       established,
       removed,
-      corrections,
+      corrections:
+        gaps.length === 0 ? corrections : [...corrections, questionFor(gaps)],
       results,
     };
   }
@@ -509,7 +518,17 @@ type Extraction =
       readonly draft: SetupDraft;
       readonly established: EstablishedRecord;
     }
-  | { readonly kind: 'missing'; readonly question: string };
+  | { readonly kind: 'missing'; readonly gap: Gap };
+
+/**
+ * What one record is still missing, and the record it is missing it for. It
+ * is a gap rather than a sentence because a turn asks about all of its gaps at
+ * once — see {@link questionFor}.
+ */
+interface Gap {
+  readonly wants: readonly string[];
+  readonly subject: string | undefined;
+}
 
 interface ApplyContext {
   readonly draft: SetupDraft;
@@ -711,7 +730,8 @@ const TOOLS: readonly ToolSpec[] = [
           type: {
             type: 'string',
             enum: [AccountType.Checking, AccountType.Savings, AccountType.Cash],
-            description: 'what kind of account it is',
+            description:
+              'what kind of account it is. Leave it out unless the user says which; an account nobody described records as a checking one',
           },
           balanceInCents: centsField('what is in it right now'),
         },
@@ -720,23 +740,23 @@ const TOOLS: readonly ToolSpec[] = [
     },
     apply: ({ draft, args }) => {
       const name = readText(args, 'name');
-      const type = readChoice(args, 'type', [
-        AccountType.Checking,
-        AccountType.Savings,
-        AccountType.Cash,
-      ]);
-      const balance = readCents(args, 'balanceInCents');
-
       if (name === undefined) return missing(["the account's name"]);
-      const unanswered = [
-        ...(type === undefined
-          ? ['whether it is checking, savings or cash']
-          : []),
-        ...(balance === undefined ? ['what is in it right now'] : []),
-      ];
-      if (type === undefined || balance === undefined) {
-        return missing(unanswered, name);
+
+      const balance = readCents(args, 'balanceInCents');
+      if (balance === undefined) {
+        return missing(['what is in it right now'], name);
       }
+
+      // FIN-128 — nobody says "checking" describing their money, and what a
+      // wrong kind costs is a label on a record the user is being shown and
+      // can correct. A due day is the opposite and is still asked for: it is
+      // invisible once recorded and it decides which cycle pays the bill.
+      const type =
+        readChoice(args, 'type', [
+          AccountType.Checking,
+          AccountType.Savings,
+          AccountType.Cash,
+        ]) ?? AccountType.Checking;
 
       return {
         kind: 'record',
@@ -1137,15 +1157,50 @@ function toolsFor(state: SetupState): ToolDeclaration[] {
 }
 
 function missing(what: readonly string[], subject?: string): Extraction {
-  const list = joinWithAnd(what);
+  return { kind: 'missing', gap: { wants: what, subject } };
+}
 
-  return {
-    kind: 'missing',
-    question:
-      subject === undefined
-        ? `I still need ${list}.`
-        : `I still need ${list} for ${subject}.`,
-  };
+/**
+ * A turn's gaps as one question — FIN-128. Records missing the same thing are
+ * named together, so three accounts described in one sentence are asked about
+ * in one sentence rather than in one exchange each.
+ */
+function questionFor(gaps: readonly Gap[]): string {
+  const clauses: { readonly wants: string; readonly subjects: string[] }[] = [];
+
+  for (const gap of gaps) {
+    const wants = joinWithAnd(gap.wants);
+    const subject = gap.subject;
+    if (subject === undefined) {
+      clauses.push({ wants, subjects: [] });
+      continue;
+    }
+
+    const sharing = clauses.find(
+      (clause) => clause.wants === wants && clause.subjects.length > 0,
+    );
+    if (sharing === undefined) {
+      clauses.push({ wants, subjects: [subject] });
+      continue;
+    }
+    sharing.subjects.push(subject);
+  }
+
+  const asked = clauses.map((clause) =>
+    clause.subjects.length === 0
+      ? clause.wants
+      : `${clause.wants} for ${joinWithAnd(clause.subjects)}`,
+  );
+
+  return `I still need ${joinClauses(asked)}.`;
+}
+
+/** A clause carries an "and" of its own, so the last is set off by a comma. */
+function joinClauses(clauses: readonly string[]): string {
+  const rest = clauses.slice(0, -1);
+  const last = clauses.slice(-1).join('');
+
+  return rest.length === 0 ? last : `${rest.join(', ')}, and ${last}`;
 }
 
 function joinWithAnd(parts: readonly string[]): string {
@@ -1243,7 +1298,7 @@ function centsField(description: string): JsonObject {
 
 const ROLE = `You are the setup assistant of Financial Control, a personal budgeting application with a single user. You are collecting what the app needs before it can show anything, one section at a time.
 
-Ask about one thing at a time and keep every message short. Record what the user tells you by calling the tool for the section being asked about, once per item, and call finish_section as soon as they have nothing more to add to it.
+Ask about one section at a time and keep every message short. When more than one record is missing something, ask for all of it in a single question naming each record — never one question per record. Record what the user tells you by calling the tool for the section being asked about, once per item, and call finish_section as soon as they have nothing more to add to it.
 
 Leave a field out when the user has not said it, and ask about it instead — never fill one in from what is typical. Amounts are Brazilian Real in whole cents: R$ 1.234,56 is 123456.`;
 
@@ -1253,7 +1308,7 @@ const BRIEFINGS: Record<SetupSection, string> = {
   ANCHOR:
     'You are on the payday anchor: the day of the month the salary lands. Every cycle in the app is measured from it, and it cannot be skipped.',
   ACCOUNTS:
-    'You are on accounts: where the money actually sits — checking, savings or cash — and what is in each right now.',
+    'You are on accounts: where the money actually sits, and what is in each right now. Record the kind — checking, savings or cash — only when the user says which; never ask for it.',
   SALARY:
     'You are on the salary: how much arrives each cycle. Never ask which day it arrives; the payday anchor already answered that.',
   FIXED_BILLS:
