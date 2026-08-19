@@ -28,7 +28,7 @@ export const STEPS: readonly StepDefinition[] = [
   { id: 'cycle', label: 'The payday cycle', title: 'The payday cycle' },
   { id: 'accounts', label: 'Accounts', title: 'Where your money sits' },
   { id: 'cards', label: 'Cards', title: 'Credit cards and their invoices' },
-  { id: 'templates', label: 'Templates', title: 'The bills that repeat' },
+  { id: 'templates', label: 'Templates', title: 'What repeats every cycle' },
   { id: 'buckets', label: 'Buckets', title: 'What you are saving for' },
   { id: 'done', label: 'Done', title: 'You are set up' },
 ];

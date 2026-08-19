@@ -1,5 +1,5 @@
 import type { SpreadsheetReading } from '@fin/contracts';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -135,7 +135,7 @@ describe('the wizard with a spreadsheet behind it', () => {
   });
 
   it('pre-fills the bills and asks each for a due day', async () => {
-    await reach('The bills that repeat');
+    await reach('What repeats every cycle');
 
     expect(screen.getByText('Convênio')).toBeInTheDocument();
     expect(screen.getByText('Salário')).toBeInTheDocument();
@@ -143,11 +143,94 @@ describe('the wizard with a spreadsheet behind it', () => {
   });
 
   /**
+   * The salary is the wage received, not a bill to be paid. Listing it among
+   * the outgoings told the user the app had misread the largest figure in
+   * their sheet, when what it actually imports is an income template.
+   */
+  it('presents the salary as income rather than as one of the bills', async () => {
+    await reach('What repeats every cycle');
+
+    const income = within(
+      screen.getByRole('region', { name: 'Money coming in' }),
+    );
+    const bills = within(
+      screen.getByRole('region', { name: 'The bills that repeat' }),
+    );
+
+    expect(income.getByText('Salário')).toBeInTheDocument();
+    expect(bills.queryByText('Salário')).not.toBeInTheDocument();
+    expect(bills.getByText('Convênio')).toBeInTheDocument();
+  });
+
+  it('says the salary arrives, and only the bills leave', async () => {
+    await reach('What repeats every cycle');
+
+    const income = within(
+      screen.getByRole('region', { name: 'Money coming in' }),
+    );
+    const bills = within(
+      screen.getByRole('region', { name: 'The bills that repeat' }),
+    );
+
+    expect(income.getByText(/the day it arrives/)).toBeInTheDocument();
+    expect(income.queryByText(/leaves/)).not.toBeInTheDocument();
+    expect(bills.getByText(/the money actually leaves/)).toBeInTheDocument();
+  });
+
+  // The one figure every cycle boundary is measured from is not a guess.
+  it('does not offer to mark the salary an estimate', async () => {
+    await reach('What repeats every cycle');
+
+    const income = within(
+      screen.getByRole('region', { name: 'Money coming in' }),
+    );
+    const bills = within(
+      screen.getByRole('region', { name: 'The bills that repeat' }),
+    );
+
+    expect(income.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(bills.getAllByRole('checkbox')).toHaveLength(3);
+  });
+
+  it('still asks the salary for the day it lands', async () => {
+    await reach('What repeats every cycle');
+
+    const income = within(
+      screen.getByRole('region', { name: 'Money coming in' }),
+    );
+
+    await userEvent.type(income.getByLabelText('Due day'), '5');
+
+    expect(income.getByLabelText('Due day')).toHaveValue(5);
+  });
+
+  it('shows no income group when the sheet carries no salary', async () => {
+    stubApi({
+      '/api/import/spreadsheet': {
+        ...reading,
+        months: reading.months.map((month) => ({ ...month, salary: null })),
+      },
+      '/api/import/spreadsheet/apply': report,
+    });
+
+    await reach('What repeats every cycle');
+
+    expect(
+      screen.queryByRole('region', { name: 'Money coming in' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole('region', { name: 'The bills that repeat' }),
+      ).getByText('Convênio'),
+    ).toBeInTheDocument();
+  });
+
+  /**
    * UC-2.4 — a renovation climbing across the months is one template with a
    * value schedule, not four separate bills.
    */
   it('shows an amount that steps as one chain, not several bills', async () => {
-    await reach('The bills that repeat');
+    await reach('What repeats every cycle');
 
     expect(
       screen.getByText('-R$ 2.600,00 → -R$ 2.650,00 → -R$ 2.924,00'),
