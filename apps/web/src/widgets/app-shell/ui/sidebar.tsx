@@ -3,29 +3,11 @@ import { NavLink } from 'react-router';
 import { useAccounts } from '@/entities/account';
 import { Amount, Skeleton } from '@/shared/ui';
 
-const groups = [
-  {
-    label: 'Now',
-    items: [
-      { to: '/', label: 'Dashboard' },
-      { to: '/ledger', label: 'Cycle Ledger' },
-      { to: '/cards', label: 'Cards & Invoices' },
-    ],
-  },
-  {
-    label: 'Ahead',
-    items: [
-      { to: '/buckets', label: 'Buckets & Goals' },
-      { to: '/wealth', label: 'Wealth Projection' },
-    ],
-  },
-  {
-    label: 'Setup',
-    items: [
-      { to: '/templates', label: 'Recurring Templates' },
-      { to: '/settings', label: 'Settings' },
-    ],
-  },
+/** Three screens, per `docs/USE_CASES.md` §5 — few enough to need no grouping. */
+const items = [
+  { to: '/', label: 'Main' },
+  { to: '/profile', label: 'Profile' },
+  { to: '/savings', label: 'Investments & Savings' },
 ];
 
 export function Sidebar() {
@@ -40,29 +22,22 @@ export function Sidebar() {
         <span className="text-sm font-semibold">Financial Control</span>
       </div>
 
-      <nav className="flex flex-col gap-5">
-        {groups.map((group) => (
-          <div key={group.label} className="flex flex-col gap-0.5">
-            <span className="px-5 pb-1.5 text-[10px] font-semibold tracking-widest text-zinc-400 uppercase">
-              {group.label}
-            </span>
-            {group.items.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                className={({ isActive }) =>
-                  `mx-2 rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                    isActive
-                      ? 'bg-zinc-100 font-semibold text-zinc-900'
-                      : 'text-zinc-600 hover:bg-zinc-50'
-                  }`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </div>
+      <nav className="flex flex-col gap-0.5">
+        {items.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === '/'}
+            className={({ isActive }) =>
+              `mx-2 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                isActive
+                  ? 'bg-zinc-100 font-semibold text-zinc-900'
+                  : 'text-zinc-600 hover:bg-zinc-50'
+              }`
+            }
+          >
+            {item.label}
+          </NavLink>
         ))}
       </nav>
 

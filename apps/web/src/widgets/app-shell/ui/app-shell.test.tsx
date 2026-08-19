@@ -46,7 +46,7 @@ function renderShell(initialEntry = '/') {
           {
             path: '/',
             element: (
-              <AppShell title="Dashboard" subtitle="The next payday">
+              <AppShell title="Main" subtitle="The next payday">
                 <p>screen body</p>
               </AppShell>
             ),
@@ -68,9 +68,23 @@ describe('AppShell', () => {
     renderShell();
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Dashboard' }),
+      await screen.findByRole('heading', { level: 1, name: 'Main' }),
     ).toBeInTheDocument();
     expect(screen.getByText('screen body')).toBeInTheDocument();
+  });
+
+  // The seven screens became three, and the sidebar is where that is felt.
+  it('navigates to the three screens and nothing else', async () => {
+    stubApi({ '/api/cycles': window_ });
+    renderShell();
+
+    const links = await screen.findAllByRole('link');
+
+    expect(links.map((link) => link.textContent)).toEqual([
+      'Main',
+      'Profile',
+      'Investments & Savings',
+    ]);
   });
 
   // UC-1.2 — the app's starting cash, permanently visible.
