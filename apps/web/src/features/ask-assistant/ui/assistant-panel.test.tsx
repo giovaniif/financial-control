@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useBuckets } from '@/entities/bucket';
 import { useCycle } from '@/entities/cycle';
 import { useDashboard } from '@/entities/dashboard';
+import { useAssistantRail } from '@/shared/model';
 import { renderWithProviders, sseStub, stubApi } from '@/shared/testing';
 import type { SseStub } from '@/shared/testing';
 
@@ -58,6 +59,24 @@ function Screen() {
       </p>
       <AssistantPanel />
     </div>
+  );
+}
+
+/**
+ * Anything else on screen with a question worth asking — an alert, on Main.
+ * It hands the question over; it never reaches into the composer.
+ */
+function AskFromElsewhere() {
+  const { ask } = useAssistantRail();
+
+  return (
+    <button
+      onClick={() => {
+        ask('Why is September lower than August?');
+      }}
+    >
+      Ask about this alert
+    </button>
   );
 }
 
@@ -353,5 +372,44 @@ describe('AssistantPanel', () => {
     expect(await screen.findByText(/declined to answer/)).toBeInTheDocument();
     expect(screen.getByText(/stopped reading/)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+// UC-8 with UC-4.7 — a question raised elsewhere arrives as a draft.
+describe('AssistantPanel and a question handed to it', () => {
+  it('writes the question into the composer without sending it', async () => {
+    stubApi({});
+    renderWithProviders(
+      <>
+        <AskFromElsewhere />
+        <AssistantPanel />
+      </>,
+    );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Ask about this alert' }),
+    );
+
+    const composer = screen.getByLabelText('Ask about your money');
+    expect(composer).toHaveValue('Why is September lower than August?');
+    expect(composer).toHaveFocus();
+    expect(callsTo('/api/assistant/messages')).toBe(0);
+  });
+
+  it('leaves the question editable rather than reinstating it', async () => {
+    stubApi({});
+    renderWithProviders(
+      <>
+        <AskFromElsewhere />
+        <AssistantPanel />
+      </>,
+    );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Ask about this alert' }),
+    );
+    await userEvent.clear(screen.getByLabelText('Ask about your money'));
+
+    expect(screen.getByLabelText('Ask about your money')).toHaveValue('');
   });
 });
