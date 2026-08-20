@@ -4,6 +4,8 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   disabled: boolean;
+  /** An example answering the section being asked about — UC-1.5. */
+  placeholder: string;
   onSend: (message: string) => void;
   /** Held above so an example answer can fill the field and focus it. */
   ref: RefObject<HTMLTextAreaElement | null>;
@@ -13,7 +15,14 @@ interface Props {
  * The field is the whole composer — UC-1.5. Enter sends, because an answer is
  * usually one line; Shift+Enter is there for the answer that lists four bills.
  */
-export function Composer({ value, onChange, disabled, onSend, ref }: Props) {
+export function Composer({
+  value,
+  onChange,
+  disabled,
+  placeholder,
+  onSend,
+  ref,
+}: Props) {
   // A textarea cannot size itself to its content, and the content arrives from
   // the user and from an example answer alike, so the height is measured from
   // whatever the field now holds rather than from a keystroke.
@@ -49,7 +58,7 @@ export function Composer({ value, onChange, disabled, onSend, ref }: Props) {
           rows={1}
           value={value}
           aria-label="Sua resposta"
-          placeholder="18 mil, sempre no dia 5"
+          placeholder={placeholder}
           onChange={(event) => {
             onChange(event.target.value);
           }}

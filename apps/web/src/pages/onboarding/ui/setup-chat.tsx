@@ -4,6 +4,10 @@ import { Link } from 'react-router';
 
 import { useApplySetup, useSetupTurn } from '../api/use-setup-conversation.js';
 import {
+  NEUTRAL_PLACEHOLDER,
+  SECTION_PLACEHOLDERS,
+} from '../model/sections.js';
+import {
   applyTurn,
   draftSections,
   OPENING,
@@ -45,6 +49,7 @@ export function SetupChat() {
   const conversationId = latest?.conversationId;
   const isComplete = latest?.isComplete ?? false;
   const hasSpoken = entries.some((entry) => entry.kind === 'user');
+  const section = latest === undefined ? 'ANCHOR' : latest.nextSection;
 
   // A new turn belongs at the bottom of the transcript and in view — including
   // the thinking line, which is what says the answer was taken.
@@ -148,6 +153,13 @@ export function SetupChat() {
               value={draft}
               onChange={setDraft}
               disabled={turn.isPending}
+              placeholder={
+                // The anchor is where the conversation opens, so it is what
+                // the field offers before any turn has come back.
+                section === null
+                  ? NEUTRAL_PLACEHOLDER
+                  : SECTION_PLACEHOLDERS[section]
+              }
               onSend={send}
             />
           </div>
