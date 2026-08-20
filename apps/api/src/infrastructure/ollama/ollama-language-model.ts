@@ -231,18 +231,83 @@ function toModelResponse(
   rawCalls: readonly OllamaToolCall[],
   streamedText?: string,
 ): ModelResponse {
-  const toolCalls = rawCalls.map((call, index): ToolCall => ({
+  const parsed = rawCalls.map((call, index): ToolCall => ({
     id: call.id ?? `call_${String(index)}`,
     name: call.function.name,
     arguments: call.function.arguments ?? {},
   }));
 
+  const written = streamedText ?? final.message?.content ?? '';
+  const turn =
+    parsed.length > 0 ? { calls: parsed, text: written } : recover(written);
+
   return {
-    text: streamedText ?? final.message?.content ?? '',
-    toolCalls,
-    stopReason: toStopReason(final.done_reason, toolCalls.length > 0),
+    text: turn.text,
+    toolCalls: turn.calls,
+    stopReason: toStopReason(final.done_reason, turn.calls.length > 0),
     usage: toUsage(final),
   };
+}
+
+/**
+ * The syntax a chat template wraps a call in. Ollama normally consumes it and
+ * hands back a parsed call; when it does not, the whole block arrives as
+ * content instead — FIN-132.
+ */
+const WRITTEN_CALL = /<tool_call>([\s\S]*?)<\/tool_call>[ \t]*\n?/g;
+
+/**
+ * A call the model wrote as prose, read back into the field the port promises
+ * it in. Only the syntax is recovered, never the intent: anything that is not
+ * a whole well-formed block is left exactly where it was, because a model
+ * writing *about* a call must not be mistaken for one making it.
+ *
+ * Recovering costs nothing when there is nothing to recover, and the
+ * alternative is what a first run actually did — show the user a fragment of
+ * a wire format and record none of what they said.
+ */
+function recover(written: string): { calls: ToolCall[]; text: string } {
+  const calls: ToolCall[] = [];
+  const rest = written.replace(WRITTEN_CALL, (block, body: string) => {
+    const call = toWrittenCall(body, calls.length);
+    if (call === undefined) return block;
+    calls.push(call);
+    return '';
+  });
+
+  return calls.length === 0
+    ? { calls, text: written }
+    : { calls, text: rest.trim() };
+}
+
+function toWrittenCall(body: string, index: number): ToolCall | undefined {
+  const written = parseJson(body);
+  if (written === undefined) return undefined;
+
+  const name = written['name'];
+  if (typeof name !== 'string' || name === '') return undefined;
+
+  const args = written['arguments'];
+  if (args !== undefined && !isJsonObject(args)) return undefined;
+
+  return {
+    id: `call_${String(index)}`,
+    name,
+    arguments: args ?? {},
+  };
+}
+
+function parseJson(body: string): JsonObject | undefined {
+  try {
+    const parsed = JSON.parse(body) as unknown;
+    return isJsonObject(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function toUsage(final: OllamaChatChunk): ModelUsage {
