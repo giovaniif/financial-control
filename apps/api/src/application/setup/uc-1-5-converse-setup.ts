@@ -412,7 +412,7 @@ export class ConverseSetup {
     if (outcome.corrections.length > 0) {
       return outcome.corrections.join(' ');
     }
-    return text.trim() === '' ? nextQuestion(outcome.state.section) : text;
+    return text.trim() === '' ? nextQuestion(outcome.state) : text;
   }
 
   private turn(
@@ -1333,6 +1333,19 @@ const BRIEFINGS: Record<SetupSection, string> = {
     'You are on savings buckets: either a goal with a target and a date, or an ongoing contribution with neither, and how much goes in each cycle.',
 };
 
+/**
+ * Asked instead of the opening question once the section holds something.
+ * Only the sections that hold a list have one: the anchor and the salary hold
+ * a single value and move on by themselves, so they never reach it.
+ */
+const MORE_QUESTIONS: Partial<Record<SetupSection, string>> = {
+  ACCOUNTS: 'Tem mais alguma conta, ou seguimos?',
+  FIXED_BILLS: 'Tem mais alguma conta fixa, ou seguimos?',
+  VARIABLE_BILLS: 'Tem mais alguma conta variável, ou seguimos?',
+  CARDS: 'Tem mais algum cartão, ou seguimos?',
+  BUCKETS: 'Tem mais alguma caixinha, ou seguimos?',
+};
+
 const QUESTIONS: Record<SetupSection, string> = {
   ANCHOR: 'Em que dia do mês o seu salário cai?',
   ACCOUNTS: 'Em quais contas você guarda dinheiro, e quanto tem em cada uma?',
@@ -1361,8 +1374,27 @@ function systemPrompt(
   return `${ROLE}\n\n${briefing}${finishing}${corrections}`;
 }
 
-function nextQuestion(section: SetupSection | undefined): string {
-  return section === undefined
-    ? 'É tudo o que eu preciso — posso configurar o app?'
-    : QUESTIONS[section];
+/**
+ * What to say when the model wrote no prose of its own — which is what a turn
+ * looks like when extraction goes well, so it is the common path rather than
+ * the exceptional one.
+ *
+ * A section holding a list stays current until it is finished, so asking its
+ * opening question again once it holds something reads as though nothing was
+ * recorded — and never mentions the only thing that moves the conversation
+ * on, which is saying there is nothing more. FIN-135.
+ */
+function nextQuestion(state: SetupState): string {
+  const section = state.section;
+  if (section === undefined) {
+    return 'É tudo o que eu preciso — posso configurar o app?';
+  }
+
+  const holdsSomething = state.draft.records.some(
+    (record) => record.section === section,
+  );
+
+  return (
+    (holdsSomething ? MORE_QUESTIONS[section] : undefined) ?? QUESTIONS[section]
+  );
 }

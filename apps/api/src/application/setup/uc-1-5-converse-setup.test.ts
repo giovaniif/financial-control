@@ -1220,6 +1220,52 @@ describe('ConverseSetup', () => {
 
     expect(turn.message).toBe('Em que dia do mês o seu salário cai?');
   });
+
+  /**
+   * A tool-call-only turn is what extraction looks like when it goes well, so
+   * this is the common path — and repeating the opening question there reads
+   * as though nothing was recorded, with nothing to say how to move on.
+   */
+  it('asks whether there is more once a list section holds something', async () => {
+    const { converse } = wire([
+      anchorTurn,
+      {
+        text: '',
+        toolCalls: [
+          call('record_account', { name: 'Nubank', balanceInCents: 0 }),
+        ],
+      },
+    ]);
+
+    const turn = await runThrough(converse, 2);
+
+    expect(turn.nextSection).toBe(SetupSection.Accounts);
+    expect(turn.message).toBe('Tem mais alguma conta, ou seguimos?');
+  });
+
+  it('keeps the opening question while the section holds nothing', async () => {
+    const { converse } = wire([anchorTurn, { text: '', toolCalls: [] }]);
+
+    const turn = await runThrough(converse, 2);
+
+    expect(turn.message).toBe(
+      'Em quais contas você guarda dinheiro, e quanto tem em cada uma?',
+    );
+  });
+
+  it('still prefers what the model actually wrote', async () => {
+    const { converse } = wire([
+      anchorTurn,
+      {
+        text: 'Anotei a Nubank.',
+        toolCalls: [
+          call('record_account', { name: 'Nubank', balanceInCents: 0 }),
+        ],
+      },
+    ]);
+
+    expect((await runThrough(converse, 2)).message).toBe('Anotei a Nubank.');
+  });
 });
 
 const ANSWERS = [
