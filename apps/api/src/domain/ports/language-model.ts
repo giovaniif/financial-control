@@ -56,6 +56,14 @@ export interface ToolCall {
   readonly id: string;
   readonly name: string;
   readonly arguments: JsonObject;
+  /**
+   * Opaque, and only ever handed back to the adapter that issued it. Some
+   * providers stamp a call with a token and reject a transcript that replays
+   * the call without it, so a conversation that outlives one request has to
+   * carry it. What is inside is the adapter's business; that it survives a
+   * round trip is the port's.
+   */
+  readonly continuation?: string;
 }
 
 export interface ToolResult {

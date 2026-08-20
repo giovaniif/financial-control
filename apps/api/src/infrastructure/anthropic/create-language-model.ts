@@ -2,6 +2,11 @@ import Anthropic from '@anthropic-ai/sdk';
 
 import type { LanguageModel } from '../../domain/ports/language-model.js';
 import {
+  DEFAULT_GEMINI_URL,
+  FetchGeminiTransport,
+} from '../gemini/fetch-gemini-transport.js';
+import { GeminiLanguageModel } from '../gemini/gemini-language-model.js';
+import {
   DEFAULT_OLLAMA_URL,
   FetchOllamaTransport,
 } from '../ollama/fetch-ollama-transport.js';
@@ -28,7 +33,14 @@ import { UnavailableLanguageModel } from './unavailable-language-model.js';
  * from ordinary use must not send the call back to the paid API. Unset, which
  * is the normal state, nothing changes: the default path is never the test
  * path.
+ *
+ * `GEMINI_API_KEY` comes next, ahead of `ANTHROPIC_API_KEY` — FIN-133. It is
+ * what the app actually runs on, and a key left over from before must not
+ * quietly take a turn back to an account that cannot answer it.
  */
+/** Named here rather than in `MODELS`, which holds the Anthropic ids. */
+const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash';
+
 export function createLanguageModel(
   env: Partial<Record<string, string>>,
   choice: ModelChoice,
@@ -39,6 +51,20 @@ export function createLanguageModel(
       new FetchOllamaTransport(DEFAULT_OLLAMA_URL, fetch),
       {
         model: localModel,
+        maxTokens: choice.maxTokens,
+        maxTokensStreaming: choice.maxTokensStreaming,
+      },
+    );
+  }
+
+  const geminiKey = env['GEMINI_API_KEY']?.trim();
+  if (geminiKey !== undefined && geminiKey !== '') {
+    const named = env['GEMINI_MODEL']?.trim();
+    return new GeminiLanguageModel(
+      new FetchGeminiTransport(DEFAULT_GEMINI_URL, geminiKey, fetch),
+      {
+        model:
+          named === undefined || named === '' ? DEFAULT_GEMINI_MODEL : named,
         maxTokens: choice.maxTokens,
         maxTokensStreaming: choice.maxTokensStreaming,
       },
