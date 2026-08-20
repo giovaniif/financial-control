@@ -367,6 +367,131 @@ describe('OllamaLanguageModel', () => {
     });
   });
 
+  /**
+   * The real failure this guards — FIN-132. A first run showed the user
+   * `{"name": "record_payday_anchor", ...}</tool_call>` and recorded nothing,
+   * because the call never reached the field the interactor reads.
+   */
+  describe('recovering a call the model wrote as prose', () => {
+    const wrote = (content: string) =>
+      modelFor(
+        new StubTransport(reply({ message: { role: 'assistant', content } })),
+      );
+
+    it('reads a call out of the content Ollama did not parse', async () => {
+      const response = await wrote(
+        '<tool_call>\n{"name": "record_payday_anchor", "arguments": {"dayOfMonth": 31}}\n</tool_call>',
+      ).complete(ask());
+
+      expect(response.toolCalls).toEqual([
+        {
+          id: 'call_0',
+          name: 'record_payday_anchor',
+          arguments: { dayOfMonth: 31 },
+        },
+      ]);
+      expect(response.text).toBe('');
+      expect(response.stopReason).toBe('toolCalls');
+    });
+
+    it('reads every call a single message wrote', async () => {
+      const response = await wrote(
+        '<tool_call>{"name": "record_account", "arguments": {"name": "Itaú"}}</tool_call>' +
+          '<tool_call>{"name": "finish_section", "arguments": {}}</tool_call>',
+      ).complete(ask());
+
+      expect(response.toolCalls.map((call) => call.name)).toEqual([
+        'record_account',
+        'finish_section',
+      ]);
+      expect(response.toolCalls.map((call) => call.id)).toEqual([
+        'call_0',
+        'call_1',
+      ]);
+    });
+
+    it('keeps the prose around a call and drops only the call itself', async () => {
+      const response = await wrote(
+        'Anotei.\n<tool_call>{"name": "finish_section", "arguments": {}}</tool_call>\nSegue.',
+      ).complete(ask());
+
+      expect(response.text).toBe('Anotei.\nSegue.');
+      expect(response.toolCalls).toHaveLength(1);
+    });
+
+    it('treats a call with no arguments written as a call with none', async () => {
+      const response = await wrote(
+        '<tool_call>{"name": "finish_section"}</tool_call>',
+      ).complete(ask());
+
+      expect(response.toolCalls[0]).toEqual({
+        id: 'call_0',
+        name: 'finish_section',
+        arguments: {},
+      });
+    });
+
+    it.each([
+      ['the JSON does not parse', '<tool_call>{"name": broken}</tool_call>'],
+      ['it names nothing', '<tool_call>{"arguments": {}}</tool_call>'],
+      ['the block never closes', '<tool_call>{"name": "finish_section"}'],
+      ['it is a sentence about JSON', 'Escreva {"name": "x"} no campo.'],
+    ])('leaves the content alone when %s', async (_why, content) => {
+      const response = await wrote(content).complete(ask());
+
+      expect(response.toolCalls).toEqual([]);
+      expect(response.text).toBe(content);
+      expect(response.stopReason).toBe('end');
+    });
+
+    it('leaves parsed calls to Ollama and touches nothing', async () => {
+      const stub = new StubTransport(
+        reply({
+          message: {
+            role: 'assistant',
+            content:
+              '<tool_call>{"name": "ignored", "arguments": {}}</tool_call>',
+            tool_calls: [{ id: 'x', function: { name: 'record_salary' } }],
+          },
+        }),
+      );
+
+      const response = await modelFor(stub).complete(ask());
+
+      expect(response.toolCalls.map((call) => call.name)).toEqual([
+        'record_salary',
+      ]);
+      expect(response.text).toBe(
+        '<tool_call>{"name": "ignored", "arguments": {}}</tool_call>',
+      );
+    });
+
+    it('recovers a call the stream wrote across several deltas', async () => {
+      const stub = new StubTransport(reply(), [
+        { message: { role: 'assistant', content: '<tool_call>{"name": "fin' } },
+        {
+          message: {
+            role: 'assistant',
+            content: 'ish_section", "arguments": {}}</tool_call>',
+          },
+        },
+        { done: true, done_reason: 'stop', eval_count: 12 },
+      ]);
+
+      const events = await collect(modelFor(stub).stream(ask()));
+      const done = events.at(-1);
+
+      expect(events.filter((event) => event.kind === 'toolCall')).toEqual([
+        {
+          kind: 'toolCall',
+          call: { id: 'call_0', name: 'finish_section', arguments: {} },
+        },
+      ]);
+      expect(done).toMatchObject({ kind: 'done' });
+      expect(done?.kind === 'done' ? done.response.text : '').toBe('');
+    });
+  });
+
   it('surfaces an unreachable server as a domain failure', async () => {
     const stub = new StubTransport(new Error('connect ECONNREFUSED'));
 
