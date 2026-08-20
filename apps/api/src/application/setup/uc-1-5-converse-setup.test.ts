@@ -229,6 +229,21 @@ describe('ConverseSetup', () => {
   });
 
   /**
+   * A model asked for a tool it was not given has to do something with the
+   * instruction, and improvised tool syntax is not parsed as a call — it
+   * arrives as prose and lands on the user's screen. The anchor cannot be
+   * skipped, so it is the one section with no finish_section to name.
+   */
+  it('names finish_section only where the section can be finished', async () => {
+    const { converse, model } = wire(OPENING.slice(0, 2));
+
+    await runThrough(converse, 2);
+
+    expect(model.requests[0]?.system).not.toContain('finish_section');
+    expect(model.requests[1]?.system).toContain('finish_section');
+  });
+
+  /**
    * Strict tool use never omits a required field, so anything a user can
    * plausibly leave unsaid has to be optional — and an optional field the
    * model did not fill in is a question, never a default. A defaulted due day
