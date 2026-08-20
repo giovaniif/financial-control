@@ -854,4 +854,41 @@ describe('the chat frame', () => {
       expect(log.scrollTop).toBe(1200);
     });
   });
+
+  /**
+   * The field sits directly under the question, so an example answering a
+   * different section contradicts what was just asked — FIN-134.
+   */
+  it('offers an example answering the section being asked about', async () => {
+    stubApi({
+      '/api/setup/conversation': conversation(
+        turn({ nextSection: 'ACCOUNTS' }),
+        turn({ nextSection: 'CARDS' }),
+      ),
+    });
+    renderPage();
+
+    expect(await screen.findByLabelText('Sua resposta')).toHaveAttribute(
+      'placeholder',
+      'dia 5, voltando se cair num fim de semana',
+    );
+
+    await say('dia 31');
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Sua resposta')).toHaveAttribute(
+        'placeholder',
+        'Nubank 2.160, carteira 300',
+      );
+    });
+
+    await say('Nubank 12 mil');
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Sua resposta')).toHaveAttribute(
+        'placeholder',
+        'Inter, limite 5 mil, fecha dia 28 e vence dia 10',
+      );
+    });
+  });
 });
