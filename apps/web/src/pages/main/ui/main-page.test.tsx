@@ -230,7 +230,7 @@ const renderPage = (entry = '/') =>
 
 /** The chain strip names the same figures, so the tiles are read on their own. */
 const tiles = () =>
-  within(screen.getByRole('region', { name: 'Headline figures' }));
+  within(screen.getByRole('region', { name: 'Figuras principais' }));
 
 const upcoming = (overrides = {}) => ({
   id: 'e1',
@@ -256,17 +256,17 @@ describe('MainPage', () => {
   it('reads the answer as one sentence', async () => {
     renderPage();
 
-    const headline = await screen.findByText(/stays free after allocations/);
+    const headline = await screen.findByText(/fica livre depois das alocações/);
 
     expect(headline).toHaveTextContent(
-      'In the September 2026 cycle you’ll receive',
+      'No ciclo September 2026 você vai receber',
     );
   });
 
   it('states the amounts in the headline', async () => {
     renderPage();
 
-    const headline = await screen.findByText(/stays free after allocations/);
+    const headline = await screen.findByText(/fica livre depois das alocações/);
 
     // The same figures also appear as KPI tiles, so this scopes to the sentence.
     expect(headline).toHaveTextContent('R$ 18.000,00');
@@ -278,9 +278,7 @@ describe('MainPage', () => {
   it('shows the closing balance without the estimates too', async () => {
     renderPage();
 
-    expect(
-      await screen.findByText('Without the estimates'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Sem as estimativas')).toBeInTheDocument();
     expect(screen.getByText('R$ 5.056,00')).toBeInTheDocument();
   });
 
@@ -302,14 +300,16 @@ describe('MainPage', () => {
   it('reports cycle progress against spend', async () => {
     renderPage();
 
-    expect(await screen.findByText('Day 6 of 30')).toBeInTheDocument();
-    expect(screen.getByText('Spent against planned')).toBeInTheDocument();
+    expect(await screen.findByText('Dia 6 de 30')).toBeInTheDocument();
+    expect(
+      screen.getByText('Gasto em relação ao previsto'),
+    ).toBeInTheDocument();
   });
 
   it('says when there is nothing due', async () => {
     renderPage();
 
-    expect(await screen.findByText('Nothing due')).toBeInTheDocument();
+    expect(await screen.findByText('Nada a vencer')).toBeInTheDocument();
   });
 
   it('announces a critical alert to a screen reader', async () => {
@@ -350,8 +350,8 @@ describe('MainPage', () => {
     renderPage();
 
     expect(await screen.findByText('Renovation Progress')).toBeInTheDocument();
-    expect(screen.getByText('4 days late')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Settle' })).toBeInTheDocument();
+    expect(screen.getByText('4 dias de atraso')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pagar' })).toBeInTheDocument();
   });
 
   /**
@@ -366,7 +366,7 @@ describe('MainPage', () => {
 
     expect(
       await screen.findByRole('button', {
-        name: 'Settle at a different amount',
+        name: 'Dar baixa com outro valor',
       }),
     ).toBeInTheDocument();
   });
@@ -381,7 +381,7 @@ describe('MainPage', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('button', { name: 'Confirm' }),
+      await screen.findByRole('button', { name: 'Confirmar' }),
     ).toBeInTheDocument();
   });
 
@@ -396,7 +396,7 @@ describe('MainPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('~estimate')).toBeInTheDocument();
+    expect(await screen.findByText('~estimativa')).toBeInTheDocument();
   });
 
   // UC-4.1 — a cycle with nothing scheduled has no lowest point to name.
@@ -413,7 +413,7 @@ describe('MainPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('nothing scheduled')).toBeInTheDocument();
+    expect(await screen.findByText('nada agendado')).toBeInTheDocument();
   });
 
   it('shows no bucket chips before there are any buckets', async () => {
@@ -421,7 +421,7 @@ describe('MainPage', () => {
 
     await screen.findByText('Lowest point in cycle');
 
-    expect(screen.queryByText('Buckets')).not.toBeInTheDocument();
+    expect(screen.queryByText('Caixinhas')).not.toBeInTheDocument();
   });
 
   it('shows a goal bucket as progress toward its target', async () => {
@@ -430,7 +430,7 @@ describe('MainPage', () => {
     renderPage();
 
     expect(await screen.findByText('Apartment')).toBeInTheDocument();
-    expect(screen.getByText(/24% of/)).toBeInTheDocument();
+    expect(screen.getByText(/24% de/)).toBeInTheDocument();
     // Archived buckets are out of the picture entirely.
     expect(screen.queryByText('Europe Trip')).not.toBeInTheDocument();
   });
@@ -443,8 +443,10 @@ describe('MainPage', () => {
     renderPage();
 
     expect(await screen.findByText('Investments')).toBeInTheDocument();
-    expect(screen.getByText('ongoing — no target to hit')).toBeInTheDocument();
-    expect(screen.queryByText(/% of/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText('contínua — sem objetivo a atingir'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/% de/)).not.toBeInTheDocument();
   });
 
   // UC-4.6 — one click through to the screen the bucket belongs to.
@@ -462,16 +464,14 @@ describe('MainPage', () => {
 // UC-4.4 — one control, and every figure on the screen answers the same way.
 describe('MainPage answers the estimates toggle', () => {
   const switchOff = async () =>
-    userEvent.click(
-      screen.getByRole('button', { name: 'Including estimates' }),
-    );
+    userEvent.click(screen.getByRole('button', { name: 'Com estimativas' }));
 
   it('restates the headline from the confirmed figures', async () => {
     respondWith(dashboard({ upcoming: [upcoming({ isEstimate: true })] }));
     renderPage();
 
     expect(
-      await screen.findByText(/stays free after allocations/),
+      await screen.findByText(/fica livre depois das alocações/),
     ).toHaveTextContent('R$ 9.110,00');
 
     await switchOff();
@@ -479,7 +479,7 @@ describe('MainPage answers the estimates toggle', () => {
     // The reading is refetched rather than re-derived on the client, so the
     // sentence arrives with the answer instead of changing in place.
     await waitFor(() => {
-      const sentence = screen.getByText(/stays free after allocations/);
+      const sentence = screen.getByText(/fica livre depois das alocações/);
       expect(sentence).toHaveTextContent('R$ 7.610,00');
       expect(sentence).toHaveTextContent('R$ 5.056,00');
     });
@@ -498,7 +498,7 @@ describe('MainPage answers the estimates toggle', () => {
     // The chain strip closes at the confirmed figure too.
     expect(
       within(
-        screen.getByRole('region', { name: 'Calculation chain' }),
+        screen.getByRole('region', { name: 'Cadeia de cálculo' }),
       ).getByText('R$ 6.056,00'),
     ).toBeInTheDocument();
   });
@@ -537,21 +537,25 @@ describe('MainPage and the assistant', () => {
     renderPage();
 
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Ask about this alert' }),
+      await screen.findByRole('button', {
+        name: 'Perguntar sobre este alerta',
+      }),
     );
 
     expect(
-      screen.getByRole('log', { name: 'Assistant conversation' }),
+      screen.getByRole('log', { name: 'Conversa com o assistente' }),
     ).toBeVisible();
-    expect(screen.getByLabelText('Ask about your money')).toHaveValue(
-      'About “Projected negative balance on 2026-09-28”: September 2026 runs ' +
-        'to -R$ 2.013,22. Why is that, and what would change it?',
+    expect(screen.getByLabelText('Pergunte sobre o seu dinheiro')).toHaveValue(
+      'Sobre “Projected negative balance on 2026-09-28”: September 2026 runs ' +
+        'to -R$ 2.013,22. Por que isso acontece, e o que mudaria isso?',
     );
     // The question is offered, never sent on the user's behalf.
     expect(
-      screen.getByRole('log', { name: 'Assistant conversation' }),
-    ).toHaveTextContent('Nothing asked yet');
-    expect(screen.getByLabelText('Ask about your money')).toHaveFocus();
+      screen.getByRole('log', { name: 'Conversa com o assistente' }),
+    ).toHaveTextContent('Nada perguntado ainda');
+    expect(
+      screen.getByLabelText('Pergunte sobre o seu dinheiro'),
+    ).toHaveFocus();
   });
 
   // UC-8.5 — the figures are the app; the assistant is how you ask about them.
@@ -560,21 +564,21 @@ describe('MainPage and the assistant', () => {
     renderPage();
 
     expect(
-      await screen.findByText(/stays free after allocations/),
+      await screen.findByText(/fica livre depois das alocações/),
     ).toHaveTextContent('R$ 9.110,00');
     expect(tiles().getByText('Total Outcome')).toBeInTheDocument();
 
     // Switched off is a state, not a breakage: the rail opens and says so.
     await userEvent.click(
-      screen.getByRole('button', { name: 'Open the assistant' }),
+      screen.getByRole('button', { name: 'Abrir o assistente' }),
     );
 
-    expect(screen.getByText(/The assistant is switched off/)).toBeVisible();
+    expect(screen.getByText(/O assistente está desligado/)).toBeVisible();
     expect(
-      screen.queryByLabelText('Ask about your money'),
+      screen.queryByLabelText('Pergunte sobre o seu dinheiro'),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Ask about this alert' }),
+      screen.queryByRole('button', { name: 'Perguntar sobre este alerta' }),
     ).not.toBeInTheDocument();
   });
 });
@@ -586,7 +590,7 @@ describe('MainPage follows the selected cycle', () => {
     renderPage();
 
     expect(
-      await screen.findByText(/In the September 2026 cycle/),
+      await screen.findByText(/No ciclo September 2026/),
     ).toBeInTheDocument();
   });
 
@@ -599,9 +603,7 @@ describe('MainPage follows the selected cycle', () => {
 
     renderPage('/?cycle=2026-08');
 
-    expect(
-      await screen.findByText(/In the August 2026 cycle/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/No ciclo August 2026/)).toBeInTheDocument();
   });
 
   // UC-3.1 — the chain strip moved here when the Ledger screen went.
@@ -609,17 +611,17 @@ describe('MainPage follows the selected cycle', () => {
     renderPage('/?cycle=2026-08');
 
     expect(
-      await screen.findByText('available to allocate'),
+      await screen.findByText('disponível para alocar'),
     ).toBeInTheDocument();
-    expect(screen.getByText("next cycle's opening")).toBeInTheDocument();
+    expect(screen.getByText('abertura do próximo ciclo')).toBeInTheDocument();
   });
 
   it('does not call a past cycle the next one', async () => {
     renderPage('/?cycle=2026-08');
 
-    await screen.findByText(/In the September 2026 cycle/);
+    await screen.findByText(/No ciclo September 2026/);
 
-    expect(screen.queryByText('Next cycle')).not.toBeInTheDocument();
+    expect(screen.queryByText('Próximo ciclo')).not.toBeInTheDocument();
   });
 
   /**
@@ -659,9 +661,7 @@ describe('MainPage follows the selected cycle', () => {
 
     renderPage();
 
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Settle' }),
-    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Pagar' }));
 
     // The freed-up figure is the visible proof the cache was invalidated and
     // refetched, not just that a request went out.
@@ -677,7 +677,7 @@ describe('MainPage and closing a cycle', () => {
     await screen.findByText('Lowest point in cycle');
 
     expect(
-      screen.queryByRole('button', { name: 'Close the cycle' }),
+      screen.queryByRole('button', { name: 'Fechar o ciclo' }),
     ).not.toBeInTheDocument();
   });
 
@@ -706,12 +706,12 @@ describe('MainPage and closing a cycle', () => {
     renderPage();
 
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Close the cycle' }),
+      await screen.findByRole('button', { name: 'Fechar o ciclo' }),
     );
 
     expect(
       within(screen.getByRole('dialog')).getByText(
-        /1 entry is still unsettled/,
+        /1 lançamento ainda está sem baixa/,
       ),
     ).toBeInTheDocument();
   });

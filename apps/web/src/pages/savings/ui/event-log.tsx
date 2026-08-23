@@ -12,6 +12,14 @@ const tones = {
   WITHDRAWAL: 'critical',
 } as const;
 
+const kindLabels = {
+  CONTRIBUTION: 'aporte',
+  OVERRIDE: 'ajuste',
+  YIELD: 'rendimento',
+  CORRECTION: 'correção',
+  WITHDRAWAL: 'resgate',
+} as const;
+
 const MONTH_KEY_LENGTH = 7;
 
 /**
@@ -21,12 +29,12 @@ const MONTH_KEY_LENGTH = 7;
  */
 export function EventLog({ bucket }: { bucket: BucketView }) {
   return (
-    <Card label="History" className="flex flex-col gap-3">
-      <CardTitle>{bucket.name} — history</CardTitle>
+    <Card label="Histórico" className="flex flex-col gap-3">
+      <CardTitle>{bucket.name} — histórico</CardTitle>
       {bucket.events.length === 0 ? (
         <EmptyState
-          title="Nothing has moved yet"
-          body="Contributions land when a cycle is allocated. Yields and corrections are recorded by hand."
+          title="Nada se moveu ainda"
+          body="Aportes chegam quando um ciclo é alocado. Rendimentos e correções são registrados manualmente."
         />
       ) : (
         <ul className="divide-y divide-zinc-100 text-sm">
@@ -35,7 +43,7 @@ export function EventLog({ bucket }: { bucket: BucketView }) {
               <span className="w-28 shrink-0 font-mono text-xs text-zinc-500">
                 {formatWhen(event.when)}
               </span>
-              <Badge tone={tones[event.kind]}>{event.kind.toLowerCase()}</Badge>
+              <Badge tone={tones[event.kind]}>{kindLabels[event.kind]}</Badge>
               <span className="min-w-0 flex-1 truncate text-xs text-zinc-500">
                 {noteFor(event)}
               </span>
@@ -58,13 +66,13 @@ function formatWhen(when: string): string {
 function noteFor(event: BucketEventResponse): string {
   switch (event.kind) {
     case 'CONTRIBUTION':
-      return `the rule applied for ${formatMonthLabel(event.when)}`;
+      return `a regra aplicada em ${formatMonthLabel(event.when)}`;
     case 'OVERRIDE':
       return event.ruleWouldHaveBeen === null
-        ? 'a deliberate amount for this cycle only'
-        : `deliberate, for this cycle only — the rule would have said ${formatBRL(event.ruleWouldHaveBeen)}`;
+        ? 'um valor deliberado só para este ciclo'
+        : `deliberado, só para este ciclo — a regra diria ${formatBRL(event.ruleWouldHaveBeen)}`;
     case 'YIELD':
-      return 'growth from returns, not a deposit';
+      return 'crescimento por rendimento, não um aporte';
     case 'CORRECTION':
       return event.reason ?? '';
     case 'WITHDRAWAL':

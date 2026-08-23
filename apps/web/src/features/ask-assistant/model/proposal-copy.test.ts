@@ -35,7 +35,7 @@ describe('proposal copy', () => {
         'SETTLE_ENTRY',
         'Settle entry e1 in the 2026-09 cycle as paid, at its planned amount.',
       ),
-    ).toBe('Settles in the September 2026 cycle.');
+    ).toBe('Dá baixa no ciclo September 2026.');
   });
 
   it('names the cycle an override applies to', () => {
@@ -44,7 +44,7 @@ describe('proposal copy', () => {
         'OVERRIDE_CONTRIBUTION',
         'Put R$ 500,00 into bucket b1 for the 2026-10 cycle, this once.',
       ),
-    ).toBe('Applies to the October 2026 cycle.');
+    ).toBe('Vale para o ciclo October 2026.');
   });
 
   /**
@@ -58,7 +58,7 @@ describe('proposal copy', () => {
         'Register “Laptop” of R$ 6.000,00 on card c1, bought on 2026-08-29, in 10 instalments.',
       ),
     ).toBe(
-      'The invoice this is billed on decides the cycle it lands in, not the date it was bought.',
+      'A fatura em que isso é cobrado decide o ciclo em que cai, não a data da compra.',
     );
   });
 
@@ -68,7 +68,7 @@ describe('proposal copy', () => {
         'CREATE_TEMPLATE',
         'Create the recurring outcome “Dentist” of R$ 300,00 on day 20, from the current cycle.',
       ),
-    ).toBe('Generates an entry from the current cycle onward.');
+    ).toBe('Gera um lançamento a partir do ciclo atual em diante.');
   });
 
   it('reads dates and cycles the way the rest of the app does', () => {

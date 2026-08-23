@@ -19,19 +19,20 @@ export function AllocationSection({ month }: { month: string }) {
   const label = formatMonthLabel(month);
 
   return (
-    <Card label="Allocation this cycle" className="flex flex-col gap-3">
-      <CardTitle>Allocation this cycle</CardTitle>
+    <Card label="Alocação neste ciclo" className="flex flex-col gap-3">
+      <CardTitle>Alocação neste ciclo</CardTitle>
 
       <p className="text-sm text-zinc-600">
-        {label} has <Amount cents={data.expectedSurplus} /> of Expected Surplus
-        to allocate.
+        {label} tem <Amount cents={data.expectedSurplus} /> de Sobra Esperada
+        para alocar.
       </p>
 
       <Warning preview={data} label={label} />
 
       {data.fundings.length === 0 ? (
         <p className="text-xs text-zinc-500">
-          No bucket has a rule that funds from this cycle yet.
+          Nenhuma caixinha tem uma regra que financia a partir deste ciclo
+          ainda.
         </p>
       ) : (
         <ul className="divide-y divide-zinc-100 text-sm">
@@ -39,10 +40,10 @@ export function AllocationSection({ month }: { month: string }) {
             <li key={funding.bucketId} className="flex items-center gap-3 py-2">
               {/* Lowest first: the order decides who is paid when money runs short. */}
               <span className="w-16 shrink-0 font-mono text-xs text-zinc-500">
-                #{index + 1} of {data.fundings.length}
+                #{index + 1} de {data.fundings.length}
               </span>
               <span className="min-w-0 flex-1 truncate text-xs text-zinc-600">
-                {funding.name} asks {formatBRL(funding.requested)}, gets{' '}
+                {funding.name} pede {formatBRL(funding.requested)}, recebe{' '}
                 {formatBRL(funding.funded)}
               </span>
               <Amount cents={funding.funded} className="w-28 text-right" />
@@ -70,8 +71,8 @@ function Warning({
         role="alert"
         className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900"
       >
-        {label} has no Expected Surplus to allocate from. Nothing is contributed
-        this cycle, rather than a negative amount taken out of the buckets.
+        {label} não tem Sobra Esperada para alocar. Nada é aportado neste ciclo,
+        em vez de um valor negativo retirado das caixinhas.
       </p>
     );
   }
@@ -86,16 +87,16 @@ function Warning({
       className="flex flex-col gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
     >
       <span>
-        The rules run {formatBRL(preview.shortfall)} short in {label}. The
-        priority order funds:
+        Falta {formatBRL(preview.shortfall)} para cobrir as regras em {label}. A
+        ordem de prioridade financia:
       </span>
       <ul className="list-disc pl-4">
         {preview.fundings.map((funding) => (
           <li key={funding.bucketId}>
             {funding.funded === 0
-              ? `${funding.name} gets nothing`
-              : `${funding.name} gets ${formatBRL(funding.funded)}${
-                  funding.isFullyFunded ? '' : ' — not all it asked for'
+              ? `${funding.name} não recebe nada`
+              : `${funding.name} recebe ${formatBRL(funding.funded)}${
+                  funding.isFullyFunded ? '' : ' — não tudo o que pediu'
                 }`}
           </li>
         ))}

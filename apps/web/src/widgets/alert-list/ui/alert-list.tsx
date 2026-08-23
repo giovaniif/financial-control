@@ -8,6 +8,12 @@ const tones = {
   INFO: 'info',
 } as const;
 
+const severityLabels = {
+  CRITICAL: 'Crítico',
+  WARNING: 'Atenção',
+  INFO: 'Info',
+} as const;
+
 const borders = {
   CRITICAL: 'border-l-red-600',
   WARNING: 'border-l-amber-500',
@@ -31,7 +37,7 @@ export function AlertList({ alerts, onAsk }: Props) {
 
   return (
     <section className="flex flex-col gap-2">
-      <CardTitle>Needs attention</CardTitle>
+      <CardTitle>Precisa de atenção</CardTitle>
       {alerts.map((alert) => (
         <div
           key={alert.title}
@@ -41,19 +47,21 @@ export function AlertList({ alerts, onAsk }: Props) {
           className={`flex flex-col gap-1 rounded-lg border border-zinc-200 border-l-4 bg-white p-3 ${borders[alert.severity]}`}
         >
           <div className="flex items-center gap-2">
-            <Badge tone={tones[alert.severity]}>{alert.severity}</Badge>
+            <Badge tone={tones[alert.severity]}>
+              {severityLabels[alert.severity]}
+            </Badge>
             <span className="text-sm font-medium">{alert.title}</span>
           </div>
           <p className="text-sm text-zinc-600">{alert.body}</p>
           {onAsk !== undefined && (
             <div>
               <Button
-                aria-label="Ask about this alert"
+                aria-label="Perguntar sobre este alerta"
                 onClick={() => {
                   onAsk(alert);
                 }}
               >
-                Ask about this
+                Perguntar sobre isso
               </Button>
             </div>
           )}

@@ -1,8 +1,8 @@
 export function NotFoundPage() {
   return (
     <section>
-      <h1>Page not found</h1>
-      <p>That screen does not exist.</p>
+      <h1>Página não encontrada</h1>
+      <p>Essa tela não existe.</p>
     </section>
   );
 }

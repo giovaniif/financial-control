@@ -23,66 +23,66 @@ export function describeProposal(kind: ProposalKind): ProposalCopy {
   switch (kind) {
     case 'SETTLE_ENTRY':
       return {
-        label: 'Settle an entry',
-        cycleLead: 'Settles in the',
+        label: 'Dar baixa em um lançamento',
+        cycleLead: 'Dá baixa no ciclo',
         cycleNote: null,
       };
     case 'ADD_ENTRY':
       return {
-        label: 'Add an entry',
-        cycleLead: 'Lands in the',
+        label: 'Adicionar um lançamento',
+        cycleLead: 'Cai no ciclo',
         cycleNote: null,
       };
     case 'REGISTER_PURCHASE':
       return {
-        label: 'Register a purchase',
+        label: 'Registrar uma compra',
         cycleLead: null,
         // UC-5.4 — the due date decides, so a purchase one day after closing
         // is paid a whole cycle later.
         cycleNote:
-          'The invoice this is billed on decides the cycle it lands in, not the date it was bought.',
+          'A fatura em que isso é cobrado decide o ciclo em que cai, não a data da compra.',
       };
     case 'CREATE_TEMPLATE':
       return {
-        label: 'Create a recurring entry',
-        cycleLead: 'Generates an entry from the',
-        cycleNote: 'Generates an entry from the current cycle onward.',
+        label: 'Criar um lançamento recorrente',
+        cycleLead: 'Gera um lançamento a partir do ciclo',
+        cycleNote: 'Gera um lançamento a partir do ciclo atual em diante.',
       };
     case 'CHANGE_TEMPLATE_AMOUNT':
       return {
-        label: 'Change a recurring amount',
-        cycleLead: 'Applies from the',
+        label: 'Alterar um valor recorrente',
+        cycleLead: 'Vale a partir do ciclo',
         cycleNote: null,
       };
     case 'CHANGE_PAYDAY_ANCHOR':
       return {
-        label: 'Move the payday anchor',
+        label: 'Mudar o dia do pagamento',
         cycleLead: null,
         cycleNote:
-          'Re-slices every open cycle, so entries can move from one cycle to another.',
+          'Refaz o corte de todos os ciclos abertos, então lançamentos podem mudar de um ciclo para outro.',
       };
     case 'CREATE_GOAL_BUCKET':
       return {
-        label: 'Create a goal bucket',
+        label: 'Criar uma caixinha de meta',
         cycleLead: null,
-        cycleNote: 'Takes from Expected Surplus in every cycle from now on.',
+        cycleNote: 'Tira da Sobra Esperada em todo ciclo a partir de agora.',
       };
     case 'CREATE_ONGOING_BUCKET':
       return {
-        label: 'Create an ongoing bucket',
+        label: 'Criar uma caixinha contínua',
         cycleLead: null,
-        cycleNote: 'Takes from Expected Surplus in every cycle from now on.',
+        cycleNote: 'Tira da Sobra Esperada em todo ciclo a partir de agora.',
       };
     case 'CHANGE_ALLOCATION_RULE':
       return {
-        label: 'Change an allocation rule',
+        label: 'Alterar uma regra de alocação',
         cycleLead: null,
-        cycleNote: 'Changes what every cycle allocates from now on.',
+        cycleNote: 'Muda o que cada ciclo aloca a partir de agora.',
       };
     case 'OVERRIDE_CONTRIBUTION':
       return {
-        label: 'Override one contribution',
-        cycleLead: 'Applies to the',
+        label: 'Ajustar um aporte',
+        cycleLead: 'Vale para o ciclo',
         cycleNote: null,
       };
     default: {
@@ -108,7 +108,7 @@ export function describeCycle(
     return cycleNote;
   }
 
-  return `${cycleLead} ${formatMonthLabel(month)} cycle.`;
+  return `${cycleLead} ${formatMonthLabel(month)}.`;
 }
 
 /** The cycle a summary names, as a month key, or nothing when it names none. */

@@ -13,22 +13,26 @@ export function PaydayAnchor() {
   });
 
   return (
-    <Card label="Payday anchor" className="flex flex-col gap-3">
-      <CardTitle>Payday anchor</CardTitle>
+    <Card label="Dia do pagamento" className="flex flex-col gap-3">
+      <CardTitle>Dia do pagamento</CardTitle>
       {isPending || data === undefined ? (
         <Skeleton className="h-10 w-40" />
       ) : (
         <>
           <p className="text-sm">
-            Salary lands on day{' '}
-            <strong className="font-mono">{data.anchorDay}</strong>, moving to
-            the {data.shiftPolicy === 'PRECEDING' ? 'preceding' : 'following'}{' '}
-            business day when that falls on a weekend or a holiday.
+            O salário cai no dia{' '}
+            <strong className="font-mono">{data.anchorDay}</strong>, passando
+            para o{' '}
+            {data.shiftPolicy === 'PRECEDING'
+              ? 'dia útil anterior'
+              : 'dia útil seguinte'}{' '}
+            quando isso cai num fim de semana ou feriado.
           </p>
           {/* Changing it re-slices every open cycle, so it is never silent. */}
           <p className="text-xs text-zinc-500">
-            Changing the anchor re-slices every open cycle. Closed cycles are
-            never touched, and the change is previewed before it applies.
+            Alterar o dia do pagamento redefine os limites de todos os ciclos em
+            aberto. Os ciclos fechados nunca são alterados, e a mudança é sempre
+            pré-visualizada antes de ser aplicada.
           </p>
           <div>
             <ChangeAnchor

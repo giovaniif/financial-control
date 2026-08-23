@@ -13,22 +13,22 @@ export function SetupSummary() {
 
   const rows = [
     {
-      label: 'Payday anchor',
-      value: (data?.anchorConfigured ?? false) ? 'configured' : 'not set',
+      label: 'Dia do pagamento',
+      value: (data?.anchorConfigured ?? false) ? 'configurado' : 'não definido',
     },
-    { label: 'Accounts', value: String(data?.accounts ?? 0) },
-    { label: 'Credit cards', value: String(data?.cards ?? 0) },
-    { label: 'Salary and bills', value: String(data?.templates ?? 0) },
-    { label: 'Buckets', value: String(data?.buckets ?? 0) },
+    { label: 'Contas', value: String(data?.accounts ?? 0) },
+    { label: 'Cartões de crédito', value: String(data?.cards ?? 0) },
+    { label: 'Salário e contas', value: String(data?.templates ?? 0) },
+    { label: 'Caixinhas', value: String(data?.buckets ?? 0) },
   ];
 
   return (
     <div className="flex flex-col gap-6">
       <p className="text-zinc-600">
-        That is everything the app needs to start answering. From here it fills
-        the next twelve cycles from your salary and bills, assigns each card
-        invoice to the cycle containing its due date, and allocates the surplus
-        by your rules.
+        Isso é tudo o que o app precisa para começar a responder. A partir daqui
+        ele preenche os próximos doze ciclos com o seu salário e suas contas,
+        atribui cada fatura de cartão ao ciclo que contém o seu vencimento, e
+        aloca a sobra pelas suas regras.
       </p>
 
       <dl className="divide-y divide-zinc-100 text-sm">
@@ -41,8 +41,8 @@ export function SetupSummary() {
       </dl>
 
       <p className="text-sm text-zinc-500">
-        Nothing here is final — every one of these is editable from Profile, and
-        the next cycle you open will show what they add up to.
+        Nada aqui é definitivo — cada um destes itens é editável no Perfil, e o
+        próximo ciclo que você abrir vai mostrar no que eles se somam.
       </p>
 
       <div>
@@ -50,7 +50,7 @@ export function SetupSummary() {
           to="/"
           className="inline-block rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800"
         >
-          Open Main
+          Abrir o Principal
         </Link>
       </div>
     </div>

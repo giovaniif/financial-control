@@ -16,17 +16,19 @@ export function CardsSection() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 text-zinc-600">
         <p>
-          A card invoice is one outcome in the cycle containing its{' '}
-          <strong className="font-medium text-zinc-900">due date</strong> — not
-          the cycle its purchases were made in.
+          Uma fatura de cartão é uma única saída no ciclo que contém o seu{' '}
+          <strong className="font-medium text-zinc-900">vencimento</strong> —
+          não o ciclo em que as compras foram feitas.
         </p>
         <p>
-          A purchase made the day before the card closes is paid next month. One
-          made the day after waits for the invoice after that:{' '}
+          Uma compra feita no dia antes do fechamento do cartão é paga no mês
+          seguinte. Uma feita no dia depois espera pela fatura seguinte a essa:{' '}
           <strong className="font-medium text-zinc-900">
-            a day apart on the calendar, a whole cycle apart in cash
+            um dia de diferença no calendário, um ciclo inteiro de diferença no
+            caixa
           </strong>
-          . That is why the closing and due days matter more than they look.
+          . É por isso que os dias de fechamento e vencimento importam mais do
+          que parecem.
         </p>
       </div>
 
@@ -38,7 +40,7 @@ export function CardsSection() {
             <li key={card.id} className="flex items-center gap-3 py-1.5">
               <span className="flex-1">{card.name}</span>
               <Badge>
-                closes {card.closingDay} · due {card.dueDay}
+                fecha {card.closingDay} · vence {card.dueDay}
               </Badge>
               <Amount cents={card.limit} className="w-28 text-right" />
             </li>
@@ -46,7 +48,7 @@ export function CardsSection() {
         </ul>
       ) : (
         <p className="text-sm text-zinc-500">
-          No cards yet. Skip this step if you do not use one.
+          Nenhum cartão ainda. Pule esta etapa se você não usa um.
         </p>
       )}
 

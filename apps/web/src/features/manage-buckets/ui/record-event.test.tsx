@@ -35,7 +35,7 @@ const render = () =>
   );
 
 const open = () =>
-  userEvent.click(screen.getByRole('button', { name: 'Record on Reserve' }));
+  userEvent.click(screen.getByRole('button', { name: 'Registrar em Reserve' }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -48,8 +48,8 @@ describe('RecordEvent', () => {
     render();
 
     await open();
-    await userEvent.type(screen.getByLabelText('Amount'), '100,00');
-    await userEvent.click(screen.getByRole('button', { name: 'Record' }));
+    await userEvent.type(screen.getByLabelText('Valor'), '100,00');
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -71,13 +71,13 @@ describe('RecordEvent', () => {
 
     await open();
     await userEvent.selectOptions(
-      screen.getByLabelText('What happened'),
-      'Yield',
+      screen.getByLabelText('O que aconteceu'),
+      'Rendimento',
     );
-    await userEvent.type(screen.getByLabelText('Amount'), '45,80');
-    await userEvent.clear(screen.getByLabelText('Date'));
-    await userEvent.type(screen.getByLabelText('Date'), '2026-08-31');
-    await userEvent.click(screen.getByRole('button', { name: 'Record' }));
+    await userEvent.type(screen.getByLabelText('Valor'), '45,80');
+    await userEvent.clear(screen.getByLabelText('Data'));
+    await userEvent.type(screen.getByLabelText('Data'), '2026-08-31');
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toEqual({
@@ -98,14 +98,14 @@ describe('RecordEvent', () => {
 
     await open();
     await userEvent.selectOptions(
-      screen.getByLabelText('What happened'),
-      'Correction',
+      screen.getByLabelText('O que aconteceu'),
+      'Correção',
     );
-    await userEvent.type(screen.getByLabelText('Amount'), '15.783,44');
-    await userEvent.click(screen.getByRole('button', { name: 'Record' }));
+    await userEvent.type(screen.getByLabelText('Valor'), '15.783,44');
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Say why the balance is being corrected',
+      'Diga por que o saldo está sendo corrigido',
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -116,17 +116,17 @@ describe('RecordEvent', () => {
 
     await open();
     await userEvent.selectOptions(
-      screen.getByLabelText('What happened'),
-      'Correction',
+      screen.getByLabelText('O que aconteceu'),
+      'Correção',
     );
-    await userEvent.type(screen.getByLabelText('Amount'), '15.783,44');
+    await userEvent.type(screen.getByLabelText('Valor'), '15.783,44');
     await userEvent.type(
-      screen.getByLabelText('Reason'),
+      screen.getByLabelText('Motivo'),
       'Matched to the bank statement',
     );
-    await userEvent.clear(screen.getByLabelText('Date'));
-    await userEvent.type(screen.getByLabelText('Date'), '2026-08-31');
-    await userEvent.click(screen.getByRole('button', { name: 'Record' }));
+    await userEvent.clear(screen.getByLabelText('Data'));
+    await userEvent.type(screen.getByLabelText('Data'), '2026-08-31');
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toEqual({
@@ -144,13 +144,13 @@ describe('RecordEvent', () => {
 
     await open();
     await userEvent.selectOptions(
-      screen.getByLabelText('What happened'),
-      'Withdrawal',
+      screen.getByLabelText('O que aconteceu'),
+      'Resgate',
     );
-    await userEvent.type(screen.getByLabelText('Amount'), '500,00');
-    await userEvent.click(screen.getByRole('button', { name: 'Record' }));
+    await userEvent.type(screen.getByLabelText('Valor'), '500,00');
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Say why');
+    expect(screen.getByRole('alert')).toHaveTextContent('Diga por que');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -160,14 +160,14 @@ describe('RecordEvent', () => {
 
     await open();
     await userEvent.selectOptions(
-      screen.getByLabelText('What happened'),
-      'Withdrawal',
+      screen.getByLabelText('O que aconteceu'),
+      'Resgate',
     );
-    await userEvent.type(screen.getByLabelText('Amount'), '500,00');
-    await userEvent.type(screen.getByLabelText('Reason'), 'Notary fees');
-    await userEvent.clear(screen.getByLabelText('Date'));
-    await userEvent.type(screen.getByLabelText('Date'), '2026-08-20');
-    await userEvent.click(screen.getByRole('button', { name: 'Record' }));
+    await userEvent.type(screen.getByLabelText('Valor'), '500,00');
+    await userEvent.type(screen.getByLabelText('Motivo'), 'Notary fees');
+    await userEvent.clear(screen.getByLabelText('Data'));
+    await userEvent.type(screen.getByLabelText('Data'), '2026-08-20');
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toMatchObject({
@@ -184,6 +184,6 @@ describe('RecordEvent', () => {
 
     await open();
 
-    expect(screen.queryByLabelText('Reason')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Motivo')).not.toBeInTheDocument();
   });
 });

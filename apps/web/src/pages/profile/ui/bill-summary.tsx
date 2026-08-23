@@ -6,33 +6,33 @@ import { StatTile } from '@/shared/ui';
 export function BillSummary({ summary }: { summary: TemplateSummaryResponse }) {
   return (
     <section
-      aria-label="Commitments per cycle"
+      aria-label="Compromissos por ciclo"
       className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
     >
       <StatTile
-        label="Fixed commitment"
+        label="Compromisso fixo"
         cents={-summary.fixedCommitment}
-        note={`${String(summary.activeOutcomeCount)} bills, every cycle`}
+        note={`${String(summary.activeOutcomeCount)} contas, por ciclo`}
         signed
       />
       <StatTile
-        label="Fixed income"
+        label="Receita fixa"
         cents={summary.fixedIncome}
-        note="before any variables"
+        note="antes das variáveis"
         signed
       />
       <StatTile
-        label="Unconfirmed estimates"
+        label="Estimativas não confirmadas"
         cents={-summary.unconfirmedEstimates}
-        note="what you are still guessing at"
+        note="valores que você ainda está estimando"
         signed
       />
       <StatTile
-        label="Ending within 12 cycles"
+        label="Encerrando em 12 ciclos"
         cents={0}
         note={
           summary.endingWithinTwelve.length === 0
-            ? 'nothing falls off'
+            ? 'nada se encerra'
             : summary.endingWithinTwelve.join(', ')
         }
       />

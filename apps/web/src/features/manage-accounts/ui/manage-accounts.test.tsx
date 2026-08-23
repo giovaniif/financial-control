@@ -53,11 +53,13 @@ describe('ManageAccounts', () => {
     const fetchMock = stubWrite();
     render([]);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add account' }));
-    await userEvent.type(screen.getByLabelText('Name'), 'Nubank');
-    await userEvent.selectOptions(screen.getByLabelText('Type'), 'Savings');
-    await userEvent.type(screen.getByLabelText('Balance'), '1.500,00');
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Adicionar conta' }),
+    );
+    await userEvent.type(screen.getByLabelText('Nome'), 'Nubank');
+    await userEvent.selectOptions(screen.getByLabelText('Tipo'), 'Poupança');
+    await userEvent.type(screen.getByLabelText('Saldo'), '1.500,00');
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
     await waitFor(() => {
       expect(lastCall(fetchMock)).toMatchObject({
@@ -73,11 +75,11 @@ describe('ManageAccounts', () => {
     const fetchMock = stubWrite();
     render();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Edit Inter' }));
-    await userEvent.clear(screen.getByLabelText('Balance'));
-    await userEvent.type(screen.getByLabelText('Balance'), '2.160,00');
+    await userEvent.click(screen.getByRole('button', { name: 'Editar Inter' }));
+    await userEvent.clear(screen.getByLabelText('Saldo'));
+    await userEvent.type(screen.getByLabelText('Saldo'), '2.160,00');
     await userEvent.click(
-      screen.getByRole('button', { name: 'Correct the balance' }),
+      screen.getByRole('button', { name: 'Corrigir o saldo' }),
     );
 
     await waitFor(() => {
@@ -93,10 +95,10 @@ describe('ManageAccounts', () => {
     const fetchMock = stubWrite();
     render();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Edit Inter' }));
-    await userEvent.clear(screen.getByLabelText('Name'));
-    await userEvent.type(screen.getByLabelText('Name'), 'Inter Checking');
-    await userEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Editar Inter' }));
+    await userEvent.clear(screen.getByLabelText('Nome'));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Inter Checking');
+    await userEvent.click(screen.getByRole('button', { name: 'Renomear' }));
 
     await waitFor(() => {
       expect(lastCall(fetchMock)).toMatchObject({
@@ -111,8 +113,8 @@ describe('ManageAccounts', () => {
     const fetchMock = stubWrite();
     render();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Edit Inter' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Editar Inter' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remover' }));
 
     await waitFor(() => {
       expect(lastCall(fetchMock)).toMatchObject({
@@ -126,13 +128,15 @@ describe('ManageAccounts', () => {
     const fetchMock = stubWrite();
     render([]);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add account' }));
-    await userEvent.type(screen.getByLabelText('Name'), 'Cash');
-    await userEvent.type(screen.getByLabelText('Balance'), 'some');
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Adicionar conta' }),
+    );
+    await userEvent.type(screen.getByLabelText('Nome'), 'Cash');
+    await userEvent.type(screen.getByLabelText('Saldo'), 'some');
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Enter an amount like 1.234,56',
+      'Digite um valor como 1.234,56',
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });

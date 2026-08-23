@@ -42,7 +42,9 @@ const render = () =>
   renderWithProviders(<ChangeAnchor anchorDay={5} shiftPolicy="PRECEDING" />);
 
 const open = () =>
-  userEvent.click(screen.getByRole('button', { name: 'Change the anchor' }));
+  userEvent.click(
+    screen.getByRole('button', { name: 'Alterar o dia do pagamento' }),
+  );
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -58,12 +60,14 @@ describe('ChangeAnchor', () => {
     render();
 
     await open();
-    await userEvent.clear(screen.getByLabelText('Day of month'));
-    await userEvent.type(screen.getByLabelText('Day of month'), '7');
-    await userEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    await userEvent.clear(screen.getByLabelText('Dia do mês'));
+    await userEvent.type(screen.getByLabelText('Dia do mês'), '7');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Pré-visualizar' }),
+    );
 
     expect(
-      await screen.findByText(/3 entries would move out of their cycle/),
+      await screen.findByText(/3 lançamentos mudariam de ciclo/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/5 Aug – 3 Sep → 7 Aug – 6 Sep/),
@@ -79,13 +83,15 @@ describe('ChangeAnchor', () => {
     render();
 
     await open();
-    await userEvent.click(screen.getByRole('button', { name: 'Preview' }));
-    await screen.findByText(/3 entries would move/);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Pré-visualizar' }),
+    );
+    await screen.findByText(/3 lançamentos mudariam/);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Apply the change' }),
+      screen.getByRole('button', { name: 'Aplicar a mudança' }),
     );
 
     await waitFor(() => {
@@ -103,7 +109,7 @@ describe('ChangeAnchor', () => {
     await open();
 
     expect(
-      screen.getByText(/Closed cycles are never re-sliced/),
+      screen.getByText(/Os ciclos fechados nunca têm seus limites redefinidos/),
     ).toBeInTheDocument();
   });
 
@@ -113,13 +119,17 @@ describe('ChangeAnchor', () => {
     render();
 
     await open();
-    await userEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Pré-visualizar' }),
+    );
 
     expect(
-      await screen.findByText(/2 entries would fall outside every open cycle/),
+      await screen.findByText(
+        /2 lançamentos ficariam fora de todos os ciclos em aberto/,
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Apply the change' }),
+      screen.getByRole('button', { name: 'Aplicar a mudança' }),
     ).toBeDisabled();
   });
 
@@ -145,10 +155,12 @@ describe('ChangeAnchor', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Preview' }));
-    await screen.findByText(/3 entries would move/);
     await userEvent.click(
-      screen.getByRole('button', { name: 'Apply the change' }),
+      screen.getByRole('button', { name: 'Pré-visualizar' }),
+    );
+    await screen.findByText(/3 lançamentos mudariam/);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Aplicar a mudança' }),
     );
 
     // The preview is an alert of its own, so this asserts the refusal itself.
@@ -163,10 +175,12 @@ describe('ChangeAnchor', () => {
 
     await open();
     await userEvent.selectOptions(
-      screen.getByLabelText('When it lands on a weekend or holiday'),
-      'The following business day',
+      screen.getByLabelText('Quando cai num fim de semana ou feriado'),
+      'O dia útil seguinte',
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Pré-visualizar' }),
+    );
 
     await waitFor(() => {
       const call = fetchMock.mock.calls[0] as unknown as [string, RequestInit];

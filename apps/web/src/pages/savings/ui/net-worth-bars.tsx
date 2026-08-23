@@ -22,8 +22,8 @@ export function NetWorthBars({ data }: { data: WealthProjectionResponse }) {
   const max = Math.max(...data.horizons.map((horizon) => horizon.total), 1);
 
   return (
-    <Card label="Net worth" className="flex flex-col gap-4">
-      <CardTitle>Net worth, stacked by bucket</CardTitle>
+    <Card label="Patrimônio" className="flex flex-col gap-4">
+      <CardTitle>Patrimônio, dividido por caixinha</CardTitle>
       <div className="flex h-56 items-end gap-6">
         {data.horizons.map((horizon) => (
           <div
@@ -52,7 +52,7 @@ export function NetWorthBars({ data }: { data: WealthProjectionResponse }) {
                 />
               ))}
             </div>
-            <span className="text-xs text-zinc-500">{horizon.years} years</span>
+            <span className="text-xs text-zinc-500">{horizon.years} anos</span>
           </div>
         ))}
       </div>
@@ -65,8 +65,8 @@ export function NetWorthBars({ data }: { data: WealthProjectionResponse }) {
         ))}
       </div>
       <p className="text-xs text-zinc-500">
-        Assuming today&rsquo;s rules keep contributing and each bucket compounds
-        at its expected yield — assumptions, not facts.
+        Supondo que as regras de hoje continuem contribuindo e que cada caixinha
+        renda de acordo com o rendimento esperado — premissas, não fatos.
       </p>
     </Card>
   );

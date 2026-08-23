@@ -40,7 +40,7 @@ describe('SettleEntry', () => {
     const fetchMock = stubSettle();
     renderEntry();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Settle' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Pagar' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toEqual({ status: 'PAID' });
@@ -51,7 +51,7 @@ describe('SettleEntry', () => {
     const fetchMock = stubSettle();
     renderEntry(1_800_000);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toEqual({ status: 'RECEIVED' });
@@ -63,11 +63,11 @@ describe('SettleEntry', () => {
     renderEntry();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Settle at a different amount' }),
+      screen.getByRole('button', { name: 'Dar baixa com outro valor' }),
     );
-    await userEvent.clear(screen.getByLabelText('Actual amount'));
-    await userEvent.type(screen.getByLabelText('Actual amount'), '345,90');
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await userEvent.clear(screen.getByLabelText('Valor realizado'));
+    await userEvent.type(screen.getByLabelText('Valor realizado'), '345,90');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toEqual({ status: 'PAID', actual: -34_590 });
@@ -79,10 +79,10 @@ describe('SettleEntry', () => {
     renderEntry();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Settle at a different amount' }),
+      screen.getByRole('button', { name: 'Dar baixa com outro valor' }),
     );
 
-    expect(screen.getByLabelText('Actual amount')).toHaveValue('320,00');
+    expect(screen.getByLabelText('Valor realizado')).toHaveValue('320,00');
   });
 
   // A plan that never happened is not the same as one paid at zero.
@@ -91,9 +91,9 @@ describe('SettleEntry', () => {
     renderEntry();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Settle at a different amount' }),
+      screen.getByRole('button', { name: 'Dar baixa com outro valor' }),
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Skip it' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ignorar' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toEqual({ status: 'SKIPPED' });
@@ -105,14 +105,14 @@ describe('SettleEntry', () => {
     renderEntry();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Settle at a different amount' }),
+      screen.getByRole('button', { name: 'Dar baixa com outro valor' }),
     );
-    await userEvent.clear(screen.getByLabelText('Actual amount'));
-    await userEvent.type(screen.getByLabelText('Actual amount'), 'about 300');
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await userEvent.clear(screen.getByLabelText('Valor realizado'));
+    await userEvent.type(screen.getByLabelText('Valor realizado'), 'about 300');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Enter an amount like 1.234,56',
+      'Digite um valor como 1.234,56',
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });

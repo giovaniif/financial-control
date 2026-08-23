@@ -12,10 +12,10 @@ interface Props {
 }
 
 const kinds = {
-  'Override this cycle': 'OVERRIDE',
-  Yield: 'YIELD',
-  Correction: 'CORRECTION',
-  Withdrawal: 'WITHDRAWAL',
+  'Ajuste neste ciclo': 'OVERRIDE',
+  Rendimento: 'YIELD',
+  Correção: 'CORRECTION',
+  Resgate: 'WITHDRAWAL',
 } as const;
 
 type Label = keyof typeof kinds;
@@ -32,16 +32,16 @@ export function RecordEvent({ bucketId, bucketName, month }: Props) {
   return (
     <>
       <Button
-        aria-label={`Record on ${bucketName}`}
+        aria-label={`Registrar em ${bucketName}`}
         onClick={() => {
           setOpen(true);
         }}
       >
-        Record
+        Registrar
       </Button>
       <Dialog
         open={open}
-        title={`${bucketName} — record an event`}
+        title={`${bucketName} — registrar evento`}
         onClose={() => {
           setOpen(false);
         }}
@@ -68,7 +68,7 @@ function Form({
   onDone: () => void;
 }) {
   const record = useRecordBucketEvent(bucketId);
-  const [label, setLabel] = useState<Label>('Override this cycle');
+  const [label, setLabel] = useState<Label>('Ajuste neste ciclo');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState('');
   const [reason, setReason] = useState('');
@@ -83,14 +83,14 @@ function Form({
     const cents = parseBRL(amount);
 
     if (cents === null) {
-      setError('Enter an amount like 1.234,56.');
+      setError('Informe um valor como 1.234,56.');
       return;
     }
     if (needsReason && reason.trim() === '') {
       setError(
         kind === 'CORRECTION'
-          ? 'Say why the balance is being corrected.'
-          : 'Say why the money is coming out.',
+          ? 'Diga por que o saldo está sendo corrigido.'
+          : 'Diga por que o dinheiro está saindo.',
       );
       return;
     }
@@ -109,7 +109,7 @@ function Form({
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
       <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600">
-        What happened
+        O que aconteceu
         <select
           value={label}
           onChange={(event) => {
@@ -124,24 +124,24 @@ function Form({
       </label>
 
       <Field
-        label="Amount"
+        label="Valor"
         value={amount}
         placeholder="1.234,56"
         onChange={(event) => {
           setAmount(event.target.value);
         }}
         {...(kind === 'OVERRIDE'
-          ? { hint: `Instead of the rule, for ${month} only` }
+          ? { hint: `Em vez da regra, só para ${month}` }
           : {})}
         {...(kind === 'CORRECTION'
-          ? { hint: 'The balance as observed, not the difference' }
+          ? { hint: 'O saldo observado, não a diferença' }
           : {})}
         {...(error !== undefined && !needsReason ? { error } : {})}
       />
 
       {kind !== 'OVERRIDE' && (
         <Field
-          label="Date"
+          label="Data"
           type="date"
           value={date}
           onChange={(event) => {
@@ -152,18 +152,18 @@ function Form({
 
       {needsReason && (
         <Field
-          label="Reason"
+          label="Motivo"
           value={reason}
           onChange={(event) => {
             setReason(event.target.value);
           }}
-          hint="Required — a balance that moves without a trace is what this replaces"
+          hint="Obrigatório — um saldo que muda sem deixar rastro é o que isto substitui"
           {...(error === undefined ? {} : { error })}
         />
       )}
 
       <Button variant="primary" type="submit" disabled={record.isPending}>
-        Record
+        Registrar
       </Button>
     </form>
   );

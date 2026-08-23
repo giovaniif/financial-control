@@ -41,7 +41,7 @@ const renderRule = (overrides: Partial<BucketResponse> = {}) =>
 
 const open = () =>
   userEvent.click(
-    screen.getByRole('button', { name: 'Adjust the rule for Apartment' }),
+    screen.getByRole('button', { name: 'Ajustar a regra de Apartment' }),
   );
 
 function lastBody(fetchMock: ReturnType<typeof vi.fn>) {
@@ -65,10 +65,10 @@ describe('AdjustRule', () => {
     renderRule();
 
     await open();
-    await userEvent.clear(screen.getByLabelText('Percentage'));
-    await userEvent.type(screen.getByLabelText('Percentage'), '25');
+    await userEvent.clear(screen.getByLabelText('Percentual'));
+    await userEvent.type(screen.getByLabelText('Percentual'), '25');
     await userEvent.click(
-      screen.getByRole('button', { name: 'Save the rule' }),
+      screen.getByRole('button', { name: 'Salvar a regra' }),
     );
 
     await waitFor(() => {
@@ -89,7 +89,7 @@ describe('AdjustRule', () => {
     await open();
 
     expect(
-      await screen.findByText(/20% → R\$ 1\.778,00 in this cycle/),
+      await screen.findByText(/20% → R\$ 1\.778,00 neste ciclo/),
     ).toBeInTheDocument();
   });
 
@@ -100,7 +100,9 @@ describe('AdjustRule', () => {
     await open();
 
     expect(
-      await screen.findByText(/R\$ 1\.778,00 → 20,0% of this cycle/),
+      await screen.findByText(
+        /R\$ 1\.778,00 → 20,0% da Sobra Esperada deste ciclo/,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -109,14 +111,11 @@ describe('AdjustRule', () => {
     renderRule();
 
     await open();
-    await userEvent.selectOptions(
-      screen.getByLabelText('Rule'),
-      'Fixed amount',
-    );
-    await userEvent.clear(screen.getByLabelText('Amount per cycle'));
-    await userEvent.type(screen.getByLabelText('Amount per cycle'), '1.778,00');
+    await userEvent.selectOptions(screen.getByLabelText('Regra'), 'Valor fixo');
+    await userEvent.clear(screen.getByLabelText('Valor por ciclo'));
+    await userEvent.type(screen.getByLabelText('Valor por ciclo'), '1.778,00');
     await userEvent.click(
-      screen.getByRole('button', { name: 'Save the rule' }),
+      screen.getByRole('button', { name: 'Salvar a regra' }),
     );
 
     await waitFor(() => {
@@ -132,10 +131,10 @@ describe('AdjustRule', () => {
     renderRule();
 
     await open();
-    await userEvent.clear(screen.getByLabelText('Priority'));
-    await userEvent.type(screen.getByLabelText('Priority'), '2');
+    await userEvent.clear(screen.getByLabelText('Prioridade'));
+    await userEvent.type(screen.getByLabelText('Prioridade'), '2');
     await userEvent.click(
-      screen.getByRole('button', { name: 'Save priority' }),
+      screen.getByRole('button', { name: 'Salvar prioridade' }),
     );
 
     await waitFor(() => {
@@ -152,13 +151,16 @@ describe('AdjustRule', () => {
     await open();
 
     expect(
-      screen.getByText(/An assumption, not a promise/),
+      screen.getByText(/Uma premissa, não uma promessa/),
     ).toBeInTheDocument();
 
-    await userEvent.clear(screen.getByLabelText('Expected annual yield'));
-    await userEvent.type(screen.getByLabelText('Expected annual yield'), '9');
+    await userEvent.clear(screen.getByLabelText('Rendimento anual esperado'));
+    await userEvent.type(
+      screen.getByLabelText('Rendimento anual esperado'),
+      '9',
+    );
     await userEvent.click(
-      screen.getByRole('button', { name: 'Save the yield' }),
+      screen.getByRole('button', { name: 'Salvar o rendimento' }),
     );
 
     await waitFor(() => {
@@ -173,13 +175,13 @@ describe('AdjustRule', () => {
     renderRule();
 
     await open();
-    await userEvent.clear(screen.getByLabelText('Percentage'));
-    await userEvent.type(screen.getByLabelText('Percentage'), '140');
+    await userEvent.clear(screen.getByLabelText('Percentual'));
+    await userEvent.type(screen.getByLabelText('Percentual'), '140');
     await userEvent.click(
-      screen.getByRole('button', { name: 'Save the rule' }),
+      screen.getByRole('button', { name: 'Salvar a regra' }),
     );
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Between 0 and 100');
+    expect(screen.getByRole('alert')).toHaveTextContent('Entre 0 e 100');
   });
 
   // UC-6.4 — the warning names the cycle, the shortfall and who gets funded.
@@ -205,10 +207,10 @@ describe('AdjustRule', () => {
     await open();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      /R\$ 2\.120,00 short in August 2026/,
+      /Falta R\$ 2\.120,00 para cobrir as regras em August 2026/,
     );
     expect(
-      screen.getByText(/Apartment gets R\$ 2\.880,00/),
+      screen.getByText(/Apartment recebe R\$ 2\.880,00/),
     ).toBeInTheDocument();
   });
 });

@@ -8,14 +8,14 @@ interface Props {
  * point is to show that a sentence is enough, not to answer for the user.
  */
 const EXAMPLES = [
-  '18k, always on the 5th',
-  'the 5th, moving back off a weekend',
-  'health plan 320 on the 8th',
+  '18 mil, sempre no dia 5',
+  'dia 5, voltando se cair num fim de semana',
+  'plano de saúde 320 no dia 8',
 ];
 
 export function ExampleAnswers({ onPick }: Props) {
   return (
-    <ul aria-label="Example answers" className="flex flex-wrap gap-2">
+    <ul aria-label="Respostas de exemplo" className="flex flex-wrap gap-2">
       {EXAMPLES.map((example) => (
         <li key={example}>
           <button

@@ -10,12 +10,19 @@ const statusTones = {
   ENDED: 'neutral',
 } as const;
 
+const statusLabels = {
+  ACTIVE: 'Ativa',
+  PAUSED: 'Pausada',
+  ENDED: 'Encerrada',
+} as const;
+
 interface Props {
   title: string;
   description: string;
   bills: TemplateResponse[];
   /** A change applies from the selected cycle onward, never behind it. */
   currentMonth: string;
+  emptyTitle: string;
   emptyBody: string;
   /** The control that adds one of these — the page supplies it. */
   action: ReactNode;
@@ -27,6 +34,7 @@ export function BillList({
   description,
   bills,
   currentMonth,
+  emptyTitle,
   emptyBody,
   action,
 }: Props) {
@@ -41,17 +49,17 @@ export function BillList({
       </div>
 
       {bills.length === 0 ? (
-        <EmptyState title={`No ${title.toLowerCase()} yet`} body={emptyBody} />
+        <EmptyState title={emptyTitle} body={emptyBody} />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-200 text-left text-[10px] tracking-wider text-zinc-500 uppercase">
-                <th className="px-4 py-2 font-semibold">Name</th>
-                <th className="px-4 py-2 font-semibold">Due day</th>
-                <th className="px-4 py-2 text-right font-semibold">Amount</th>
-                <th className="px-4 py-2 font-semibold">Next</th>
-                <th className="px-4 py-2 font-semibold">Status</th>
+                <th className="px-4 py-2 font-semibold">Nome</th>
+                <th className="px-4 py-2 font-semibold">Dia de vencimento</th>
+                <th className="px-4 py-2 text-right font-semibold">Valor</th>
+                <th className="px-4 py-2 font-semibold">Próximo</th>
+                <th className="px-4 py-2 font-semibold">Situação</th>
                 <th className="px-4 py-2" />
               </tr>
             </thead>
@@ -87,14 +95,14 @@ function BillRow({
           <span className="flex items-center gap-2">
             {bill.name}
             {/* UC-2.6 — a guess is tagged everywhere it appears. */}
-            {bill.isEstimate && <Badge tone="warning">~estimate</Badge>}
+            {bill.isEstimate && <Badge tone="warning">~estimativa</Badge>}
             {bill.valueSchedule.length > 0 && (
-              <Badge tone="info">value schedule</Badge>
+              <Badge tone="info">tabela de valores</Badge>
             )}
           </span>
         </td>
         <td className="px-4 py-2 font-mono text-xs text-zinc-500">
-          day {bill.dueDayOfMonth}
+          dia {bill.dueDayOfMonth}
         </td>
         <td className="px-4 py-2 text-right">
           <Amount cents={bill.amount} signed />
@@ -104,7 +112,9 @@ function BillRow({
         </td>
         <td className="px-4 py-2">
           <Badge tone={statusTones[bill.status]}>
-            {bill.endMonth === null ? bill.status : `ends ${bill.endMonth}`}
+            {bill.endMonth === null
+              ? statusLabels[bill.status]
+              : `encerra em ${bill.endMonth}`}
           </Badge>
         </td>
         <td className="px-4 py-2 text-right">
@@ -115,7 +125,7 @@ function BillRow({
       {bill.valueSchedule.map((step) => (
         <tr key={`${bill.id}-${step.fromMonth}`} className="bg-zinc-50/60">
           <td className="py-1.5 pr-4 pl-10 text-xs text-zinc-500" colSpan={2}>
-            from {step.fromMonth}
+            a partir de {step.fromMonth}
           </td>
           <td className="py-1.5 pr-4 text-right text-xs">
             <Amount cents={step.amount} signed />

@@ -12,20 +12,20 @@ export function PlannedAgainstReal({ bucket }: { bucket: BucketView }) {
   const { planned, real, gap } = plannedAgainstReal(bucket);
 
   return (
-    <Card label="Planned against real" className="flex flex-col gap-3 bg-white">
-      <CardTitle>{bucket.name} — planned against real</CardTitle>
+    <Card label="Previsto x real" className="flex flex-col gap-3 bg-white">
+      <CardTitle>{bucket.name} — previsto x real</CardTitle>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatTile
-          label="The rules said"
+          label="O que as regras previam"
           cents={planned}
-          note="Every contribution the rules made, plus what each override replaced"
+          note="Cada aporte que as regras fizeram, mais o que cada ajuste substituiu"
         />
         <StatTile
-          label="Actually there"
+          label="Realizado"
           cents={real}
-          note="The fold over the whole event log"
+          note="O acumulado de todo o histórico de eventos"
         />
-        <StatTile label="Gap" cents={gap} signed note={explain(gap)} />
+        <StatTile label="Diferença" cents={gap} signed note={explain(gap)} />
       </div>
     </Card>
   );
@@ -33,11 +33,11 @@ export function PlannedAgainstReal({ bucket }: { bucket: BucketView }) {
 
 function explain(gap: number): string {
   if (gap === 0) {
-    return 'Exactly what the rules said would be here';
+    return 'Exatamente o que as regras diziam que estaria aqui';
   }
   if (gap > 0) {
-    return `${formatBRL(gap)} ahead of what the rules said — yields and corrections are the difference`;
+    return `${formatBRL(gap)} à frente do que as regras diziam — rendimentos e correções são a diferença`;
   }
 
-  return `${formatBRL(-gap)} behind what the rules said — withdrawals and corrections are the difference`;
+  return `${formatBRL(-gap)} atrás do que as regras diziam — resgates e correções são a diferença`;
 }

@@ -56,25 +56,27 @@ describe('setting up without the assistant', () => {
     stubApi({ '/api/setup': withoutAssistant });
     renderPage();
 
-    expect(await screen.findByText(/Claude API key/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/chave de API do Claude/),
+    ).toBeInTheDocument();
   });
 
   it('offers no conversation to type into', async () => {
     stubApi({ '/api/setup': withoutAssistant });
     renderPage();
 
-    await screen.findByText(/Claude API key/);
+    await screen.findByText(/chave de API do Claude/);
 
-    expect(screen.queryByLabelText('Your answer')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Sua resposta')).not.toBeInTheDocument();
     expect(screen.queryByRole('log')).not.toBeInTheDocument();
   });
 
   it.each([
-    'The payday cycle',
-    'Where your money sits',
-    'Salary and what repeats every cycle',
-    'Credit cards and their invoices',
-    'What you are saving for',
+    'O ciclo de pagamento',
+    'Onde o seu dinheiro está',
+    'Salário e o que se repete a cada ciclo',
+    'Cartões de crédito e suas faturas',
+    'Para o que você está guardando',
   ])('covers the %s section', async (heading) => {
     stubApi({ '/api/setup': withoutAssistant });
     renderPage();
@@ -88,11 +90,11 @@ describe('setting up without the assistant', () => {
     stubApi({ '/api/setup': withoutAssistant });
     renderPage();
 
-    const day = await screen.findByLabelText('Salary lands on day');
+    const day = await screen.findByLabelText('Salário cai no dia');
     await userEvent.clear(day);
     await userEvent.type(day, '12');
     await userEvent.click(
-      screen.getByRole('button', { name: 'Save the payday anchor' }),
+      screen.getByRole('button', { name: 'Salvar o dia do pagamento' }),
     );
 
     expect(
@@ -114,13 +116,12 @@ describe('setting up without the assistant', () => {
     });
     renderPage();
 
-    expect(await screen.findByText('configured')).toBeInTheDocument();
+    expect(await screen.findByText('configurado')).toBeInTheDocument();
     expect(
-      screen.getByText('Salary and bills').closest('div'),
+      screen.getByText('Salário e contas').closest('div'),
     ).toHaveTextContent('4');
-    expect(screen.getByRole('link', { name: 'Open Main' })).toHaveAttribute(
-      'href',
-      '/',
-    );
+    expect(
+      screen.getByRole('link', { name: 'Abrir o Principal' }),
+    ).toHaveAttribute('href', '/');
   });
 });

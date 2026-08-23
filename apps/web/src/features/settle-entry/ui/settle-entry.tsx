@@ -32,10 +32,10 @@ export function SettleEntry({ month, entryId, planned }: Props) {
           settle.mutate({ month, entryId, status });
         }}
       >
-        {isIncoming ? 'Confirm' : 'Settle'}
+        {isIncoming ? 'Confirmar' : 'Pagar'}
       </Button>
       <Button
-        aria-label="Settle at a different amount"
+        aria-label="Dar baixa com outro valor"
         disabled={settle.isPending}
         onClick={() => {
           setOpen(true);
@@ -46,7 +46,9 @@ export function SettleEntry({ month, entryId, planned }: Props) {
 
       <Dialog
         open={open}
-        title={isIncoming ? 'Confirm what arrived' : 'Settle at what was paid'}
+        title={
+          isIncoming ? 'Confirmar o que chegou' : 'Dar baixa pelo valor pago'
+        }
         onClose={() => {
           setOpen(false);
         }}
@@ -110,7 +112,7 @@ function ActualForm({
     const cents = parseBRL(actual);
 
     if (cents === null) {
-      setError('Enter an amount like 1.234,56.');
+      setError('Digite um valor como 1.234,56.');
       return;
     }
     onSave(Math.abs(cents));
@@ -119,21 +121,21 @@ function ActualForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
       <Field
-        label="Actual amount"
+        label="Valor realizado"
         value={actual}
         onChange={(event) => {
           setActual(event.target.value);
         }}
-        hint={`Planned ${formatBRL(planned)}`}
+        hint={`Previsto ${formatBRL(planned)}`}
         {...(error === undefined ? {} : { error })}
       />
       <div className="flex items-center justify-between gap-2">
         {/* A plan that never happened, not one paid at zero. */}
         <Button type="button" disabled={isPending} onClick={onSkip}>
-          Skip it
+          Ignorar
         </Button>
         <Button variant="primary" type="submit" disabled={isPending}>
-          Save
+          Salvar
         </Button>
       </div>
     </form>

@@ -33,10 +33,10 @@ export function BucketSentence({
         <span className="text-sm font-medium">{projection.name}</span>
         {projection.mode === 'GOAL' ? (
           <Badge tone={projection.isOnTrack ? 'positive' : 'critical'}>
-            {projection.isOnTrack ? 'on track' : 'behind'}
+            {projection.isOnTrack ? 'no prazo' : 'atrasada'}
           </Badge>
         ) : (
-          <Badge tone="info">ongoing</Badge>
+          <Badge tone="info">contínua</Badge>
         )}
       </div>
 
@@ -48,14 +48,14 @@ export function BucketSentence({
 
       {/* UC-7.1 and UC-7.4 — the assumption sits with the number it moves. */}
       <Field
-        label="Expected annual yield"
-        aria-label={`Expected annual yield for ${projection.name}`}
+        label="Rendimento anual esperado"
+        aria-label={`Rendimento anual esperado para ${projection.name}`}
         type="number"
         value={yieldPercent}
         onChange={(event) => {
           onYieldChange(event.target.value);
         }}
-        hint="An assumption. Adjusting it here moves the projection; saving it on the bucket's rule is what keeps it."
+        hint="Uma premissa. Ajustar aqui move a projeção; salvar na regra da caixinha é o que mantém."
       />
     </Card>
   );
@@ -71,27 +71,27 @@ function GoalSentence({
   return (
     <>
       <p className="text-sm text-zinc-600">
-        At <Amount cents={projection.contributionPerCycle} /> per cycle and{' '}
-        {formatPercent(projection.expectedYieldPercent)} a year,{' '}
+        Com <Amount cents={projection.contributionPerCycle} /> por ciclo e{' '}
+        {formatPercent(projection.expectedYieldPercent)} ao ano,{' '}
         {projection.name}{' '}
         {projection.reachesTargetIn === null ? (
           <>
-            never reaches <Amount cents={projection.target} />.
+            nunca alcança <Amount cents={projection.target} />.
           </>
         ) : (
           <>
-            reaches <Amount cents={projection.target} />{' '}
+            alcança <Amount cents={projection.target} />{' '}
             {arrival(fromMonth, projection.reachesTargetIn)}.
           </>
         )}
         {projection.targetDate !== null &&
-          ` Target: ${formatMonthOf(projection.targetDate)}.`}
+          ` Objetivo: ${formatMonthOf(projection.targetDate)}.`}
       </p>
 
       {projection.contributionToCatchUp !== null && (
         <p role="alert" className="text-sm text-red-700">
-          {formatBRL(projection.contributionToCatchUp)} per cycle would bring it
-          back.
+          {formatBRL(projection.contributionToCatchUp)} por ciclo traria de
+          volta ao prazo.
         </p>
       )}
     </>
@@ -101,21 +101,21 @@ function GoalSentence({
 function OngoingSentence({ projection }: { projection: OngoingProjection }) {
   return (
     <p className="text-sm text-zinc-600">
-      At <Amount cents={projection.contributionPerCycle} /> per cycle and{' '}
-      {formatPercent(projection.expectedYieldPercent)} a year, {projection.name}{' '}
-      holds{' '}
+      Com <Amount cents={projection.contributionPerCycle} /> por ciclo e{' '}
+      {formatPercent(projection.expectedYieldPercent)} ao ano, {projection.name}{' '}
+      tem{' '}
       {projection.inFiveYears === null ? (
         '—'
       ) : (
         <Amount cents={projection.inFiveYears} compact />
       )}{' '}
-      in 5 years and{' '}
+      em 5 anos e{' '}
       {projection.inTenYears === null ? (
         '—'
       ) : (
         <Amount cents={projection.inTenYears} compact />
       )}{' '}
-      in 10. No target to hit — the question is only whether the rate is right.
+      em 10. Sem objetivo a bater — a questão é só se o ritmo está certo.
     </p>
   );
 }
@@ -126,6 +126,6 @@ function OngoingSentence({ projection }: { projection: OngoingProjection }) {
  */
 function arrival(fromMonth: string | undefined, cycles: number): string {
   return fromMonth === undefined
-    ? `in ${String(cycles)} cycles`
-    : `in ${formatMonthLabel(shiftMonth(fromMonth, cycles))}`;
+    ? `em ${String(cycles)} ciclos`
+    : `em ${formatMonthLabel(shiftMonth(fromMonth, cycles))}`;
 }

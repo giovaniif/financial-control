@@ -34,7 +34,7 @@ describe('OnboardingPage', () => {
     stubApi({});
     renderPage();
 
-    expect(await screen.findByLabelText('Your answer')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Sua resposta')).toBeInTheDocument();
   });
 
   // There is nothing to navigate to yet, and a sidebar full of empty screens
@@ -48,7 +48,7 @@ describe('OnboardingPage', () => {
     expect(
       screen.queryByRole('navigation', { name: 'Main' }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText('In accounts now')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nas contas agora')).not.toBeInTheDocument();
   });
 
   // The app stays fully usable without finishing setup; that escape hatch is
@@ -58,7 +58,7 @@ describe('OnboardingPage', () => {
     renderPage();
 
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Skip for now' }),
+      await screen.findByRole('button', { name: 'Pular por agora' }),
     );
 
     expect(await screen.findByText('Main')).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('OnboardingPage', () => {
     stubApi({});
     renderPage();
 
-    await screen.findByLabelText('Your answer');
+    await screen.findByLabelText('Sua resposta');
 
     expect(screen.queryByLabelText('Your backup file')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /restore/i })).toBeNull();

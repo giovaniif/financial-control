@@ -24,7 +24,7 @@ function bodyOf(fetchMock: ReturnType<typeof stubPost>) {
   >;
 }
 
-const open = (name = 'Add a bill') =>
+const open = (name = 'Adicionar conta a pagar') =>
   userEvent.click(screen.getByRole('button', { name }));
 
 afterEach(() => {
@@ -37,11 +37,11 @@ describe('CreateTemplateButton', () => {
     renderWithProviders(<CreateTemplateButton currentMonth="2026-08" />);
 
     await open();
-    await userEvent.type(screen.getByLabelText('Name'), 'Health Plan');
-    await userEvent.type(screen.getByLabelText('Amount'), '320');
-    await userEvent.clear(screen.getByLabelText('Due day of month'));
-    await userEvent.type(screen.getByLabelText('Due day of month'), '8');
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Health Plan');
+    await userEvent.type(screen.getByLabelText('Valor'), '320');
+    await userEvent.clear(screen.getByLabelText('Dia de vencimento'));
+    await userEvent.type(screen.getByLabelText('Dia de vencimento'), '8');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar' }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -63,13 +63,10 @@ describe('CreateTemplateButton', () => {
     renderWithProviders(<CreateTemplateButton currentMonth="2026-08" />);
 
     await open();
-    await userEvent.type(screen.getByLabelText('Name'), 'Salary');
-    await userEvent.type(screen.getByLabelText('Amount'), '18.000');
-    await userEvent.selectOptions(
-      screen.getByLabelText('Direction'),
-      'Money in',
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Salary');
+    await userEvent.type(screen.getByLabelText('Valor'), '18.000');
+    await userEvent.selectOptions(screen.getByLabelText('Direção'), 'Entrada');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toMatchObject({
@@ -85,10 +82,10 @@ describe('CreateTemplateButton', () => {
     renderWithProviders(<CreateTemplateButton currentMonth="2026-08" />);
 
     await open();
-    await userEvent.type(screen.getByLabelText('Name'), 'Contractor Costs');
-    await userEvent.type(screen.getByLabelText('Amount'), '1.500');
-    await userEvent.click(screen.getByLabelText('Unconfirmed estimate'));
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Contractor Costs');
+    await userEvent.type(screen.getByLabelText('Valor'), '1.500');
+    await userEvent.click(screen.getByLabelText('Estimativa não confirmada'));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toMatchObject({ isEstimate: true });
@@ -104,17 +101,17 @@ describe('CreateTemplateButton', () => {
     renderWithProviders(
       <CreateTemplateButton
         currentMonth="2026-08"
-        label="Add income"
+        label="Adicionar receita"
         direction="IN"
       />,
     );
 
-    await open('Add income');
-    expect(screen.queryByLabelText('Direction')).not.toBeInTheDocument();
+    await open('Adicionar receita');
+    expect(screen.queryByLabelText('Direção')).not.toBeInTheDocument();
 
-    await userEvent.type(screen.getByLabelText('Name'), 'Salary');
-    await userEvent.type(screen.getByLabelText('Amount'), '18.000');
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Salary');
+    await userEvent.type(screen.getByLabelText('Valor'), '18.000');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toMatchObject({
@@ -133,18 +130,18 @@ describe('CreateTemplateButton', () => {
     renderWithProviders(
       <CreateTemplateButton
         currentMonth="2026-08"
-        label="Add a bill"
+        label="Adicionar conta a pagar"
         direction="OUT"
       />,
     );
 
-    await open('Add a bill');
-    await userEvent.type(screen.getByLabelText('Name'), 'Electricity');
-    await userEvent.type(screen.getByLabelText('Amount'), '280');
+    await open('Adicionar conta a pagar');
+    await userEvent.type(screen.getByLabelText('Nome'), 'Electricity');
+    await userEvent.type(screen.getByLabelText('Valor'), '280');
     await userEvent.click(
-      screen.getByRole('checkbox', { name: 'Unconfirmed estimate' }),
+      screen.getByRole('checkbox', { name: 'Estimativa não confirmada' }),
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toMatchObject({ isEstimate: true });
@@ -159,9 +156,9 @@ describe('CreateTemplateButton', () => {
     );
 
     await open();
-    await userEvent.type(screen.getByLabelText('Name'), 'Rent');
-    await userEvent.type(screen.getByLabelText('Amount'), '2.500');
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Rent');
+    await userEvent.type(screen.getByLabelText('Valor'), '2.500');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar' }));
 
     await waitFor(() => {
       expect(bodyOf(fetchMock)).toMatchObject({ isEstimate: false });
@@ -173,15 +170,13 @@ describe('CreateTemplateButton', () => {
     renderWithProviders(<CreateTemplateButton currentMonth="2026-08" />);
 
     await open();
-    await userEvent.type(screen.getByLabelText('Name'), 'Rent');
-    await userEvent.type(screen.getByLabelText('Amount'), '100');
-    await userEvent.clear(screen.getByLabelText('Due day of month'));
-    await userEvent.type(screen.getByLabelText('Due day of month'), '45');
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Rent');
+    await userEvent.type(screen.getByLabelText('Valor'), '100');
+    await userEvent.clear(screen.getByLabelText('Dia de vencimento'));
+    await userEvent.type(screen.getByLabelText('Dia de vencimento'), '45');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'A day between 1 and 31',
-    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Um dia entre 1 e 31');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -190,10 +185,10 @@ describe('CreateTemplateButton', () => {
     renderWithProviders(<CreateTemplateButton currentMonth="2026-08" />);
 
     await open();
-    await userEvent.type(screen.getByLabelText('Amount'), '100');
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await userEvent.type(screen.getByLabelText('Valor'), '100');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Give it a name');
+    expect(screen.getByRole('alert')).toHaveTextContent('Informe um nome');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

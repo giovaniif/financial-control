@@ -49,8 +49,8 @@ const renderEdit = (overrides: Partial<TemplateResponse> = {}) =>
   );
 
 const openAmount = async () => {
-  await userEvent.click(screen.getByRole('button', { name: 'Edit Salary' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Change amount' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Editar Salary' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Alterar valor' }));
 };
 
 afterEach(() => {
@@ -68,12 +68,12 @@ describe('EditTemplate', () => {
     renderEdit();
 
     await openAmount();
-    await userEvent.clear(screen.getByLabelText('New amount'));
-    await userEvent.type(screen.getByLabelText('New amount'), '18.000');
+    await userEvent.clear(screen.getByLabelText('Novo valor'));
+    await userEvent.type(screen.getByLabelText('Novo valor'), '18.000');
     await userEvent.click(
-      screen.getByRole('radio', { name: /This cycle and all future/ }),
+      screen.getByRole('radio', { name: /Neste ciclo e nos futuros/ }),
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
 
     await waitFor(() => {
       expect(lastCall(fetchMock).url).toBe('/api/templates/t1/amount');
@@ -90,12 +90,12 @@ describe('EditTemplate', () => {
     renderEdit();
 
     await openAmount();
-    await userEvent.clear(screen.getByLabelText('New amount'));
-    await userEvent.type(screen.getByLabelText('New amount'), '9.000');
+    await userEvent.clear(screen.getByLabelText('Novo valor'));
+    await userEvent.type(screen.getByLabelText('Novo valor'), '9.000');
     await userEvent.click(
-      screen.getByRole('radio', { name: /This cycle only/ }),
+      screen.getByRole('radio', { name: /Só neste ciclo/ }),
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
 
     await waitFor(() => {
       expect(lastCall(fetchMock).body).toMatchObject({
@@ -110,12 +110,12 @@ describe('EditTemplate', () => {
     renderEdit();
 
     await openAmount();
-    await userEvent.clear(screen.getByLabelText('New amount'));
-    await userEvent.type(screen.getByLabelText('New amount'), '9.000');
-    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await userEvent.clear(screen.getByLabelText('Novo valor'));
+    await userEvent.type(screen.getByLabelText('Novo valor'), '9.000');
+    await userEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Choose whether this applies to one cycle or to every cycle from here',
+      'Escolha se isso vale para um ciclo ou para todos os ciclos a partir de agora',
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -127,7 +127,7 @@ describe('EditTemplate', () => {
     await openAmount();
 
     expect(
-      screen.getByText(/Past cycles are never touched/),
+      screen.getByText(/Os ciclos passados nunca são alterados/),
     ).toBeInTheDocument();
   });
 
@@ -135,8 +135,10 @@ describe('EditTemplate', () => {
     const fetchMock = stubPatch();
     renderEdit();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Edit Salary' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Editar Salary' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Pausar' }));
 
     await waitFor(() => {
       expect(lastCall(fetchMock).body).toEqual({ status: 'PAUSED' });
@@ -147,8 +149,10 @@ describe('EditTemplate', () => {
     const fetchMock = stubPatch();
     renderEdit({ status: 'PAUSED' });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Edit Salary' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Resume' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Editar Salary' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Retomar' }));
 
     await waitFor(() => {
       expect(lastCall(fetchMock).body).toEqual({ status: 'ACTIVE' });
@@ -159,10 +163,15 @@ describe('EditTemplate', () => {
     const fetchMock = stubPatch();
     renderEdit();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Edit Salary' }));
-    await userEvent.clear(screen.getByLabelText('End after cycle'));
-    await userEvent.type(screen.getByLabelText('End after cycle'), '2026-12');
-    await userEvent.click(screen.getByRole('button', { name: 'End it' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Editar Salary' }),
+    );
+    await userEvent.clear(screen.getByLabelText('Encerrar após o ciclo'));
+    await userEvent.type(
+      screen.getByLabelText('Encerrar após o ciclo'),
+      '2026-12',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Encerrar' }));
 
     await waitFor(() => {
       expect(lastCall(fetchMock).body).toEqual({ endMonth: '2026-12' });
@@ -173,9 +182,11 @@ describe('EditTemplate', () => {
     const fetchMock = stubPatch();
     renderEdit();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Edit Salary' }));
     await userEvent.click(
-      screen.getByRole('button', { name: 'Flag as an estimate' }),
+      screen.getByRole('button', { name: 'Editar Salary' }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Marcar como estimativa' }),
     );
 
     await waitFor(() => {
@@ -187,10 +198,12 @@ describe('EditTemplate', () => {
     const fetchMock = stubPatch();
     renderEdit();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Edit Salary' }));
-    await userEvent.clear(screen.getByLabelText('Name'));
-    await userEvent.type(screen.getByLabelText('Name'), 'Salary (new job)');
-    await userEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Editar Salary' }),
+    );
+    await userEvent.clear(screen.getByLabelText('Nome'));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Salary (new job)');
+    await userEvent.click(screen.getByRole('button', { name: 'Renomear' }));
 
     await waitFor(() => {
       expect(lastCall(fetchMock).body).toEqual({ name: 'Salary (new job)' });

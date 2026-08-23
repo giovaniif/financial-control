@@ -14,9 +14,6 @@ export function ChainSection({ cycle }: { cycle: CycleResponse | undefined }) {
   }
 
   return (
-    <ChainStrip
-      chain={cycle.chain}
-      openingFrom="carried in from the previous cycle"
-    />
+    <ChainStrip chain={cycle.chain} openingFrom="trazido do ciclo anterior" />
   );
 }

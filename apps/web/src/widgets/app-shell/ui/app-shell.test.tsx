@@ -46,7 +46,7 @@ function renderShell(initialEntry = '/') {
           {
             path: '/',
             element: (
-              <AppShell title="Main" subtitle="The next payday">
+              <AppShell title="Principal" subtitle="O próximo pagamento">
                 <p>screen body</p>
               </AppShell>
             ),
@@ -105,7 +105,7 @@ function storeConversation() {
 
 const openRail = async () => {
   await userEvent.click(
-    await screen.findByRole('button', { name: 'Open the assistant' }),
+    await screen.findByRole('button', { name: 'Abrir o assistente' }),
   );
 };
 
@@ -124,7 +124,7 @@ describe('AppShell', () => {
     renderShell();
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Main' }),
+      await screen.findByRole('heading', { level: 1, name: 'Principal' }),
     ).toBeInTheDocument();
     expect(screen.getByText('screen body')).toBeInTheDocument();
   });
@@ -137,9 +137,9 @@ describe('AppShell', () => {
     const links = await screen.findAllByRole('link');
 
     expect(links.map((link) => link.textContent)).toEqual([
-      'Main',
-      'Profile',
-      'Investments & Savings',
+      'Principal',
+      'Perfil',
+      'Investimentos e Reservas',
     ]);
   });
 
@@ -158,10 +158,10 @@ describe('AppShell', () => {
     renderShell();
 
     expect(await screen.findByText('R$ 2.160,00')).toBeInTheDocument();
-    expect(screen.getByText('2 accounts')).toBeInTheDocument();
+    expect(screen.getByText('2 contas')).toBeInTheDocument();
   });
 
-  it('says "1 account" rather than "1 accounts"', async () => {
+  it('says "1 conta" rather than "1 contas"', async () => {
     stubApi({
       '/api/cycles': window_,
       '/api/accounts': {
@@ -171,7 +171,7 @@ describe('AppShell', () => {
     });
     renderShell();
 
-    expect(await screen.findByText('1 account')).toBeInTheDocument();
+    expect(await screen.findByText('1 conta')).toBeInTheDocument();
   });
 
   // A cycle is not a month, so its bounds are always stated.
@@ -181,7 +181,7 @@ describe('AppShell', () => {
 
     expect(await screen.findByText('July 2026')).toBeInTheDocument();
     expect(screen.getByText('3 Jul – 4 Aug')).toBeInTheDocument();
-    expect(screen.getByText('current')).toBeInTheDocument();
+    expect(screen.getByText('atual')).toBeInTheDocument();
   });
 
   it('cannot step back past the first cycle in the window', async () => {
@@ -189,7 +189,7 @@ describe('AppShell', () => {
     renderShell();
 
     expect(
-      await screen.findByRole('button', { name: 'Previous cycle' }),
+      await screen.findByRole('button', { name: 'Ciclo anterior' }),
     ).toBeDisabled();
   });
 
@@ -198,14 +198,16 @@ describe('AppShell', () => {
     renderShell();
 
     await userEvent.click(
-      await screen.findByRole('button', { name: 'Next cycle' }),
+      await screen.findByRole('button', { name: 'Próximo ciclo' }),
     );
 
     expect(await screen.findByText('August 2026')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Next cycle' })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Próximo ciclo' }),
+    ).toBeDisabled();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Previous cycle' }),
+      screen.getByRole('button', { name: 'Ciclo anterior' }),
     );
 
     await waitFor(() => {
@@ -219,7 +221,7 @@ describe('AppShell', () => {
     renderShell('/?cycle=2026-08');
 
     expect(await screen.findByText('August 2026')).toBeInTheDocument();
-    expect(screen.getByText('next')).toBeInTheDocument();
+    expect(screen.getByText('próximo')).toBeInTheDocument();
   });
 
   it('shows no cycle nav when the window is empty', async () => {
@@ -228,7 +230,7 @@ describe('AppShell', () => {
 
     expect(await screen.findByText('screen body')).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Next cycle' }),
+      screen.queryByRole('button', { name: 'Próximo ciclo' }),
     ).not.toBeInTheDocument();
   });
 });
@@ -241,25 +243,27 @@ describe('AppShell and the assistant rail', () => {
     renderShell();
 
     expect(
-      screen.queryByRole('log', { name: 'Assistant conversation' }),
+      screen.queryByRole('log', { name: 'Conversa com o assistente' }),
     ).not.toBeInTheDocument();
 
     await openRail();
 
     expect(
-      screen.getByRole('log', { name: 'Assistant conversation' }),
+      screen.getByRole('log', { name: 'Conversa com o assistente' }),
     ).toBeInTheDocument();
 
-    const close = screen.getByRole('button', { name: 'Close the assistant' });
+    const close = screen.getByRole('button', {
+      name: 'Fechar o assistente',
+    });
     expect(close).toHaveAttribute('aria-expanded', 'true');
 
     await userEvent.click(close);
 
     expect(
-      screen.queryByRole('log', { name: 'Assistant conversation' }),
+      screen.queryByRole('log', { name: 'Conversa com o assistente' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Open the assistant' }),
+      screen.getByRole('button', { name: 'Abrir o assistente' }),
     ).toHaveAttribute('aria-expanded', 'false');
   });
 
@@ -275,13 +279,15 @@ describe('AppShell and the assistant rail', () => {
 
     await openRail();
     await userEvent.type(
-      screen.getByLabelText('Ask about your money'),
+      screen.getByLabelText('Pergunte sobre o seu dinheiro'),
       'And in October?',
     );
-    expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Confirmar' }),
+    ).toBeInTheDocument();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Close the assistant' }),
+      screen.getByRole('button', { name: 'Fechar o assistente' }),
     );
 
     expect(
@@ -293,10 +299,10 @@ describe('AppShell and the assistant rail', () => {
     expect(
       screen.getByText('Because the Inter invoice lands in it.'),
     ).toBeVisible();
-    expect(screen.getByLabelText('Ask about your money')).toHaveValue(
+    expect(screen.getByLabelText('Pergunte sobre o seu dinheiro')).toHaveValue(
       'And in October?',
     );
-    expect(screen.getByRole('button', { name: 'Confirm' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeVisible();
   });
 
   // UC-1.2 — the figure the sidebar exists to keep permanently visible does
@@ -317,7 +323,7 @@ describe('AppShell and the assistant rail', () => {
     await openRail();
 
     expect(screen.getByText('R$ 2.160,00')).toBeVisible();
-    expect(screen.getByText('In accounts now')).toBeVisible();
+    expect(screen.getByText('Nas contas agora')).toBeVisible();
   });
 
   it('keeps a name on every nav item once the nav is icons only', async () => {
@@ -327,7 +333,7 @@ describe('AppShell and the assistant rail', () => {
     await openRail();
 
     expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(
-      ['Main', 'Profile', 'Investments & Savings'],
+      ['Principal', 'Perfil', 'Investimentos e Reservas'],
     );
   });
 
@@ -344,7 +350,7 @@ describe('AppShell and the assistant rail', () => {
     await openRail();
 
     expect(
-      screen.getByRole('complementary', { name: 'Assistant' }),
+      screen.getByRole('complementary', { name: 'Assistente' }),
     ).toHaveAttribute('data-layout', 'overlay');
   });
 
@@ -355,7 +361,7 @@ describe('AppShell and the assistant rail', () => {
     await openRail();
 
     expect(
-      screen.getByRole('complementary', { name: 'Assistant' }),
+      screen.getByRole('complementary', { name: 'Assistente' }),
     ).toHaveAttribute('data-layout', 'inline');
   });
 });

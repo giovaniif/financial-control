@@ -54,27 +54,28 @@ function Close({
           setOpen(true);
         }}
       >
-        Close the cycle
+        Fechar o ciclo
       </Button>
       <Dialog
         open={open}
-        title={`Close ${label}`}
+        title={`Fechar ${label}`}
         onClose={() => {
           setOpen(false);
         }}
       >
         <div className="flex flex-col gap-3">
           <p className="text-sm text-zinc-600">
-            Closing freezes {label}: its entries become read-only, and its
-            closing balance becomes the next cycle&rsquo;s opening balance.
+            Fechar {label} congela o ciclo: os lançamentos passam a ser somente
+            leitura, e o saldo final vira o saldo inicial do próximo ciclo.
           </p>
           {unsettled > 0 && (
             <p
               role="alert"
               className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
             >
-              {unsettled} {unsettled === 1 ? 'entry is' : 'entries are'} still
-              unsettled. Settle or skip {unsettled === 1 ? 'it' : 'them'} first.
+              {unsettled === 1
+                ? `${String(unsettled)} lançamento ainda está sem baixa. Dê baixa nele ou ignore-o antes.`
+                : `${String(unsettled)} lançamentos ainda estão sem baixa. Dê baixa neles ou ignore-os antes.`}
             </p>
           )}
           <Button
@@ -88,7 +89,7 @@ function Close({
               });
             }}
           >
-            Close {label}
+            Fechar {label}
           </Button>
         </div>
       </Dialog>
@@ -108,11 +109,11 @@ function Reopen({ month, label }: { month: string; label: string }) {
           setOpen(true);
         }}
       >
-        Reopen the cycle
+        Reabrir o ciclo
       </Button>
       <Dialog
         open={open}
-        title={`Reopen ${label}`}
+        title={`Reabrir ${label}`}
         onClose={() => {
           setOpen(false);
         }}
@@ -126,8 +127,8 @@ function Reopen({ month, label }: { month: string; label: string }) {
                   since, so every balance that moves is named first. */}
               <p className="text-sm text-zinc-600">
                 {preview.data.shifts.length === 0
-                  ? 'No later cycle changes.'
-                  : `${String(preview.data.shifts.length)} later cycles would open at a different balance.`}
+                  ? 'Nenhum ciclo posterior muda.'
+                  : `${String(preview.data.shifts.length)} ciclos posteriores abririam com um saldo diferente.`}
               </p>
               {preview.data.shifts.length > 0 && (
                 <ul className="flex flex-col gap-1 rounded-lg border border-zinc-200 p-3 text-xs">
@@ -147,7 +148,7 @@ function Reopen({ month, label }: { month: string; label: string }) {
                   });
                 }}
               >
-                Reopen
+                Reabrir
               </Button>
             </>
           )}

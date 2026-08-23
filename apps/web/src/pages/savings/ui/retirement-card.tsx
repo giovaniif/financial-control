@@ -12,20 +12,20 @@ export function RetirementCard({
   retirement: RetirementResponse;
 }) {
   return (
-    <Card label="Retirement" className="flex flex-col gap-1">
-      <CardTitle>Retirement</CardTitle>
+    <Card label="Aposentadoria" className="flex flex-col gap-1">
+      <CardTitle>Aposentadoria</CardTitle>
       <p className="text-sm">
-        In 30 years {retirement.name} holds{' '}
+        Em 30 anos {retirement.name} tem{' '}
         <Amount cents={retirement.balanceAtHorizon} className="font-semibold" />
-        , which sustains{' '}
+        , o que sustenta{' '}
         <Amount
           cents={retirement.sustainableMonthlyIncome}
           className="font-semibold"
         />{' '}
-        a month.
+        por mês.
       </p>
       <p className="text-xs text-zinc-500">
-        At a 4% withdrawal rate. An assumption, like every yield here.
+        A uma taxa de retirada de 4%. Uma premissa, como todo rendimento aqui.
       </p>
     </Card>
   );

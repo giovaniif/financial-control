@@ -3,6 +3,11 @@ import { CreateBucketButton } from '@/features/create-bucket';
 import { formatBRL } from '@/shared/lib';
 import { Amount, Badge, Skeleton } from '@/shared/ui';
 
+const BUCKET_MODE_LABELS: Record<'GOAL' | 'ONGOING', string> = {
+  GOAL: 'meta',
+  ONGOING: 'contínua',
+};
+
 /** UC-6.1 / UC-6.2 — where the Expected Surplus goes each cycle. */
 export function BucketsSection() {
   const { data, isPending } = useBuckets();
@@ -12,21 +17,21 @@ export function BucketsSection() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 text-zinc-600">
         <p>
-          What is left after the bills is the{' '}
-          <strong className="font-medium text-zinc-900">
-            Expected Surplus
-          </strong>
-          , and buckets are where it goes. Each one takes a share of every cycle
-          automatically.
+          O que sobra depois das contas é a{' '}
+          <strong className="font-medium text-zinc-900">Sobra Esperada</strong>,
+          e as caixinhas são para onde ela vai. Cada uma recebe uma parte
+          automaticamente a cada ciclo.
         </p>
         <p>
-          A bucket is either a{' '}
-          <strong className="font-medium text-zinc-900">goal</strong> — a target
-          amount by a target date, like six months of expenses by next March —
-          or <strong className="font-medium text-zinc-900">ongoing</strong>, a
-          per-cycle commitment with no finish line, like a brokerage
-          contribution. The distinction is real: asking an ongoing bucket how
-          complete it is has no answer, so the app never pretends it does.
+          Uma caixinha é ou uma{' '}
+          <strong className="font-medium text-zinc-900">meta</strong> — um valor
+          objetivo até uma data objetivo, como seis meses de despesas até março
+          que vem — ou{' '}
+          <strong className="font-medium text-zinc-900">contínua</strong>, um
+          compromisso por ciclo sem linha de chegada, como um aporte numa
+          corretora. A distinção é real: perguntar a uma caixinha contínua o
+          quanto ela está completa não tem resposta, então o app nunca finge que
+          tem.
         </p>
       </div>
 
@@ -38,12 +43,12 @@ export function BucketsSection() {
             <li key={bucket.id} className="flex items-center gap-3 py-1.5">
               <span className="flex-1">{bucket.name}</span>
               <Badge tone={bucket.mode === 'GOAL' ? 'info' : 'neutral'}>
-                {bucket.mode.toLowerCase()}
+                {BUCKET_MODE_LABELS[bucket.mode]}
               </Badge>
               <span className="text-xs text-zinc-500">
                 {bucket.rule.kind === 'PERCENT'
-                  ? `${String(bucket.rule.percent)}% per cycle`
-                  : `${formatBRL(bucket.rule.amount)} per cycle`}
+                  ? `${String(bucket.rule.percent)}% por ciclo`
+                  : `${formatBRL(bucket.rule.amount)} por ciclo`}
               </span>
               {bucket.target !== null && (
                 <Amount cents={bucket.target} className="w-28 text-right" />
@@ -53,8 +58,8 @@ export function BucketsSection() {
         </ul>
       ) : (
         <p className="text-sm text-zinc-500">
-          No buckets yet. You can add them later, but a cycle with no buckets
-          leaves every surplus as free cash.
+          Nenhuma caixinha ainda. Você pode adicioná-las depois, mas um ciclo
+          sem caixinhas deixa toda a sobra como dinheiro livre.
         </p>
       )}
 

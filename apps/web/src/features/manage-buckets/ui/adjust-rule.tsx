@@ -30,16 +30,16 @@ export function AdjustRule({ bucket, month }: Props) {
   return (
     <>
       <Button
-        aria-label={`Adjust the rule for ${bucket.name}`}
+        aria-label={`Ajustar a regra de ${bucket.name}`}
         onClick={() => {
           setOpen(true);
         }}
       >
-        Adjust
+        Ajustar
       </Button>
       <Dialog
         open={open}
-        title={`${bucket.name} — allocation`}
+        title={`${bucket.name} — alocação`}
         onClose={() => {
           setOpen(false);
         }}
@@ -72,7 +72,7 @@ function Form({ bucket, month }: Props) {
     if (kind === 'PERCENT') {
       const value = Number(percent);
       if (!Number.isFinite(value) || value < 0 || value > 100) {
-        setError('Between 0 and 100.');
+        setError('Entre 0 e 100.');
         return;
       }
       update.mutate({ rule: { kind: 'PERCENT', percent: value } });
@@ -81,7 +81,7 @@ function Form({ bucket, month }: Props) {
 
     const cents = parseBRL(amount);
     if (cents === null) {
-      setError('Enter an amount like 1.234,56.');
+      setError('Informe um valor como 1.234,56.');
       return;
     }
     update.mutate({ rule: { kind: 'FIXED', amount: Math.abs(cents) } });
@@ -93,24 +93,24 @@ function Form({ bucket, month }: Props) {
 
       <div className="flex flex-col gap-2">
         <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600">
-          Rule
+          Regra
           <select
-            value={kind === 'PERCENT' ? 'Percentage' : 'Fixed amount'}
+            value={kind === 'PERCENT' ? 'Percentual' : 'Valor fixo'}
             onChange={(event) => {
               setKind(
-                event.target.value === 'Percentage' ? 'PERCENT' : 'FIXED',
+                event.target.value === 'Percentual' ? 'PERCENT' : 'FIXED',
               );
             }}
             className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-normal"
           >
-            <option>Percentage</option>
-            <option>Fixed amount</option>
+            <option>Percentual</option>
+            <option>Valor fixo</option>
           </select>
         </label>
 
         {kind === 'PERCENT' ? (
           <Field
-            label="Percentage"
+            label="Percentual"
             type="number"
             value={percent}
             onChange={(event) => {
@@ -120,7 +120,7 @@ function Form({ bucket, month }: Props) {
           />
         ) : (
           <Field
-            label="Amount per cycle"
+            label="Valor por ciclo"
             value={amount}
             placeholder="1.778,00"
             onChange={(event) => {
@@ -143,19 +143,19 @@ function Form({ bucket, month }: Props) {
           disabled={update.isPending}
           onClick={saveRule}
         >
-          Save the rule
+          Salvar a regra
         </Button>
       </div>
 
       <div className="flex flex-col gap-2 border-t border-zinc-100 pt-3">
         <Field
-          label="Priority"
+          label="Prioridade"
           type="number"
           value={priority}
           onChange={(event) => {
             setPriority(event.target.value);
           }}
-          hint="Lowest first when the money runs short"
+          hint="A mais baixa primeiro quando falta dinheiro"
         />
         <Button
           disabled={update.isPending}
@@ -163,19 +163,19 @@ function Form({ bucket, month }: Props) {
             update.mutate({ priority: Number(priority) });
           }}
         >
-          Save priority
+          Salvar prioridade
         </Button>
       </div>
 
       <div className="flex flex-col gap-2 border-t border-zinc-100 pt-3">
         <Field
-          label="Expected annual yield"
+          label="Rendimento anual esperado"
           type="number"
           value={yieldPercent}
           onChange={(event) => {
             setYieldPercent(event.target.value);
           }}
-          hint="An assumption, not a promise — it is labelled as one wherever it moves a number"
+          hint="Uma premissa, não uma promessa — é rotulada como tal onde quer que mova um número"
         />
         <Button
           disabled={update.isPending}
@@ -183,7 +183,7 @@ function Form({ bucket, month }: Props) {
             update.mutate({ expectedYieldPercent: Number(yieldPercent) });
           }}
         >
-          Save the yield
+          Salvar o rendimento
         </Button>
       </div>
     </div>
@@ -204,7 +204,7 @@ function BothWays({
   if (expectedSurplus <= 0) {
     return (
       <p className="text-xs text-zinc-500">
-        This cycle has no Expected Surplus to allocate from.
+        Este ciclo não tem Sobra Esperada para alocar.
       </p>
     );
   }
@@ -214,7 +214,7 @@ function BothWays({
 
     return (
       <p className="text-xs text-zinc-500">
-        {formatPercent(percent)} → {formatBRL(cents)} in this cycle.
+        {formatPercent(percent)} → {formatBRL(cents)} neste ciclo.
       </p>
     );
   }
@@ -223,8 +223,8 @@ function BothWays({
 
   return (
     <p className="text-xs text-zinc-500">
-      {formatBRL(amount)} → {formatPercent(share, 1)} of this cycle&rsquo;s
-      Expected Surplus.
+      {formatBRL(amount)} → {formatPercent(share, 1)} da Sobra Esperada deste
+      ciclo.
     </p>
   );
 }
@@ -261,14 +261,14 @@ function Overcommitment({
       className="flex flex-col gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
     >
       <span>
-        The rules run {formatBRL(preview.shortfall)} short in{' '}
-        {formatMonthLabel(month)}. The priority order funds:
+        Falta {formatBRL(preview.shortfall)} para cobrir as regras em{' '}
+        {formatMonthLabel(month)}. A ordem de prioridade financia:
       </span>
       <ul>
         {preview.fundings.map((funding) => (
           <li key={funding.bucketId}>
-            {funding.name} gets {formatBRL(funding.funded)}
-            {funding.isFullyFunded ? '' : ' — not all it asked for'}
+            {funding.name} recebe {formatBRL(funding.funded)}
+            {funding.isFullyFunded ? '' : ' — não tudo o que pediu'}
           </li>
         ))}
       </ul>

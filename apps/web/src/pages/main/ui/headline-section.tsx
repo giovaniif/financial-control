@@ -5,10 +5,10 @@ import { formatBRL, formatDate } from '@/shared/lib';
 
 /** How the cycle on screen relates to today, since it is no longer always next. */
 const eyebrows: Record<CyclePosition, string> = {
-  past: 'Past cycle',
-  current: 'This cycle',
-  next: 'Next cycle',
-  projected: 'Projected cycle',
+  past: 'Ciclo passado',
+  current: 'Este ciclo',
+  next: 'Próximo ciclo',
+  projected: 'Ciclo projetado',
 };
 
 interface Props {
@@ -22,12 +22,12 @@ interface Props {
 export function HeadlineSection({ headline, position, action }: Props) {
   return (
     <section
-      aria-label="The answer"
+      aria-label="A resposta"
       className="flex flex-col gap-4 rounded-xl bg-zinc-900 p-6 text-zinc-50"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-[10px] font-semibold tracking-widest text-zinc-400 uppercase">
-          {position === undefined ? 'Cycle' : eyebrows[position]}
+          {position === undefined ? 'Ciclo' : eyebrows[position]}
           <span className="font-mono text-xs normal-case">
             {headline.range}
           </span>
@@ -36,35 +36,35 @@ export function HeadlineSection({ headline, position, action }: Props) {
       </div>
 
       <p className="max-w-4xl text-2xl leading-snug font-normal">
-        In the {headline.cycleLabel} cycle you&rsquo;ll receive{' '}
+        No ciclo {headline.cycleLabel} você vai receber{' '}
         <strong className="font-mono font-semibold">
           {magnitude(headline.incoming)}
         </strong>
-        , pay{' '}
+        , pagar{' '}
         <strong className="font-mono font-semibold text-red-300">
           {magnitude(headline.outgoing)}
         </strong>
-        , and{' '}
+        {', e '}
         <strong className="font-mono font-semibold text-green-300">
           {magnitude(headline.free)}
         </strong>{' '}
-        stays free after allocations.
+        fica livre depois das alocações.
       </p>
 
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-zinc-800 pt-3 text-xs">
         <Qualifier
-          label="Lowest point"
+          label="Ponto mais baixo"
           value={headline.lowestPoint}
           note={
             headline.lowestPointDate === null
-              ? 'nothing scheduled'
-              : `on ${formatDate(headline.lowestPointDate)}`
+              ? 'nada agendado'
+              : `em ${formatDate(headline.lowestPointDate)}`
           }
         />
-        <Qualifier label="Closes at" value={headline.closing} />
+        <Qualifier label="Fecha com" value={headline.closing} />
         {/* Never let a guess masquerade as a fact. */}
         <Qualifier
-          label="Without the estimates"
+          label="Sem as estimativas"
           value={headline.closingWithoutEstimates}
           tone="text-amber-300"
         />

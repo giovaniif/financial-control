@@ -6,5 +6,5 @@ import type { AlertResponse } from '@fin/contracts';
  * has already told them.
  */
 export function questionFor(alert: AlertResponse): string {
-  return `About “${alert.title}”: ${alert.body} Why is that, and what would change it?`;
+  return `Sobre “${alert.title}”: ${alert.body} Por que isso acontece, e o que mudaria isso?`;
 }

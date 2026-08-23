@@ -22,11 +22,11 @@ export function SetupFrame({ onSkip, children }: Props) {
           >
             R
           </span>
-          <span className="text-sm font-semibold">Financial Control</span>
+          <span className="text-sm font-semibold">Controle Financeiro</span>
           {/* The screen still has a name; what it does not have is a
               title block, and no longer a step count either — a conversation
               that says "4 of 7" is a wizard wearing a chat's clothes. */}
-          <h1 className="sr-only">Setting up</h1>
+          <h1 className="sr-only">Configurando</h1>
         </div>
 
         <button
@@ -34,7 +34,7 @@ export function SetupFrame({ onSkip, children }: Props) {
           onClick={onSkip}
           className="ml-auto shrink-0 cursor-pointer text-sm text-zinc-500 underline-offset-2 transition-colors hover:text-zinc-900 hover:underline"
         >
-          Skip for now
+          Pular por agora
         </button>
       </header>
 

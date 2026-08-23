@@ -6,12 +6,12 @@ import { AccountsTotal } from './accounts-total.js';
 const items = [
   {
     to: '/',
-    label: 'Main',
+    label: 'Principal',
     paths: ['M4 10.5 12 4l8 6.5', 'M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9'],
   },
   {
     to: '/profile',
-    label: 'Profile',
+    label: 'Perfil',
     paths: [
       'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
       'M4.5 20.5a7.5 7.5 0 0 1 15 0',
@@ -19,7 +19,7 @@ const items = [
   },
   {
     to: '/savings',
-    label: 'Investments & Savings',
+    label: 'Investimentos e Reservas',
     paths: ['M3.5 17.5 10 11l4 4 6.5-7.5', 'M15 7.5h5.5V13'],
   },
 ];
@@ -43,7 +43,7 @@ export function Sidebar({ isCollapsed }: Props) {
         <span
           className={`text-sm font-semibold ${isCollapsed ? 'sr-only' : ''}`}
         >
-          Financial Control
+          Controle Financeiro
         </span>
       </div>
 

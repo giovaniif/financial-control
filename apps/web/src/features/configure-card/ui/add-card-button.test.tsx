@@ -37,7 +37,7 @@ function bodyOf(fetchMock: ReturnType<typeof stubPost>) {
 const render = () => renderWithProviders(<AddCardButton accounts={accounts} />);
 
 const open = () =>
-  userEvent.click(screen.getByRole('button', { name: 'Add a card' }));
+  userEvent.click(screen.getByRole('button', { name: 'Adicionar cartão' }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -49,13 +49,13 @@ describe('AddCardButton', () => {
     render();
 
     await open();
-    await userEvent.type(screen.getByLabelText('Name'), 'Inter');
-    await userEvent.type(screen.getByLabelText('Limit'), '10.000');
-    await userEvent.clear(screen.getByLabelText('Closing day'));
-    await userEvent.type(screen.getByLabelText('Closing day'), '28');
-    await userEvent.clear(screen.getByLabelText('Due day'));
-    await userEvent.type(screen.getByLabelText('Due day'), '10');
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Inter');
+    await userEvent.type(screen.getByLabelText('Limite'), '10.000');
+    await userEvent.clear(screen.getByLabelText('Dia de fechamento'));
+    await userEvent.type(screen.getByLabelText('Dia de fechamento'), '28');
+    await userEvent.clear(screen.getByLabelText('Dia de vencimento'));
+    await userEvent.type(screen.getByLabelText('Dia de vencimento'), '10');
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -81,14 +81,14 @@ describe('AddCardButton', () => {
     render();
 
     await open();
-    await userEvent.clear(screen.getByLabelText('Closing day'));
-    await userEvent.type(screen.getByLabelText('Closing day'), '28');
-    await userEvent.clear(screen.getByLabelText('Due day'));
-    await userEvent.type(screen.getByLabelText('Due day'), '10');
+    await userEvent.clear(screen.getByLabelText('Dia de fechamento'));
+    await userEvent.type(screen.getByLabelText('Dia de fechamento'), '28');
+    await userEvent.clear(screen.getByLabelText('Dia de vencimento'));
+    await userEvent.type(screen.getByLabelText('Dia de vencimento'), '10');
 
     expect(
       screen.getByText(
-        /Purchases up to day 28 are billed on the invoice due day 10 of the following month/,
+        /As compras feitas até o dia 28 entram na fatura com vencimento no dia 10 do mês seguinte/,
       ),
     ).toBeInTheDocument();
   });
@@ -98,15 +98,13 @@ describe('AddCardButton', () => {
     render();
 
     await open();
-    await userEvent.type(screen.getByLabelText('Name'), 'Inter');
-    await userEvent.type(screen.getByLabelText('Limit'), '100');
-    await userEvent.clear(screen.getByLabelText('Closing day'));
-    await userEvent.type(screen.getByLabelText('Closing day'), '40');
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.type(screen.getByLabelText('Nome'), 'Inter');
+    await userEvent.type(screen.getByLabelText('Limite'), '100');
+    await userEvent.clear(screen.getByLabelText('Dia de fechamento'));
+    await userEvent.type(screen.getByLabelText('Dia de fechamento'), '40');
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'A day between 1 and 31',
-    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Um dia entre 1 e 31');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -116,10 +114,12 @@ describe('AddCardButton', () => {
     renderWithProviders(<AddCardButton accounts={[]} />);
 
     expect(
-      screen.getByText('Add an account first — an invoice is paid from one.'),
+      screen.getByText(
+        'Adicione uma conta primeiro — uma fatura é paga a partir de uma conta.',
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Add a card' }),
+      screen.queryByRole('button', { name: 'Adicionar cartão' }),
     ).not.toBeInTheDocument();
   });
 });
