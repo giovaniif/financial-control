@@ -3,6 +3,7 @@ import type {
   LanguageModel,
   ModelRequest,
   ModelResponse,
+  ModelStopReason,
   ModelStreamEvent,
   ToolCall,
 } from '../../domain/ports/language-model.js';
@@ -11,6 +12,8 @@ import type {
 export interface ScriptedTurn {
   text?: string;
   toolCalls?: readonly ToolCall[];
+  /** Defaults to what the turn's content implies; set it to script a refusal. */
+  stopReason?: ModelStopReason;
 }
 
 export class ScriptExhausted extends DomainError {}
@@ -73,7 +76,8 @@ export class FakeLanguageModel implements LanguageModel {
     return {
       text: turn.text ?? '',
       toolCalls,
-      stopReason: toolCalls.length > 0 ? 'toolCalls' : 'end',
+      stopReason:
+        turn.stopReason ?? (toolCalls.length > 0 ? 'toolCalls' : 'end'),
     };
   }
 }
