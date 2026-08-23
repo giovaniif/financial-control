@@ -116,6 +116,19 @@ const healthPlan = (extra: JsonObject = {}) =>
     ...extra,
   });
 
+/** A bill on a day three of the twelve cycles cannot reach — FIN-117. */
+const gymTurn = (extra: JsonObject = {}): ScriptedTurn => ({
+  text: 'Recorded.',
+  toolCalls: [
+    call('record_fixed_bill', {
+      name: 'Gym',
+      amountInCents: 12_000,
+      dueDayOfMonth: 4,
+      ...extra,
+    }),
+  ],
+});
+
 /** Anchor, account, salary — the three sections everything else needs. */
 const OPENING: ScriptedTurn[] = [anchorTurn, accountTurn, salaryTurn];
 
@@ -293,6 +306,76 @@ describe('ConverseSetup', () => {
     expect(draft.fixedBills.map((bill) => bill.amount.cents)).toEqual([
       -32_000, -12_000,
     ]);
+  });
+
+  /**
+   * FIN-117 — a bill on the 4th is a real bill. With pay on the 5th, three of
+   * the twelve cycles end on the 3rd and never reach it, so the refusal is
+   * put to the user as an offer of the cycle's own last day.
+   */
+  it('offers the cycle last day rather than refusing a bill in a gap', async () => {
+    const { converse, conversations } = wire([...OPENING, gymTurn()]);
+
+    const turn = await runThrough(converse, 4);
+
+    expect(turn.corrections[0]).toMatch(
+      /Gym.*day 4.*last day.*everywhere else/,
+    );
+    expect((await draftOf(conversations, 'conv-1')).fixedBills).toEqual([]);
+  });
+
+  /** The model has to be told what taking the offer is, or it cannot ask. */
+  it('tells the model how the offer is taken, and never takes it itself', async () => {
+    const { converse, conversations } = wire([...OPENING, gymTurn()]);
+
+    await runThrough(converse, 4);
+    const stored = await conversations.load('conv-1');
+    const results = stored?.transcript.flatMap((message) =>
+      message.role === 'toolResults' ? message.results : [],
+    );
+
+    expect(results?.at(-1)?.content).toContain('acceptCycleLastDay');
+    expect(results?.at(-1)?.isError).toBe(true);
+  });
+
+  it('records the fallback once the user has taken the offer', async () => {
+    const { converse, conversations } = wire([
+      ...OPENING,
+      gymTurn(),
+      gymTurn({ acceptCycleLastDay: true }),
+    ]);
+
+    await runThrough(converse, 5);
+    const [gym] = (await draftOf(conversations, 'conv-1')).fixedBills;
+
+    expect(gym?.dueDayOfMonth).toBe(4);
+    expect(
+      gym?.dueDateOverrides.map((override) => override.date.toISO()),
+    ).toEqual(['2026-09-03', '2026-12-03', '2027-06-03']);
+  });
+
+  it('takes the offer on a correction as well as on a recording', async () => {
+    const { converse, conversations } = wire([
+      ...OPENING,
+      { text: 'Recorded.', toolCalls: [healthPlan({ dueDayOfMonth: 8 })] },
+      {
+        text: 'Fixed.',
+        toolCalls: [
+          call('correct_record', {
+            recordId: 'conv-3',
+            dueDayOfMonth: 4,
+            acceptCycleLastDay: true,
+          }),
+        ],
+      },
+    ]);
+
+    const turn = await runThrough(converse, 5);
+    const [bill] = (await draftOf(conversations, 'conv-1')).fixedBills;
+
+    expect(turn.corrections).toEqual([]);
+    expect(bill?.dueDayOfMonth).toBe(4);
+    expect(bill?.dueDateOverrides).toHaveLength(3);
   });
 
   /** Only a confirmed correction may replace an answer, never a stray call. */

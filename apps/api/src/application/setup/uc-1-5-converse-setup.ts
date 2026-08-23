@@ -28,7 +28,12 @@ import type { SpendCeiling } from '../spend/spend-ceiling.js';
 
 import type { RecordCorrection } from './record-correction.js';
 import { applyCorrection, describeRule } from './record-correction.js';
-import { SETUP_SECTIONS, SetupDraft, SetupSection } from './setup-draft.js';
+import {
+  DueDayOutsideCycle,
+  SETUP_SECTIONS,
+  SetupDraft,
+  SetupSection,
+} from './setup-draft.js';
 
 export class SetupConversationNotFound extends DomainError {}
 
@@ -226,9 +231,16 @@ export class ConverseSetup {
     const results: ToolResult[] = [];
     let current = state;
 
-    const refuse = (call: ToolCall, reason: string): void => {
+    // The hint goes to the model and not to the user: what to call next is
+    // this interactor's vocabulary, and the user is being asked a question
+    // about their own bill.
+    const refuse = (call: ToolCall, reason: string, hint = ''): void => {
       corrections.push(reason);
-      results.push({ callId: call.id, content: reason, isError: true });
+      results.push({
+        callId: call.id,
+        content: `${reason}${hint}`,
+        isError: true,
+      });
     };
 
     for (const call of calls) {
@@ -271,7 +283,7 @@ export class ConverseSetup {
           });
         } catch (error) {
           if (!(error instanceof DomainError)) throw error;
-          refuse(call, error.message);
+          refuse(call, error.message, hintFor(error));
         }
         continue;
       }
@@ -344,7 +356,7 @@ export class ConverseSetup {
         // Every rule belongs to the draft, so what it refuses is something to
         // say back rather than a failure: the draft is left exactly as it was.
         if (!(error instanceof DomainError)) throw error;
-        refuse(call, error.message);
+        refuse(call, error.message, hintFor(error));
       }
     }
 
@@ -490,6 +502,27 @@ const FINISH_TOOL: ToolDeclaration = {
   inputSchema: schema({}, []),
 };
 
+/**
+ * What taking the offer is called, in the model's vocabulary — FIN-117. It is
+ * never set from a refusal alone: the user has to agree, because the fallback
+ * moves one cycle's date off the day they gave.
+ */
+const FALLBACK_FIELD = 'acceptCycleLastDay';
+
+const FALLBACK_HINT = ` Put that to the user, and only once they agree call the tool again with the same day and ${FALLBACK_FIELD} set to true. Never set it on your own.`;
+
+function hintFor(error: DomainError): string {
+  return error instanceof DueDayOutsideCycle ? FALLBACK_HINT : '';
+}
+
+const FALLBACK_FLAG: JsonObject = {
+  [FALLBACK_FIELD]: {
+    type: 'boolean',
+    description:
+      "true only when the user has agreed to use the cycle's last day in the cycles that cannot reach the due day. The due day itself stays as they gave it",
+  },
+};
+
 const RULE_QUESTION =
   'how much goes in each cycle — a percentage of Expected Surplus, or a fixed amount';
 
@@ -535,6 +568,7 @@ const CORRECT_TOOL: ToolDeclaration = {
         description:
           'for a bill: true when the amount is a guess rather than a known figure',
       },
+      ...FALLBACK_FLAG,
       limitInCents: centsField('for a card: the credit limit'),
       closingDay: dayField('for a card: the day the invoice closes'),
       dueDay: dayField('for a card: the day the invoice falls due'),
@@ -898,6 +932,7 @@ function readCorrection(args: JsonObject): RecordCorrection {
     amount: readCents(args, 'amountInCents'),
     dueDayOfMonth: readInteger(args, 'dueDayOfMonth'),
     isEstimate: readFlag(args, 'isEstimate'),
+    acceptCycleFallback: readFlag(args, FALLBACK_FIELD),
     limit: readCents(args, 'limitInCents'),
     closingDay: readInteger(args, 'closingDay'),
     dueDay: readInteger(args, 'dueDay'),
@@ -985,6 +1020,7 @@ function billSpec(
             description:
               'true when the amount is a guess rather than a known figure',
           },
+          ...FALLBACK_FLAG,
         },
         ['name', 'amountInCents'],
       ),
@@ -1002,11 +1038,13 @@ function billSpec(
       }
 
       const isEstimate = readFlag(args, 'isEstimate');
+      const acceptCycleFallback = readFlag(args, FALLBACK_FIELD);
       const proposed = {
         name,
         amount,
         dueDayOfMonth,
         ...(isEstimate === undefined ? {} : { isEstimate }),
+        ...(acceptCycleFallback === undefined ? {} : { acceptCycleFallback }),
       };
       const updated =
         section === SetupSection.FixedBills
