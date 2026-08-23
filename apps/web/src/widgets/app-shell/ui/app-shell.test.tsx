@@ -105,7 +105,7 @@ function storeConversation() {
 
 const openRail = async () => {
   await userEvent.click(
-    await screen.findByRole('button', { name: 'Abrir o assistente' }),
+    await screen.findByRole('button', { name: 'Assistente' }),
   );
 };
 
@@ -263,7 +263,7 @@ describe('AppShell and the assistant rail', () => {
       screen.queryByRole('log', { name: 'Conversa com o assistente' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Abrir o assistente' }),
+      screen.getByRole('button', { name: 'Assistente' }),
     ).toHaveAttribute('aria-expanded', 'false');
   });
 
@@ -338,11 +338,11 @@ describe('AppShell and the assistant rail', () => {
   });
 
   /**
-   * Icons, 380px of chat and the figures do not fit below 64rem, so there the
-   * rail covers the content rather than squeezing it into a column too narrow
-   * to read.
+   * A 380px column and a readable column of figures do not both fit below
+   * 64rem, so there the chat rises as a sheet over the screen instead — the
+   * shape a conversation takes on a phone.
    */
-  it('covers the content rather than pushing it on a narrow window', async () => {
+  it('rises as a sheet rather than a column on a narrow window', async () => {
     stubWidth(false);
     stubApi({ '/api/cycles': window_ });
     renderShell();
@@ -351,7 +351,29 @@ describe('AppShell and the assistant rail', () => {
 
     expect(
       screen.getByRole('complementary', { name: 'Assistente' }),
-    ).toHaveAttribute('data-layout', 'overlay');
+    ).toHaveAttribute('data-layout', 'sheet');
+  });
+
+  /**
+   * Folded away, the chat is one floating control on the same side the rail
+   * opens on — not a second strip standing beside the nav, which read as
+   * another bar to account for rather than a way back into the chat.
+   */
+  it('folds away to a single floating control, not a strip', async () => {
+    stubApi({ '/api/cycles': window_ });
+    renderShell();
+
+    const tab = await screen.findByRole('button', {
+      name: 'Assistente',
+    });
+    const body = screen.getByRole('main');
+
+    expect(
+      body.compareDocumentPosition(tab) & Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
+    // The label belongs to the button: a strip with its own vertical caption
+    // beside an icon is the second bar this replaced.
+    expect(screen.getAllByText('Assistente')).toHaveLength(1);
   });
 
   it('sits beside the content on a wide window', async () => {
@@ -363,5 +385,92 @@ describe('AppShell and the assistant rail', () => {
     expect(
       screen.getByRole('complementary', { name: 'Assistente' }),
     ).toHaveAttribute('data-layout', 'inline');
+  });
+});
+
+/**
+ * Below 64rem the nav cannot hold a column of its own without leaving the
+ * figures unreadable, so it becomes a drawer — the same three links, reached
+ * from the header rather than standing beside the content.
+ */
+describe('AppShell on a phone', () => {
+  beforeEach(() => {
+    stubWidth(false);
+  });
+
+  it('keeps the nav behind a menu rather than beside the figures', async () => {
+    stubApi({ '/api/cycles': window_ });
+    renderShell();
+    await screen.findByText('screen body');
+
+    expect(
+      screen.queryByRole('link', { name: 'Perfil' }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir o menu' }));
+
+    expect(
+      screen.getAllByRole('link').map((link) => link.textContent),
+    ).toEqual(['Principal', 'Perfil', 'Investimentos e Reservas']);
+  });
+
+  // The drawer covers the screen it navigates to, so it has to get out of the
+  // way once the choice is made.
+  it('closes the drawer once a screen is picked', async () => {
+    stubApi({ '/api/cycles': window_ });
+    renderShell();
+    await screen.findByText('screen body');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir o menu' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Principal' }));
+
+    expect(
+      screen.queryByRole('link', { name: 'Perfil' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('closes the drawer from the backdrop behind it', async () => {
+    stubApi({ '/api/cycles': window_ });
+    renderShell();
+    await screen.findByText('screen body');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir o menu' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar o menu' }));
+
+    expect(
+      screen.queryByRole('link', { name: 'Perfil' }),
+    ).not.toBeInTheDocument();
+  });
+
+  // UC-1.2 — the total the sidebar exists to keep visible follows the nav
+  // into the drawer rather than being dropped on the screen that has least
+  // room for it.
+  it('carries the accounts total into the drawer', async () => {
+    stubApi({
+      '/api/cycles': window_,
+      '/api/accounts': {
+        accounts: [{ id: 'a', name: 'Inter', type: 'CHECKING', balance: 1 }],
+        total: 1,
+      },
+    });
+    renderShell();
+    await screen.findByText('screen body');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir o menu' }));
+
+    expect(await screen.findByText('Nas contas agora')).toBeVisible();
+  });
+});
+
+describe('AppShell on a wide screen', () => {
+  it('needs no menu, because the nav is already on screen', async () => {
+    stubApi({ '/api/cycles': window_ });
+    renderShell();
+    await screen.findByText('screen body');
+
+    expect(
+      screen.queryByRole('button', { name: 'Abrir o menu' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Perfil' })).toBeInTheDocument();
   });
 });

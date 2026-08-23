@@ -6,7 +6,6 @@ import { Money } from '../../domain/shared/money.js';
 import {
   InMemoryAccountRepository,
   InMemoryBucketRepository,
-  InMemoryCardRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
 } from '../testing/fakes.js';
@@ -16,20 +15,18 @@ function build({
   anchorConfigured = false,
   accounts = new InMemoryAccountRepository(),
   templates = new InMemoryTemplateRepository(),
-  cards = new InMemoryCardRepository(),
   buckets = new InMemoryBucketRepository(),
 }: {
   anchorConfigured?: boolean;
   accounts?: InMemoryAccountRepository;
   templates?: InMemoryTemplateRepository;
-  cards?: InMemoryCardRepository;
   buckets?: InMemoryBucketRepository;
 } = {}) {
   const settings = new InMemorySettingsRepository();
   if (anchorConfigured) {
     void settings.save(PaydayAnchor.of(5, ShiftPolicy.Preceding));
   }
-  return new ReadSetupState(settings, accounts, templates, cards, buckets);
+  return new ReadSetupState(settings, accounts, templates, buckets);
 }
 
 function account(name: string): Account {
@@ -48,7 +45,6 @@ describe('ReadSetupState', () => {
     expect(state).toEqual({
       anchorConfigured: false,
       accounts: 0,
-      cards: 0,
       templates: 0,
       buckets: 0,
       isPristine: true,
@@ -84,7 +80,6 @@ describe('ReadSetupState', () => {
     expect(state).toEqual({
       anchorConfigured: true,
       accounts: 2,
-      cards: 0,
       templates: 0,
       buckets: 0,
       isPristine: false,

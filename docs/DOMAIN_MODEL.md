@@ -12,16 +12,14 @@ describes how the system is structured so it stays true to it.
 | Context | Responsibility | Use cases |
 |---|---|---|
 | **Budgeting** *(core)* | Cycles, ledger entries, recurring templates, the calculation chain | UC-2, UC-3 |
-| **Cards** | Cards, invoices, purchases, instalment plans | UC-5 |
 | **Allocation & Goals** | Buckets, allocation rules, contributions, yields, corrections | UC-6 |
 | **Projection** *(read models)* | Dashboard, alerts, wealth projection | UC-4, UC-7 |
 | **Assistant** *(read models + intent)* | Answering from the app's own figures; proposing changes for the user to confirm | UC-1.5, UC-8 |
 
 Contexts communicate through application services and domain events, never by reaching into each other's
-aggregates. **Cards** publishes `InvoiceClosed` carrying a due date and a total; **Budgeting** consumes it and
-materialises a ledger entry. Budgeting knows nothing about purchases.
+aggregates.
 
-**Projection is read-only.** It never mutates. Every view it produces is derived from the other three
+**Projection is read-only.** It never mutates. Every view it produces is derived from the other two
 contexts, which keeps the numbers honest by construction — there is no separate "forecast data" that can drift
 from reality.
 
@@ -61,11 +59,8 @@ CycleRef
 ### The assignment rule
 
 > **An entry belongs to the cycle whose date range contains its due date.**
->
-> For a credit card invoice, the **due date decides** — not the dates of the purchases on it.
 
-Stated once here, implemented once in `CycleRef.contains(date)`, never re-derived. UC-5.4 is the user-facing
-explanation of the same rule.
+Stated once here, implemented once in `CycleRef.contains(date)`, never re-derived.
 
 ---
 
@@ -87,13 +82,12 @@ Cycle
 LedgerEntry                          // entity within Cycle
   id
   description     : string
-  kind            : INCOME | FIXED | INVOICE | VARIABLE | ALLOCATION
+  kind            : INCOME | FIXED | VARIABLE | ALLOCATION
   dueDate         : LocalDate        // decides cycle membership
   amount          : PlannedActual    // planned, actual, status
   isEstimate      : boolean          // UC-2.6 — unconfirmed placeholder
   origin          : Manual
                   | FromTemplate(RecurringTemplateId)
-                  | FromInvoice(InvoiceId)
                   | FromAllocation(BucketId)
                   | Override(originalOrigin, projectedAmount)   // UC-3.7
 ```
@@ -135,45 +129,6 @@ alone.
 
 Generation is **lazy and idempotent**: materialising a cycle asks every active template for its entry, keyed by
 `(templateId, cycleRef)`, so re-running never duplicates.
-
-### `Card` — aggregate root · Cards
-
-```
-Card
-  id, name, limit: Money
-  closingDay, dueDay : 1–31
-  paymentAccount     : AccountId
-  invoices           : Invoice[]
-  installmentPlans   : InstallmentPlan[]
-```
-
-```
-Invoice                              // entity within Card
-  id
-  periodStart, periodEnd : LocalDate // driven by closingDay
-  dueDate                : LocalDate // drives cycle assignment
-  status                 : OPEN | CLOSED | PAID
-  items                  : InvoiceItem[]
-
-InvoiceItem
-  purchaseId, description
-  amount        : Money              // negative for a refund (UC-5.7)
-  installment   : InstallmentRef?    // 3 of 10
-
-InstallmentPlan
-  purchaseId, totalInstallments, remaining
-  amountPerInstallment : Money
-  firstInvoiceId
-```
-
-**Invariants**
-- A `CLOSED` invoice accepts no new items.
-- An instalment plan's items sum to the original purchase amount — the last instalment absorbs the rounding
-  remainder, so cents never vanish.
-- A plan self-retires when `remaining` reaches zero (UC-5.2).
-
-**Events**: `InvoiceClosed { cardId, invoiceId, total, dueDate }` → Budgeting creates an `INVOICE` kind
-`LedgerEntry` with `origin = FromInvoice`, in the cycle containing `dueDate`.
 
 ### `Bucket` — aggregate root · Allocation & Goals
 
@@ -234,7 +189,6 @@ Their sum is the app's starting cash and the sidebar total (UC-1.2).
 | `CycleRef` | Anchor day, resolved start/end, label. Owns the weekend and short-month rules and `contains(date)` |
 | `PlannedActual` | `{ planned: Money, actual: Money?, status: PENDING \| PAID \| RECEIVED \| SKIPPED \| OVERDUE }`. Variance is derived; a projected entry has no actual |
 | `Percentage` | Basis points internally, so `33,33 %` is exact |
-| `InstallmentRef` | `{ number, total }`, renders as `3/10` |
 | `DateRange` | Inclusive of both bounds, as cycles are |
 
 ---
@@ -278,8 +232,8 @@ guarantee and cannot be made to.
 
 > **The model produces intent. The domain enforces every invariant.**
 
-A `ProposedChange` is a discriminated union — settle this entry, add this bill, split this purchase across ten
-invoices — and it is a statement of intent, not a change. It is rendered for the user in the app's own
+A `ProposedChange` is a discriminated union — settle this entry, add this bill, change what a template
+charges — and it is a statement of intent, not a change. It is rendered for the user in the app's own
 vocabulary, confirmed explicitly, and only then handed to the interactor that already implements that use
 case. No path exists from a model response to a repository write that does not pass through a confirmation.
 
@@ -327,7 +281,7 @@ Declared in the domain, implemented in infrastructure. The domain never imports 
 
 | Port | Implementation |
 |---|---|
-| `CycleRepository`, `RecurringTemplateRepository`, `CardRepository`, `BucketRepository`, `AccountRepository` | Prisma |
+| `CycleRepository`, `RecurringTemplateRepository`, `BucketRepository`, `AccountRepository` | Prisma |
 | `Clock` | Real clock in production, fixed clock in tests. Nothing in the domain calls `new Date()` |
 | `HolidayCalendar` | Brazilian public holidays, for the payday resolution rule |
 | `LanguageModel` | The conversation of UC-1.5 and the assistant of UC-8. Declared in the domain's own vocabulary — a turn, the tools it may call, the result — so nothing above it knows which vendor answers. Implemented in `infrastructure/gemini/`, `infrastructure/anthropic/` and, for free local testing, `infrastructure/ollama/`; faked in tests, so no test needs a key or a network |
@@ -358,14 +312,12 @@ without a key would make the key a precondition for reading your own numbers.
 src/
   domain/
     budgeting/        cycle.ts, ledger-entry.ts, recurring-template.ts, cycle-ref.ts, account.ts
-    cards/            card.ts, invoice.ts, installment-plan.ts
     goals/            bucket.ts, bucket-event.ts, allocation-rule.ts
     shared/           money.ts, percentage.ts, planned-actual.ts, date-range.ts
     ports/            clock.ts, holiday-calendar.ts, language-model.ts, repositories.ts
 
   application/        one interactor per use case, named for its id
     budgeting/        uc-3-5-settle-entry.ts, uc-3-8-close-cycle.ts, …
-    cards/            uc-5-1-register-purchase.ts, uc-5-2-split-installments.ts, …
     goals/            uc-6-5-override-contribution.ts, uc-6-7-correct-balance.ts, …
     projection/       uc-4-build-dashboard.ts, uc-4-7-build-alerts.ts,
                       uc-7-project-wealth.ts
@@ -394,9 +346,9 @@ src/
   pages/       main/ profile/ savings/ onboarding/
   widgets/     chain-strip/ upcoming-list/ alert-list/ bucket-event-log/ wealth-bars/
   features/    ask-assistant/ settle-entry/ toggle-estimates/ navigate-cycle/
-               configure-anchor/ configure-card/ manage-accounts/ manage-templates/
+               configure-anchor/ manage-accounts/ manage-templates/
                manage-buckets/ create-bucket/ backup-restore/
-  entities/    cycle/ ledger-entry/ card/ invoice/ bucket/ template/ account/
+  entities/    cycle/ ledger-entry/ bucket/ template/ account/
   shared/      ui/ api/ lib/ config/
 ```
 

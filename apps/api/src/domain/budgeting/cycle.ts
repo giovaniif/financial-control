@@ -210,7 +210,7 @@ export class Cycle {
 
     // Outgoing money is negative in the domain, so Total Outcome is reported
     // as the positive figure the UI shows and subtracted rather than added.
-    const fixedOutflow = sumOf(EntryKind.Fixed, EntryKind.Invoice);
+    const fixedOutflow = sumOf(EntryKind.Fixed);
     const variableOutflow = Money.sum(
       counted
         .filter((entry) => entry.kind === EntryKind.Variable)
@@ -335,8 +335,7 @@ const KIND_ORDER: Record<EntryKind, number> = {
   [EntryKind.Income]: 0,
   [EntryKind.Variable]: 1,
   [EntryKind.Fixed]: 2,
-  [EntryKind.Invoice]: 3,
-  [EntryKind.Allocation]: 4,
+  [EntryKind.Allocation]: 3,
 };
 
 function byDueDateThenKind(a: LedgerEntry, b: LedgerEntry): number {

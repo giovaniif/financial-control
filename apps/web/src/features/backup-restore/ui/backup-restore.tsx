@@ -13,7 +13,6 @@ interface Counts {
   accounts: number;
   cycles: number;
   templates: number;
-  cards: number;
   buckets: number;
 }
 
@@ -115,9 +114,8 @@ function ImportForm({
         className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900"
       >
         Isso substitui tudo o que está no app agora: {counts.accounts} contas,{' '}
-        {counts.cycles} ciclos, {counts.templates} contas e receitas,{' '}
-        {counts.cards} cartões e {counts.buckets} caixinhas. Não há como
-        desfazer.
+        {counts.cycles} ciclos, {counts.templates} contas e receitas e{' '}
+        {counts.buckets} caixinhas. Não há como desfazer.
       </p>
 
       <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600">

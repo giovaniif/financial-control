@@ -48,17 +48,6 @@ export type {
   SettleEntryRequest,
 } from './cycles.js';
 export type {
-  BillingPreviewResponse,
-  CardResponse,
-  InvoiceItemResponse,
-  InvoiceResponse,
-  InvoiceStatus,
-  OpenCardRequest,
-  PayInvoiceRequest,
-  PayOffEarlyRequest,
-  RegisterPurchaseRequest,
-} from './cards.js';
-export type {
   AllocationPreviewResponse,
   AllocationRuleRequest,
   BucketEventResponse,
@@ -86,7 +75,6 @@ export type {
   EstablishedAccountFields,
   EstablishedBillFields,
   EstablishedBucketFields,
-  EstablishedCardFields,
   EstablishedRecordResponse,
   SetupAppliedResponse,
   SetupDueDayRefusalResponse,
@@ -113,12 +101,9 @@ export type {
   BackupAccount,
   BackupBucket,
   BackupBucketEvent,
-  BackupCard,
   BackupCycle,
   BackupDocument,
   BackupEntry,
   BackupEntryOrigin,
-  BackupInvoice,
-  BackupInvoiceItem,
   BackupTemplate,
 } from './backup.js';

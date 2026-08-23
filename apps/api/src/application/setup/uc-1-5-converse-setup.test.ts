@@ -154,8 +154,7 @@ const nothingHere: ScriptedTurn = {
 
 /** Everything up to, and stopping on, the section each one names. */
 const TO_VARIABLE_BILLS = [...OPENING, nothingHere];
-const TO_CARDS = [...TO_VARIABLE_BILLS, nothingHere];
-const TO_BUCKETS = [...TO_CARDS, nothingHere];
+const TO_BUCKETS = [...TO_VARIABLE_BILLS, nothingHere];
 
 const WHOLE_SETUP: ScriptedTurn[] = [
   ...OPENING,
@@ -167,19 +166,6 @@ const WHOLE_SETUP: ScriptedTurn[] = [
         name: 'Electricity',
         amountInCents: 28_000,
         dueDayOfMonth: 15,
-      }),
-      done(),
-    ],
-  },
-  {
-    text: 'Recorded.',
-    toolCalls: [
-      call('record_card', {
-        name: 'Inter',
-        limitInCents: 1_000_000,
-        closingDay: 28,
-        dueDay: 10,
-        paymentAccountName: 'Checking',
       }),
       done(),
     ],
@@ -210,7 +196,6 @@ describe('ConverseSetup', () => {
 
     expect(document.accounts).toHaveLength(1);
     expect(document.templates).toHaveLength(3);
-    expect(document.cards).toHaveLength(1);
     expect(document.buckets).toHaveLength(1);
   });
 
@@ -441,14 +426,14 @@ describe('ConverseSetup', () => {
 
   it('settles a section the user has nothing to say about', async () => {
     const { converse, conversations } = wire([
-      ...WHOLE_SETUP.slice(0, 5),
-      { text: 'No cards, then.', toolCalls: [done()] },
+      ...WHOLE_SETUP.slice(0, 4),
+      { text: 'No variable bills, then.', toolCalls: [done()] },
     ]);
 
-    const turn = await runThrough(converse, 6);
+    const turn = await runThrough(converse, 5);
 
     expect(turn.nextSection).toBe(SetupSection.Buckets);
-    expect((await draftOf(conversations, 'conv-1')).cards).toEqual([]);
+    expect((await draftOf(conversations, 'conv-1')).variableBills).toEqual([]);
   });
 
   /**
@@ -688,20 +673,6 @@ describe('ConverseSetup', () => {
     expect(
       (await draftOf(conversations, 'conv-1')).fixedBills[0]?.isEstimate,
     ).toBe(true);
-  });
-
-  it('asks for everything a card needs beyond its name', async () => {
-    const { converse } = wire([
-      ...TO_CARDS,
-      { text: 'Noted.', toolCalls: [call('record_card', { name: 'Inter' })] },
-    ]);
-
-    const turn = await runThrough(converse, TO_CARDS.length + 1);
-
-    expect(turn.message).toContain('o limite do cartão');
-    expect(turn.message).toContain('o dia em que a fatura fecha');
-    expect(turn.message).toContain('o dia em que a fatura vence');
-    expect(turn.message).toContain('qual conta paga a fatura');
   });
 
   it('records a goal bucket with its target and the date to reach it', async () => {
@@ -978,7 +949,7 @@ describe('ConverseSetup', () => {
 
     const turn = await converse.execute(me, {
       conversationId: complete.conversationId,
-      message: 'electricity is on the card, drop it',
+      message: 'electricity is wrong, drop it',
     });
 
     expect(turn.removed).toEqual(['conv-4']);
@@ -1003,14 +974,13 @@ describe('ConverseSetup', () => {
 
   /**
    * Every kind of record `WHOLE_SETUP` establishes, and the id the sequential
-   * id source gave it: the account, the fixed bill, the card and the bucket.
+   * id source gave it: the account, the two bills and the bucket.
    */
   const corrected: readonly [string, string, JsonObject][] = [
     ['an account', 'conv-2', { balanceInCents: 500_000 }],
     ['a fixed bill', 'conv-3', { amountInCents: 35_000 }],
     ['a variable bill', 'conv-4', { dueDayOfMonth: 16 }],
-    ['a card', 'conv-5', { closingDay: 25, limitInCents: 2_000_000 }],
-    ['a bucket', 'conv-6', { fixedAmountInCents: 177_800 }],
+    ['a bucket', 'conv-5', { fixedAmountInCents: 177_800 }],
   ];
 
   it.each(corrected)(
@@ -1032,25 +1002,6 @@ describe('ConverseSetup', () => {
     },
   );
 
-  it('corrects the card and reads back the account that still pays it', async () => {
-    const { converse, conversations } = wire([
-      ...WHOLE_SETUP,
-      {
-        text: 'Fixed.',
-        toolCalls: [
-          call('correct_record', { recordId: 'conv-5', closingDay: 25 }),
-        ],
-      },
-    ]);
-
-    const turn = await runThrough(converse, WHOLE_SETUP.length + 1);
-    const [card] = (await draftOf(conversations, 'conv-1')).cards;
-
-    expect(card?.closingDay).toBe(25);
-    expect(card?.dueDay).toBe(10);
-    expect(turn.established[0]?.summary).toContain('pago por Checking');
-  });
-
   it('corrects what an ongoing bucket puts away, keeping its funding order', async () => {
     const { converse, conversations } = wire([
       ...WHOLE_SETUP,
@@ -1058,7 +1009,7 @@ describe('ConverseSetup', () => {
         text: 'Fixed.',
         toolCalls: [
           call('correct_record', {
-            recordId: 'conv-6',
+            recordId: 'conv-5',
             fixedAmountInCents: 177_800,
           }),
         ],
@@ -1130,8 +1081,7 @@ describe('ConverseSetup', () => {
   const nothingStated: readonly [string, string][] = [
     ['an account', 'conv-2'],
     ['a bill', 'conv-3'],
-    ['a card', 'conv-5'],
-    ['an ongoing bucket', 'conv-6'],
+    ['an ongoing bucket', 'conv-5'],
   ];
 
   it.each(nothingStated)(
@@ -1177,23 +1127,6 @@ describe('ConverseSetup', () => {
 
     expect(turn.removed).toEqual([]);
     expect(turn.message).toContain('conv-9');
-  });
-
-  /** The draft's rule, said back: a card would be left paid from nothing. */
-  it('refuses to drop an account a card is paid from', async () => {
-    const { converse, conversations } = wire([
-      ...WHOLE_SETUP,
-      {
-        text: 'Dropped.',
-        toolCalls: [call('remove_record', { recordId: 'conv-2' })],
-      },
-    ]);
-
-    const turn = await runThrough(converse, WHOLE_SETUP.length + 1);
-
-    expect(turn.removed).toEqual([]);
-    expect(turn.corrections[0]).toContain('Inter');
-    expect((await draftOf(conversations, 'conv-1')).accounts).toHaveLength(1);
   });
 
   it('offers the corrections only once there is something to correct', async () => {

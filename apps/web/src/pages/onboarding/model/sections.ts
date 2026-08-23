@@ -7,7 +7,6 @@ export const SECTION_ORDER: readonly SetupSection[] = [
   'SALARY',
   'FIXED_BILLS',
   'VARIABLE_BILLS',
-  'CARDS',
   'BUCKETS',
 ];
 
@@ -17,7 +16,6 @@ export const SECTION_LABELS: Record<SetupSection, string> = {
   SALARY: 'Salário',
   FIXED_BILLS: 'Contas fixas',
   VARIABLE_BILLS: 'Contas variáveis',
-  CARDS: 'Cartões de crédito',
   BUCKETS: 'Caixinhas',
 };
 
@@ -32,7 +30,6 @@ export const SECTION_PLACEHOLDERS: Record<SetupSection, string> = {
   SALARY: '18 mil por mês',
   FIXED_BILLS: 'plano de saúde 320 no dia 8',
   VARIABLE_BILLS: 'energia, uns 280 no dia 15',
-  CARDS: 'Inter, limite 5 mil, fecha dia 28 e vence dia 10',
   BUCKETS: 'reserva de emergência, 1.500 por ciclo',
 };
 

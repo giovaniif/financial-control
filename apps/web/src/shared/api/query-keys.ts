@@ -18,8 +18,7 @@ export const queryKeys = {
     month === undefined
       ? (['dashboard'] as const)
       : (['dashboard', month, estimates ?? null] as const),
-  wealth: (month?: string, yields?: string) =>
-    ['wealth', month ?? null, yields ?? null] as const,
+  wealth: (month?: string) => ['wealth', month ?? null] as const,
 
   cycles: () => ['cycles'] as const,
   cycleWindow: (estimates: EstimateMode) =>

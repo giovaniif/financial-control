@@ -58,7 +58,6 @@ export const SetupSection = {
   Salary: 'SALARY',
   FixedBills: 'FIXED_BILLS',
   VariableBills: 'VARIABLE_BILLS',
-  Cards: 'CARDS',
   Buckets: 'BUCKETS',
 } as const;
 
@@ -71,7 +70,6 @@ export const SETUP_SECTIONS = [
   SetupSection.Salary,
   SetupSection.FixedBills,
   SetupSection.VariableBills,
-  SetupSection.Cards,
   SetupSection.Buckets,
 ] as const;
 
@@ -103,16 +101,6 @@ export interface DraftBill {
    * the 4th, and the other eleven cycles say so.
    */
   readonly dueDateOverrides: readonly DueDateOverride[];
-}
-
-export interface DraftCard {
-  readonly id: string;
-  readonly name: string;
-  readonly limit: Money;
-  readonly closingDay: number;
-  readonly dueDay: number;
-  /** Names an account the draft already holds; the conversation has no ids. */
-  readonly paymentAccountName: string;
 }
 
 /**
@@ -151,14 +139,6 @@ export interface ProposedBill {
   readonly acceptCycleFallback?: boolean;
 }
 
-export interface ProposedCard {
-  readonly name: string;
-  readonly limit: Money;
-  readonly closingDay: number;
-  readonly dueDay: number;
-  readonly paymentAccountName: string;
-}
-
 export interface ProposedBucket {
   readonly name: string;
   readonly rule: AllocationRule;
@@ -179,7 +159,6 @@ export type DraftRecord =
   | { readonly section: 'ACCOUNTS'; readonly record: DraftAccount }
   | { readonly section: 'FIXED_BILLS'; readonly record: DraftBill }
   | { readonly section: 'VARIABLE_BILLS'; readonly record: DraftBill }
-  | { readonly section: 'CARDS'; readonly record: DraftCard }
   | { readonly section: 'BUCKETS'; readonly record: DraftBucket };
 
 interface DraftState {
@@ -191,7 +170,6 @@ interface DraftState {
   readonly salary: Money | undefined;
   readonly fixedBills: readonly DraftBill[];
   readonly variableBills: readonly DraftBill[];
-  readonly cards: readonly DraftCard[];
   readonly buckets: readonly DraftBucket[];
   readonly skipped: ReadonlySet<SetupSection>;
 }
@@ -241,7 +219,6 @@ export class SetupDraft {
       salary: undefined,
       fixedBills: [],
       variableBills: [],
-      cards: [],
       buckets: [],
       skipped: new Set(),
     });
@@ -279,10 +256,6 @@ export class SetupDraft {
     return this.state.variableBills;
   }
 
-  get cards(): readonly DraftCard[] {
-    return this.state.cards;
-  }
-
   get buckets(): readonly DraftBucket[] {
     return this.state.buckets;
   }
@@ -300,10 +273,6 @@ export class SetupDraft {
       })),
       ...this.state.variableBills.map((record): DraftRecord => ({
         section: 'VARIABLE_BILLS',
-        record,
-      })),
-      ...this.state.cards.map((record): DraftRecord => ({
-        section: 'CARDS',
         record,
       })),
       ...this.state.buckets.map((record): DraftRecord => ({
@@ -374,19 +343,10 @@ export class SetupDraft {
     id: string,
     proposed: { name: string; type: AccountType; balance: Money },
   ): SetupDraft {
-    const previous = existing(this.state.accounts, id, ACCOUNT);
+    existing(this.state.accounts, id, ACCOUNT);
     const account = this.readAccount(id, proposed);
 
-    return this.with({
-      accounts: replacing(this.state.accounts, account),
-      // A card names the account that pays it, and the draft holds no ids for
-      // the conversation to use, so a corrected name has to travel with it.
-      cards: this.state.cards.map((card) =>
-        card.paymentAccountName === previous.name
-          ? { ...card, paymentAccountName: account.name }
-          : card,
-      ),
-    });
+    return this.with({ accounts: replacing(this.state.accounts, account) });
   }
 
   withSalary(amount: Money): SetupDraft {
@@ -432,20 +392,6 @@ export class SetupDraft {
     });
   }
 
-  addCard(proposed: ProposedCard): SetupDraft {
-    const card = this.readCard(this.state.ids.next(), proposed);
-
-    return this.with({ cards: [...this.state.cards, card] });
-  }
-
-  replaceCard(id: string, proposed: ProposedCard): SetupDraft {
-    existing(this.state.cards, id, CARD);
-
-    return this.with({
-      cards: replacing(this.state.cards, this.readCard(id, proposed)),
-    });
-  }
-
   addGoalBucket(proposed: ProposedGoalBucket): SetupDraft {
     const bucket = this.readGoalBucket(this.state.ids.next(), proposed);
 
@@ -487,7 +433,6 @@ export class SetupDraft {
 
     switch (held.section) {
       case 'ACCOUNTS':
-        this.assertNoCardIsPaidFrom(held.record);
         return this.with({ accounts: without(this.state.accounts, id) });
       case 'FIXED_BILLS':
         return this.with({ fixedBills: without(this.state.fixedBills, id) });
@@ -495,8 +440,6 @@ export class SetupDraft {
         return this.with({
           variableBills: without(this.state.variableBills, id),
         });
-      case 'CARDS':
-        return this.with({ cards: without(this.state.cards, id) });
       case 'BUCKETS':
         return this.with({ buckets: without(this.state.buckets, id) });
       default: {
@@ -524,22 +467,10 @@ export class SetupDraft {
       SALARY: this.state.salary !== undefined,
       FIXED_BILLS: this.state.fixedBills.length > 0,
       VARIABLE_BILLS: this.state.variableBills.length > 0,
-      CARDS: this.state.cards.length > 0,
       BUCKETS: this.state.buckets.length > 0,
     };
 
     return answered[section];
-  }
-
-  private assertNoCardIsPaidFrom(account: DraftAccount): void {
-    const card = this.state.cards.find(
-      (held) => held.paymentAccountName === account.name,
-    );
-    if (card !== undefined) {
-      throw new InvalidSetupRecord(
-        `${card.name} é pago por ${account.name}, então o cartão precisa sair ou ser corrigido antes.`,
-      );
-    }
   }
 
   private readAccount(
@@ -621,44 +552,6 @@ export class SetupDraft {
         anchor,
         bill.acceptsCycleFallback,
       ),
-    };
-  }
-
-  private readCard(id: string, proposed: ProposedCard): DraftCard {
-    const name = requireUnusedName(
-      CARD,
-      proposed.name,
-      namesOthersHold(this.state.cards, id),
-    );
-    if (proposed.limit.isNegative()) {
-      throw new InvalidSetupRecord(
-        `${name} não pode ter um limite de R$ ${proposed.limit.toReais()}.`,
-      );
-    }
-    requireDayOfMonth('fechamento', proposed.closingDay);
-    requireDayOfMonth('vencimento', proposed.dueDay);
-
-    // An invoice due date is a real date and cycles tile the calendar, so it
-    // always lands in one: the gap that catches a bill's due day cannot catch
-    // a card's, and checking for it here would refuse a card that works.
-    const paymentAccount = this.state.accounts.find(
-      (account) =>
-        account.name.toLowerCase() ===
-        proposed.paymentAccountName.trim().toLowerCase(),
-    );
-    if (paymentAccount === undefined) {
-      throw new InvalidSetupRecord(
-        `${name} é pago por uma conta chamada "${proposed.paymentAccountName}", que a configuração não tem.`,
-      );
-    }
-
-    return {
-      id,
-      name,
-      limit: proposed.limit,
-      closingDay: proposed.closingDay,
-      dueDay: proposed.dueDay,
-      paymentAccountName: paymentAccount.name,
     };
   }
 
@@ -850,7 +743,6 @@ const ACCOUNT: RecordNoun = { word: 'conta', isFeminine: true };
 const BILL: RecordNoun = { word: 'conta a pagar', isFeminine: true };
 const FIXED_BILL: RecordNoun = { word: 'conta fixa', isFeminine: true };
 const VARIABLE_BILL: RecordNoun = { word: 'conta variável', isFeminine: true };
-const CARD: RecordNoun = { word: 'cartão', isFeminine: false };
 const BUCKET: RecordNoun = { word: 'caixinha', isFeminine: true };
 
 function one(noun: RecordNoun): string {

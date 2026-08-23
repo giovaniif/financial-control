@@ -4,7 +4,6 @@ import type {
   DraftAccount,
   DraftBill,
   DraftBucket,
-  DraftCard,
   DraftRecord,
   SetupDraft,
 } from './setup-draft.js';
@@ -69,8 +68,6 @@ export function summariseRecord(held: DraftRecord): string {
     case 'FIXED_BILLS':
     case 'VARIABLE_BILLS':
       return summariseBill(held.record);
-    case 'CARDS':
-      return summariseCard(held.record);
     case 'BUCKETS':
       return summariseBucket(held.record);
     default: {
@@ -98,10 +95,6 @@ function summariseAccount(account: DraftAccount): string {
 
 function summariseBill(bill: DraftBill): string {
   return `${bill.name} — R$ ${bill.amount.abs().toReais()} no dia ${String(bill.dueDayOfMonth)}${bill.isEstimate ? ', uma estimativa' : ''}.`;
-}
-
-function summariseCard(card: DraftCard): string {
-  return `${card.name} — limite de R$ ${card.limit.toReais()}, fecha no dia ${String(card.closingDay)}, vence no dia ${String(card.dueDay)}, pago por ${card.paymentAccountName}.`;
 }
 
 function summariseBucket(bucket: DraftBucket): string {

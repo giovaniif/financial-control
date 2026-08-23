@@ -75,7 +75,6 @@ describe('setting up without the assistant', () => {
     'O ciclo de pagamento',
     'Onde o seu dinheiro está',
     'Salário e o que se repete a cada ciclo',
-    'Cartões de crédito e suas faturas',
     'Para o que você está guardando',
   ])('covers the %s section', async (heading) => {
     stubApi({ '/api/setup': withoutAssistant });

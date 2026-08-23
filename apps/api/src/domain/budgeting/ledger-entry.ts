@@ -13,7 +13,6 @@ export class InvalidEntry extends DomainError {}
 export const EntryKind = {
   Income: 'INCOME',
   Fixed: 'FIXED',
-  Invoice: 'INVOICE',
   Variable: 'VARIABLE',
   Allocation: 'ALLOCATION',
 } as const;
@@ -28,13 +27,12 @@ export type EntryKind = (typeof EntryKind)[keyof typeof EntryKind];
 export type EntryOrigin =
   | { readonly kind: 'MANUAL' }
   | { readonly kind: 'FROM_TEMPLATE'; readonly templateId: string }
-  | { readonly kind: 'FROM_INVOICE'; readonly invoiceId: string }
   | { readonly kind: 'FROM_ALLOCATION'; readonly bucketId: string }
   | {
       readonly kind: 'OVERRIDE';
       /** What the entry was generated from before it was overridden. */
       readonly original: EntryOrigin;
-      /** The value the template or invoice would have produced. */
+      /** The value the template would have produced. */
       readonly projected: Money;
     };
 
@@ -43,10 +41,6 @@ export const Origin = {
   fromTemplate: (templateId: string): EntryOrigin => ({
     kind: 'FROM_TEMPLATE',
     templateId,
-  }),
-  fromInvoice: (invoiceId: string): EntryOrigin => ({
-    kind: 'FROM_INVOICE',
-    invoiceId,
   }),
   fromAllocation: (bucketId: string): EntryOrigin => ({
     kind: 'FROM_ALLOCATION',
@@ -61,8 +55,6 @@ export function describeOrigin(origin: EntryOrigin): string {
       return 'entered by hand';
     case 'FROM_TEMPLATE':
       return `generated from template ${origin.templateId}`;
-    case 'FROM_INVOICE':
-      return `the invoice ${origin.invoiceId}`;
     case 'FROM_ALLOCATION':
       return `allocated to bucket ${origin.bucketId}`;
     case 'OVERRIDE':

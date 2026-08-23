@@ -27,9 +27,14 @@ const items = [
 interface Props {
   /** Folded to a 56px icon strip so the chat rail has somewhere to open. */
   isCollapsed: boolean;
+  /**
+   * Called once a screen is picked. The drawer passes a dismiss here; beside
+   * the content there is nothing to dismiss, so it does not.
+   */
+  onNavigate?: (() => void) | undefined;
 }
 
-export function Sidebar({ isCollapsed }: Props) {
+export function Sidebar({ isCollapsed, onNavigate }: Props) {
   return (
     <aside
       className={`sticky top-0 flex h-screen shrink-0 flex-col gap-6 border-r border-zinc-200 bg-white py-5 ${
@@ -53,9 +58,10 @@ export function Sidebar({ isCollapsed }: Props) {
             key={item.to}
             to={item.to}
             end={item.to === '/'}
+            onClick={onNavigate}
             className={({ isActive }) =>
               `mx-2 flex items-center gap-2 rounded-lg text-sm transition-colors ${
-                isCollapsed ? 'size-10 justify-center' : 'px-3 py-1.5'
+                isCollapsed ? 'size-10 justify-center' : 'px-3 py-2.5'
               } ${
                 isActive
                   ? 'bg-zinc-100 font-semibold text-zinc-900'
@@ -71,9 +77,11 @@ export function Sidebar({ isCollapsed }: Props) {
         ))}
       </nav>
 
-      {/* Permanently visible: while the nav is folded the header carries it. */}
+      {/* Permanently visible: while the nav is folded the header carries it.
+          The bottom padding is the floating chat button's room — the nav is
+          only ever expanded while that button is on screen. */}
       {!isCollapsed && (
-        <div className="mt-auto px-5">
+        <div className="mt-auto px-5 pb-14">
           <AccountsTotal />
         </div>
       )}

@@ -10,18 +10,14 @@ import {
 import { Cycle } from '../../domain/budgeting/cycle.js';
 import { EntryKind, LedgerEntry } from '../../domain/budgeting/ledger-entry.js';
 import { RecurringTemplate } from '../../domain/budgeting/recurring-template.js';
-import { Card } from '../../domain/cards/card.js';
-import { Invoice } from '../../domain/cards/invoice.js';
 import { Allocation, Bucket } from '../../domain/goals/bucket.js';
 import { noHolidays } from '../../domain/ports/holiday-calendar.js';
-import { InstallmentRef } from '../../domain/shared/installment-ref.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
 import { Percentage } from '../../domain/shared/percentage.js';
 import {
   InMemoryAccountRepository,
   InMemoryBucketRepository,
-  InMemoryCardRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
@@ -77,12 +73,12 @@ function populated() {
         }).skip(),
         // Every origin has to survive, not just the two common ones.
         LedgerEntry.create({
-          id: 'e-invoice',
-          description: 'Inter invoice',
-          kind: EntryKind.Invoice,
+          id: 'e-manual',
+          description: 'Inter — fatura',
+          kind: EntryKind.Fixed,
           dueDate: date('2026-08-10'),
           planned: Money.fromCents(-240_000),
-          origin: { kind: 'FROM_INVOICE', invoiceId: 'i-aug' },
+          origin: { kind: 'MANUAL' },
         }).settle(Money.fromCents(-235_000), 'PAID'),
         LedgerEntry.create({
           id: 'e-allocation',
@@ -125,54 +121,6 @@ function populated() {
       status: 'ACTIVE',
       valueSchedule: [
         { fromMonth: '2026-09', amount: Money.fromCents(1_800_000) },
-      ],
-    }),
-  ]);
-
-  const cards = new InMemoryCardRepository([
-    Card.open({
-      id: 'c-inter',
-      name: 'Inter',
-      limit: Money.fromCents(2_500_000),
-      closingDay: 28,
-      dueDay: 10,
-      paymentAccountId: 'a-inter',
-      invoices: [
-        Invoice.open({
-          id: 'i-aug',
-          periodStart: date('2026-07-29'),
-          periodEnd: date('2026-08-28'),
-          dueDate: date('2026-09-10'),
-          status: 'PAID',
-          paidAmount: Money.fromCents(-235_000),
-          items: [
-            {
-              id: 'it-1',
-              purchaseId: 'p-sofa',
-              description: 'Sofa',
-              purchasedOn: date('2026-08-20'),
-              amount: Money.fromCents(-30_000),
-              installment: InstallmentRef.of(1, 10),
-            },
-            {
-              id: 'it-2',
-              purchaseId: 'p-refund',
-              description: 'Returned lamp',
-              purchasedOn: date('2026-08-22'),
-              amount: Money.fromCents(15_000),
-              installment: undefined,
-            },
-          ],
-        }),
-      ],
-      plans: [
-        {
-          purchaseId: 'p-sofa',
-          description: 'Sofa',
-          purchasedOn: date('2026-08-20'),
-          total: Money.fromCents(-300_000),
-          totalInstallments: 10,
-        },
       ],
     }),
   ]);
@@ -238,12 +186,11 @@ function populated() {
   const settings = new InMemorySettingsRepository(anchor);
 
   return {
-    repositories: { cycles, accounts, templates, cards, buckets, settings },
+    repositories: { cycles, accounts, templates, buckets, settings },
     service: new BackupRestore(
       cycles,
       accounts,
       templates,
-      cards,
       buckets,
       settings,
       noHolidays,
@@ -256,19 +203,17 @@ function empty() {
   const cycles = new InMemoryCycleRepository();
   const accounts = new InMemoryAccountRepository();
   const templates = new InMemoryTemplateRepository();
-  const cards = new InMemoryCardRepository();
   const buckets = new InMemoryBucketRepository();
   const settings = new InMemorySettingsRepository(
     PaydayAnchor.of(1, ShiftPolicy.Following),
   );
 
   return {
-    repositories: { cycles, accounts, templates, cards, buckets, settings },
+    repositories: { cycles, accounts, templates, buckets, settings },
     service: new BackupRestore(
       cycles,
       accounts,
       templates,
-      cards,
       buckets,
       settings,
       noHolidays,
@@ -382,14 +327,6 @@ describe('BackupRestore round trip', () => {
       { fromMonth: '2026-09', amount: Money.fromCents(1_800_000) },
     ]);
     expect(template?.endMonth).toBe('2027-01');
-  });
-
-  it('restores a card with its instalment plan', async () => {
-    const { target } = await roundTrip();
-    const [card] = await target.repositories.cards.findAll();
-
-    expect(card?.plans[0]?.totalInstallments).toBe(10);
-    expect(card?.plans[0]?.total).toEqual(Money.fromCents(-300_000));
   });
 
   it('restores a goal with its target and its whole event log', async () => {

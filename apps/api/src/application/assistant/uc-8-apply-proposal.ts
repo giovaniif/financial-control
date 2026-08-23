@@ -7,7 +7,6 @@ import { SettlementStatus } from '../../domain/shared/planned-actual.js';
 import type { ConfigurePaydayAnchor } from '../budgeting/uc-1-1-configure-payday-anchor.js';
 import type { ManageTemplates } from '../budgeting/uc-2-manage-templates.js';
 import type { LedgerActions } from '../budgeting/uc-3-ledger-actions.js';
-import type { ManageCards } from '../cards/uc-5-manage-cards.js';
 import type { ManageBuckets } from '../goals/uc-6-manage-buckets.js';
 
 import type { ProposedChange } from './proposed-change.js';
@@ -59,7 +58,6 @@ export class ApplyProposal {
     private readonly ledger: LedgerActions,
     private readonly templates: ManageTemplates,
     private readonly anchor: ConfigurePaydayAnchor,
-    private readonly cards: ManageCards,
     private readonly buckets: ManageBuckets,
     private readonly clock: Clock,
   ) {}
@@ -137,15 +135,6 @@ export class ApplyProposal {
           dueDate: change.dueDate.toISO(),
           amountCents: change.amount.cents,
           isEstimate: change.isEstimate,
-        });
-        return;
-      case 'REGISTER_PURCHASE':
-        await this.cards.registerPurchase({
-          cardId: change.cardId,
-          description: change.description,
-          purchasedOn: change.purchasedOn.toISO(),
-          amountCents: change.amount.cents,
-          installments: change.installments,
         });
         return;
       case 'CREATE_TEMPLATE':

@@ -9,7 +9,6 @@ import type { ManageTemplates } from '../../application/budgeting/uc-2-manage-te
 import type { ReadCycle } from '../../application/budgeting/uc-3-1-read-cycle.js';
 import type { CloseCycle } from '../../application/budgeting/uc-3-8-close-cycle.js';
 import type { LedgerActions } from '../../application/budgeting/uc-3-ledger-actions.js';
-import type { ManageCards } from '../../application/cards/uc-5-manage-cards.js';
 import type { ManageBuckets } from '../../application/goals/uc-6-manage-buckets.js';
 import type { BuildDashboard } from '../../application/projection/uc-4-build-dashboard.js';
 import type { ReadSetupState } from '../../application/projection/uc-1-5-read-setup-state.js';
@@ -25,7 +24,6 @@ import { registerAccountRoutes } from './routes/accounts.js';
 import { registerAssistantRoutes } from './routes/assistant.js';
 import { registerBackupRoutes } from './routes/backup.js';
 import { registerBucketRoutes } from './routes/buckets.js';
-import { registerCardRoutes } from './routes/cards.js';
 import { registerCycleRoutes } from './routes/cycles.js';
 import { registerHealthRoute } from './routes/health.js';
 import { registerProjectionRoutes } from './routes/projection.js';
@@ -43,7 +41,6 @@ interface Dependencies {
   manageTemplates: ManageTemplates;
   ledgerActions: LedgerActions;
   closeCycle: CloseCycle;
-  manageCards: ManageCards;
   manageBuckets: ManageBuckets;
   buildDashboard: BuildDashboard;
   projectWealth: ProjectWealth;
@@ -67,7 +64,6 @@ export function buildServer({
   manageTemplates,
   ledgerActions,
   closeCycle,
-  manageCards,
   manageBuckets,
   buildDashboard,
   projectWealth,
@@ -88,7 +84,6 @@ export function buildServer({
   registerCycleRoutes(app, { readCycle, listCycles });
   registerTemplateRoutes(app, { manageTemplates });
   registerLedgerRoutes(app, { ledgerActions, closeCycle });
-  registerCardRoutes(app, { manageCards });
   registerBucketRoutes(app, { manageBuckets });
   registerProjectionRoutes(app, {
     buildDashboard,

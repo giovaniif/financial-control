@@ -1,6 +1,6 @@
 import { AssistantPanel } from '@/features/ask-assistant';
 import { useMediaQuery } from '@/shared/lib';
-import { useAssistantRail, WIDE_ENOUGH_FOR_RAIL } from '@/shared/model';
+import { useAssistantRail, WIDE_ENOUGH_FOR_SHELL } from '@/shared/model';
 
 import { ASSISTANT_RAIL_ID } from '../model/rail-id.js';
 
@@ -15,24 +15,25 @@ import { ASSISTANT_RAIL_ID } from '../model/rail-id.js';
  */
 export function AssistantRail() {
   const { isOpen, close } = useAssistantRail();
-  const isWide = useMediaQuery(WIDE_ENOUGH_FOR_RAIL);
+  const isWide = useMediaQuery(WIDE_ENOUGH_FOR_SHELL);
 
-  // Below 64rem the icon strip, 380px of chat and a readable column of
-  // figures do not fit at once, so the rail covers the content instead of
-  // pushing it into a column too narrow to read.
+  // Below 64rem a 380px column and a readable column of figures do not fit
+  // at once, so the chat rises as a sheet over the screen instead — reaching
+  // for the top of the viewport but not quite covering it, so what it is
+  // being asked about stays in sight behind it.
   const placement = isWide
-    ? 'sticky top-0 h-screen w-[380px] shrink-0'
-    : 'fixed inset-y-0 left-14 z-30 w-[min(380px,calc(100vw-3.5rem))] shadow-2xl';
+    ? 'sticky top-0 h-screen w-[380px] shrink-0 border-r'
+    : 'fixed inset-x-0 top-16 bottom-0 z-40 rounded-t-2xl border-t shadow-2xl';
 
   return (
     <aside
       id={ASSISTANT_RAIL_ID}
       aria-label="Assistente"
       hidden={!isOpen}
-      data-layout={isWide ? 'inline' : 'overlay'}
+      data-layout={isWide ? 'inline' : 'sheet'}
       className={
         isOpen
-          ? `flex flex-col border-r border-zinc-200 bg-zinc-50 ${placement}`
+          ? `flex flex-col border-zinc-200 bg-zinc-50 ${placement}`
           : ''
       }
     >

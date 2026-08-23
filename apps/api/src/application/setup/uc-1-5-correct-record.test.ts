@@ -28,8 +28,8 @@ import {
 const START_MONTH = '2026-09';
 
 /**
- * A draft as far through the conversation as cards: an account, a salary, a
- * fixed bill and a card, each holding the id a correction names.
+ * A draft as far through the conversation as the fixed bills: an account, a
+ * salary and a bill, each holding the id a correction names.
  */
 function establishedDraft(): SetupDraft {
   return SetupDraft.empty(
@@ -48,19 +48,11 @@ function establishedDraft(): SetupDraft {
       name: 'Health Plan',
       amount: Money.fromCents(32_000),
       dueDayOfMonth: 8,
-    })
-    .addCard({
-      name: 'Inter',
-      limit: Money.fromCents(1_000_000),
-      closingDay: 28,
-      dueDay: 10,
-      paymentAccountName: 'Checking',
     });
 }
 
 const ACCOUNT_ID = 'rec-1';
 const BILL_ID = 'rec-2';
-const CARD_ID = 'rec-3';
 
 /**
  * `asking` carries the section rather than being one, so that a conversation
@@ -233,7 +225,7 @@ describe('CorrectSetupRecord.correct', () => {
 
     await correctRecord.correct({
       conversationId: 'conv-1',
-      recordId: 'rec-4',
+      recordId: 'rec-3',
       correction: { amount: Money.fromCents(15_000) },
     });
 
@@ -286,7 +278,7 @@ describe('CorrectSetupRecord.correct', () => {
     ).rejects.toBeInstanceOf(SetupRecordNotFound);
   });
 
-  /** A card's field on an account is not a correction that changes nothing. */
+  /** A bucket's field on an account is not a correction that changes nothing. */
   it('rejects a correction stating nothing that applies to the record', async () => {
     const { conversations, stored, correctRecord } = wire();
     await conversations.save(stored);
@@ -295,25 +287,9 @@ describe('CorrectSetupRecord.correct', () => {
       correctRecord.correct({
         conversationId: 'conv-1',
         recordId: ACCOUNT_ID,
-        correction: { closingDay: 25 },
+        correction: { targetAmount: Money.fromCents(1) },
       }),
     ).rejects.toBeInstanceOf(NothingToCorrect);
-  });
-
-  it('corrects a card', async () => {
-    const { conversations, stored, correctRecord } = wire();
-    await conversations.save(stored);
-
-    const turn = await correctRecord.correct({
-      conversationId: 'conv-1',
-      recordId: CARD_ID,
-      correction: { closingDay: 25, dueDay: 5 },
-    });
-
-    const [card] = (await open(conversations)).state.draft.cards;
-    expect(card?.closingDay).toBe(25);
-    expect(card?.dueDay).toBe(5);
-    expect(turn.message).toContain('Inter');
   });
 
   it('corrects a goal bucket', async () => {
@@ -333,7 +309,7 @@ describe('CorrectSetupRecord.correct', () => {
 
     await correctRecord.correct({
       conversationId: 'conv-1',
-      recordId: 'rec-4',
+      recordId: 'rec-3',
       correction: {
         rule: Allocation.percentOfExpectedSurplus(
           Percentage.ofBasisPoints(2_000),
@@ -398,7 +374,7 @@ describe('CorrectSetupRecord.correct', () => {
 
     const { records } = await open(conversations);
     expect(records.filter((record) => record.id === BILL_ID)).toHaveLength(1);
-    expect(records).toHaveLength(3);
+    expect(records).toHaveLength(2);
   });
 });
 
@@ -414,7 +390,7 @@ describe('CorrectSetupRecord.remove', () => {
 
     expect(turn.removed).toEqual([BILL_ID]);
     expect((await open(conversations)).state.draft.fixedBills).toEqual([]);
-    expect((await open(conversations)).records).toHaveLength(2);
+    expect((await open(conversations)).records).toHaveLength(1);
   });
 
   /** Dropped is not skipped: a section a removal emptied is asked again. */
@@ -432,15 +408,6 @@ describe('CorrectSetupRecord.remove', () => {
 
     expect(turn.nextSection).toBe('FIXED_BILLS');
     expect(turn.isComplete).toBe(false);
-  });
-
-  it('refuses to drop an account a card is paid from', async () => {
-    const { conversations, stored, correctRecord } = wire();
-    await conversations.save(stored);
-
-    await expect(
-      correctRecord.remove({ conversationId: 'conv-1', recordId: ACCOUNT_ID }),
-    ).rejects.toThrow(/Inter/);
   });
 
   it('rejects a conversation nobody opened', async () => {
@@ -464,10 +431,10 @@ describe('CorrectSetupRecord.remove', () => {
     const { conversations, stored, correctRecord } = wire();
     await conversations.save(stored);
 
-    await correctRecord.remove({ conversationId: 'conv-1', recordId: CARD_ID });
+    await correctRecord.remove({ conversationId: 'conv-1', recordId: BILL_ID });
 
     expect((await open(conversations)).transcript).toEqual([
-      { role: 'user', text: expect.stringContaining('Inter') as string },
+      { role: 'user', text: expect.stringContaining('Health Plan') as string },
     ]);
   });
 });

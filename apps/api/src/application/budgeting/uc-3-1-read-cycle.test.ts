@@ -105,7 +105,7 @@ describe('ReadCycle.byMonth', () => {
       ref: august,
       openingBalance: Money.fromCents(50_000),
       entries: [
-        entry('Big invoice', EntryKind.Invoice, '2026-08-10', -12_000),
+        entry('Big bill', EntryKind.Fixed, '2026-08-10', -12_000),
         entry('Salary', EntryKind.Income, '2026-08-25', 18_000),
       ],
     });
@@ -113,7 +113,7 @@ describe('ReadCycle.byMonth', () => {
     const view = await reading(dipping).byMonth('2026-09');
 
     expect(view.lowWaterMark?.balanceCents).toBe(-1_150_000);
-    expect(view.lowWaterMark?.description).toBe('Big invoice');
+    expect(view.lowWaterMark?.description).toBe('Big bill');
     expect(view.firstNegativeDate).toBe('2026-08-10');
   });
 

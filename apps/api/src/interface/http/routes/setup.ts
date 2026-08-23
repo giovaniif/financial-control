@@ -220,10 +220,6 @@ const FIELDS = {
   dueDayOfMonth: 'dueDayOfMonth',
   isEstimate: 'isEstimate',
   acceptCycleFallback: 'acceptCycleFallback',
-  limit: 'limit',
-  closingDay: 'closingDay',
-  dueDay: 'dueDay',
-  paymentAccountName: 'paymentAccountName',
   rule: 'rule',
   target: 'targetAmount',
   targetDate: 'targetDate',
@@ -357,18 +353,6 @@ function toEstablished(record: EstablishedRecord): EstablishedRecordResponse {
           isEstimate: record.record.isEstimate,
         },
       };
-    case 'CARDS':
-      return {
-        ...shown,
-        section: record.section,
-        fields: {
-          name: record.record.name,
-          limit: record.record.limit.cents,
-          closingDay: record.record.closingDay,
-          dueDay: record.record.dueDay,
-          paymentAccountName: record.record.paymentAccountName,
-        },
-      };
     case 'BUCKETS':
       return {
         ...shown,
@@ -429,7 +413,6 @@ function toApplied(document: BackupDocument): SetupAppliedResponse {
     shiftPolicy: document.anchor.shiftPolicy,
     accounts: document.accounts.length,
     templates: document.templates.length,
-    cards: document.cards.length,
     buckets: document.buckets.length,
   };
 }

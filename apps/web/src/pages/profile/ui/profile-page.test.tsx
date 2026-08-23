@@ -1,8 +1,4 @@
-import type {
-  CardResponse,
-  InvoiceResponse,
-  TemplateResponse,
-} from '@fin/contracts';
+import type { TemplateResponse } from '@fin/contracts';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -17,7 +13,6 @@ const anchor = { anchorDay: 5, shiftPolicy: 'PRECEDING' };
 const pristine = {
   anchorConfigured: false,
   accounts: 0,
-  cards: 0,
   templates: 0,
   buckets: 0,
   isPristine: true,
@@ -63,33 +58,6 @@ const internet = template({
   dueDayOfMonth: 20,
 });
 
-const invoice = (
-  overrides: Partial<InvoiceResponse> = {},
-): InvoiceResponse => ({
-  id: 'i1',
-  periodStart: '2026-07-29',
-  periodEnd: '2026-08-28',
-  dueDate: '2026-09-10',
-  status: 'OPEN',
-  total: -120_000,
-  paidInCycle: '2026-10',
-  items: [],
-  ...overrides,
-});
-
-const card = (overrides: Partial<CardResponse> = {}): CardResponse => ({
-  id: 'inter',
-  name: 'Inter',
-  limit: 1_000_000,
-  closingDay: 28,
-  dueDay: 10,
-  paymentAccountId: 'a1',
-  committedToFuture: 240_000,
-  available: 760_000,
-  invoices: [],
-  ...overrides,
-});
-
 const withTemplates = (templates: TemplateResponse[]) => ({
   templates,
   summary: {
@@ -123,7 +91,7 @@ afterEach(() => {
 describe('ProfilePage', () => {
   /**
    * The screen is the conversation made editable, so it asks in the same
-   * order: the anchor, then the accounts, then salary, bills and cards.
+   * order: the anchor, then the accounts, then salary and bills.
    */
   it('orders its sections the way the setup conversation asked them', async () => {
     stubApi({ '/api/settings/anchor': anchor });
@@ -140,7 +108,6 @@ describe('ProfilePage', () => {
       'Compromissos por ciclo',
       'Salário',
       'Contas a pagar',
-      'Cartões de crédito',
       'Configuração',
       'Formatação',
       'Backup',
@@ -428,87 +395,6 @@ describe('ProfilePage', () => {
     ).not.toBeChecked();
   });
 
-  // UC-5.8 — the figure the spreadsheet could not produce.
-  it('shows each card with its open invoice and what is committed to future ones', async () => {
-    stubApi({
-      '/api/settings/anchor': anchor,
-      '/api/cards': [card({ invoices: [invoice()] })],
-    });
-    renderPage();
-
-    const cards = await screen.findByRole('region', {
-      name: 'Cartões de crédito',
-    });
-
-    expect(within(cards).getByText('Inter')).toBeInTheDocument();
-    expect(within(cards).getByText('Limite')).toBeInTheDocument();
-    expect(within(cards).getByText('Fatura aberta')).toBeInTheDocument();
-    expect(within(cards).getByText('Comprometido')).toBeInTheDocument();
-    expect(within(cards).getByText('Disponível')).toBeInTheDocument();
-    expect(within(cards).getByText('R$ 2.400,00')).toBeInTheDocument();
-  });
-
-  /**
-   * UC-1.3 — the closing/due day pair is what decides which cycle a purchase
-   * is paid from, and it is the app's one counter-intuitive rule.
-   */
-  it("spells out which cycle a card's purchases will be paid in", async () => {
-    stubApi({
-      '/api/settings/anchor': anchor,
-      '/api/cards': [card({ invoices: [invoice()] })],
-    });
-    renderPage();
-
-    expect(
-      await screen.findByText(
-        'As compras de 29 jul a 28 ago entram na fatura com vencimento em 10 set — ciclo Outubro de 2026.',
-      ),
-    ).toBeInTheDocument();
-  });
-
-  // Nothing has been bought yet, so there is no invoice to name dates from.
-  it('states the day pair in plain language before a card has an invoice', async () => {
-    stubApi({
-      '/api/settings/anchor': anchor,
-      '/api/cards': [card()],
-    });
-    renderPage();
-
-    expect(
-      await screen.findByText(
-        /As compras feitas até o dia 28 entram na fatura com vencimento no dia 10 do mês seguinte/,
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it('offers to configure a card once there is an account to pay it from', async () => {
-    stubApi({
-      '/api/settings/anchor': anchor,
-      '/api/accounts': {
-        accounts: [
-          { id: 'a1', name: 'Inter', type: 'CHECKING', balance: 166_000 },
-        ],
-        total: 166_000,
-      },
-    });
-    renderPage();
-
-    expect(
-      await screen.findByRole('button', { name: 'Adicionar cartão' }),
-    ).toBeInTheDocument();
-  });
-
-  // An invoice is settled from an account, so there is nothing to configure
-  // until one exists.
-  it('asks for an account before a card can be added', async () => {
-    stubApi({ '/api/settings/anchor': anchor });
-    renderPage();
-
-    expect(
-      await screen.findByText(/Adicione uma conta primeiro/),
-    ).toBeInTheDocument();
-  });
-
   // UC-1.5 — the checklist is the conversation's own sections, still outstanding.
   it('shows the setup checklist in the order the conversation asks', async () => {
     stubApi({ '/api/settings/anchor': anchor });
@@ -526,8 +412,7 @@ describe('ProfilePage', () => {
       '3Salário0 registrados',
       '4Contas fixas0 registrados',
       '5Contas variáveis0 registrados',
-      '6Cartões de crédito0 cartões',
-      '7Caixinhas0 caixinhas',
+      '6Caixinhas0 caixinhas',
     ]);
   });
 

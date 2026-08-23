@@ -255,9 +255,6 @@ function Created({ applied }: { applied: SetupAppliedResponse }) {
       <ul className="flex flex-col gap-1.5 text-sm text-zinc-700">
         <li>{count(applied.accounts, 'conta', 'contas')}</li>
         <li>{applied.templates} contas e receitas recorrentes</li>
-        <li>
-          {count(applied.cards, 'cartão de crédito', 'cartões de crédito')}
-        </li>
         <li>{count(applied.buckets, 'caixinha', 'caixinhas')}</li>
       </ul>
       <div>

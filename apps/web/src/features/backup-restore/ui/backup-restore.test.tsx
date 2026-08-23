@@ -14,11 +14,10 @@ const document_: BackupDocument = {
   accounts: [{ id: 'a1', name: 'Inter', type: 'CHECKING', balance: 216_000 }],
   cycles: [],
   templates: [],
-  cards: [],
   buckets: [],
 };
 
-const counts = { accounts: 3, cycles: 4, templates: 12, cards: 2, buckets: 5 };
+const counts = { accounts: 3, cycles: 4, templates: 12, buckets: 5 };
 
 function stubApiWith(body: unknown = document_, status = 200) {
   const fetchMock = vi.fn(() =>
@@ -84,7 +83,6 @@ describe('BackupRestore', () => {
     expect(warning).toHaveTextContent('3 contas');
     expect(warning).toHaveTextContent('4 ciclos');
     expect(warning).toHaveTextContent('12 contas e receitas');
-    expect(warning).toHaveTextContent('2 cartões');
     expect(warning).toHaveTextContent('5 caixinhas');
   });
 

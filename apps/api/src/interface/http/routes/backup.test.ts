@@ -18,7 +18,6 @@ describe('GET /backup', () => {
       accounts: [],
       cycles: [],
       templates: [],
-      cards: [],
       buckets: [],
       anchor: { anchorDay: 5, shiftPolicy: 'PRECEDING' },
     });
@@ -35,7 +34,6 @@ describe('POST /restore', () => {
     accounts: [{ id: 'a1', name: 'Inter', type: 'CHECKING', balance: 216_000 }],
     cycles: [],
     templates: [],
-    cards: [],
     buckets: [],
     ...overrides,
   });

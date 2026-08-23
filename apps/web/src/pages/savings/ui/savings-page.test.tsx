@@ -6,7 +6,7 @@ import type {
   CycleWindowResponse,
   WealthProjectionResponse,
 } from '@fin/contracts';
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -175,7 +175,6 @@ describe('SavingsPage', () => {
       'Previsto x real',
       'Histórico',
       'Patrimônio',
-      'Por caixinha',
     ]);
   });
 
@@ -510,101 +509,23 @@ describe('SavingsPage projects what the buckets grow into', () => {
     expect(bars).toHaveTextContent('premissas, não fatos');
   });
 
-  // UC-7.3 — an ongoing bucket has no finish line, only a rate.
-  it('reads an ongoing bucket in its own terms', async () => {
+  /**
+   * The per-bucket sentences and their inline yields were removed: three
+   * repetitions of the same clause under bars that already say where the
+   * rate lands. The bars and the retirement figure carry UC-7 on their own.
+   */
+  it('leaves the projection to the bars, with no per-bucket restatement', async () => {
     stub({ '/api/buckets': [bucket()], '/api/wealth': wealth() });
     renderPage();
 
-    const perBucket = await screen.findByRole('region', {
-      name: 'Por caixinha',
-    });
-
-    expect(perBucket).toHaveTextContent(
-      'Com R$ 1.778,00 por ciclo e 9% ao ano, Investments tem R$ 142,0k em 5 anos e R$ 331,0k em 10. Sem objetivo a bater — a questão é só se o ritmo está certo.',
-    );
-  });
-
-  it('reads a goal as the month it arrives, against the month it was wanted', async () => {
-    stub({
-      '/api/buckets': [bucket()],
-      '/api/wealth': wealth({
-        buckets: [
-          projected({
-            bucketId: 'apartment',
-            name: 'Apartment',
-            isGoal: true,
-            expectedYieldPercent: 8,
-            target: 15_000_000,
-            targetDate: '2031-03-31',
-            reachesTargetIn: 55,
-            isOnTrack: true,
-            inFiveYears: null,
-            inTenYears: null,
-          }),
-        ],
-      }),
-    });
-    renderPage();
-
-    const perBucket = await screen.findByRole('region', {
-      name: 'Por caixinha',
-    });
-
-    expect(perBucket).toHaveTextContent(
-      'Com R$ 1.778,00 por ciclo e 8% ao ano, Apartment alcança R$ 150.000,00 em Março de 2031. Objetivo: Março de 2031.',
-    );
-    expect(within(perBucket).getByText('no prazo')).toBeInTheDocument();
-  });
-
-  it('flags a goal that is behind, with the contribution that fixes it', async () => {
-    stub({
-      '/api/buckets': [bucket()],
-      '/api/wealth': wealth({
-        buckets: [
-          projected({
-            bucketId: 'apartment',
-            name: 'Apartment',
-            isGoal: true,
-            target: 15_000_000,
-            targetDate: '2031-03-31',
-            reachesTargetIn: null,
-            isOnTrack: false,
-            contributionToCatchUp: 250_000,
-            inFiveYears: null,
-            inTenYears: null,
-          }),
-        ],
-      }),
-    });
-    renderPage();
-
-    expect(await screen.findByText('atrasada')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'R$ 2.500,00 por ciclo traria de volta ao prazo',
-    );
-  });
-
-  // UC-7.1 and UC-7.4 — an assumption, adjustable where it moves the number.
-  it('re-projects when a yield assumption is changed inline', async () => {
-    stub({ '/api/buckets': [bucket()], '/api/wealth': wealth() });
-    renderPage();
-
-    const field = await screen.findByLabelText(
-      'Rendimento anual esperado para Investments',
-    );
+    await screen.findByRole('region', { name: 'Patrimônio' });
 
     expect(
-      screen.getByText(/Uma premissa. Ajustar aqui move a projeção/),
-    ).toBeInTheDocument();
-
-    await userEvent.clear(field);
-    await userEvent.type(field, '12');
-
-    await waitFor(() => {
-      expect(requestedUrls()).toContain(
-        '/api/wealth?month=2026-08&yields=investments%3A12',
-      );
-    });
+      screen.queryByRole('region', { name: 'Por caixinha' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Rendimento anual esperado para Investments'),
+    ).not.toBeInTheDocument();
   });
 
   // Retirement is the one figure measured in monthly income, not in a lump sum.
@@ -632,10 +553,3 @@ describe('SavingsPage projects what the buckets grow into', () => {
     );
   });
 });
-
-function requestedUrls(): string[] {
-  const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
-  const calls = fetchMock.mock.calls as unknown as [string][];
-
-  return calls.map((call) => call[0]);
-}

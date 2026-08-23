@@ -17,7 +17,6 @@ export function SetupSummary() {
       value: (data?.anchorConfigured ?? false) ? 'configurado' : 'não definido',
     },
     { label: 'Contas', value: String(data?.accounts ?? 0) },
-    { label: 'Cartões de crédito', value: String(data?.cards ?? 0) },
     { label: 'Salário e contas', value: String(data?.templates ?? 0) },
     { label: 'Caixinhas', value: String(data?.buckets ?? 0) },
   ];
@@ -26,8 +25,7 @@ export function SetupSummary() {
     <div className="flex flex-col gap-6">
       <p className="text-zinc-600">
         Isso é tudo o que o app precisa para começar a responder. A partir daqui
-        ele preenche os próximos doze ciclos com o seu salário e suas contas,
-        atribui cada fatura de cartão ao ciclo que contém o seu vencimento, e
+        ele preenche os próximos doze ciclos com o seu salário e suas contas, e
         aloca a sobra pelas suas regras.
       </p>
 

@@ -405,6 +405,63 @@ describe('AssistantPanel and a question handed to it', () => {
     expect(callsTo('/api/assistant/messages')).toBe(0);
   });
 
+  /**
+   * A continuous conversation is typed and sent from the keyboard: Enter
+   * sends, and the modifier is what buys a newline. Reaching for the mouse
+   * between every question is what made this feel like a form.
+   */
+  it('sends on Enter', async () => {
+    const stream = sseStub();
+    stubStream(stream);
+    renderWithProviders(<AssistantPanel />);
+
+    await userEvent.type(
+      screen.getByLabelText('Pergunte sobre o seu dinheiro'),
+      'Why is September lower than August?{Enter}',
+    );
+
+    await waitFor(() => {
+      expect(callsTo('/api/assistant/messages')).toBe(1);
+    });
+    expect(lastBodyTo('/api/assistant/messages')).toEqual({
+      message: 'Why is September lower than August?',
+    });
+    expect(screen.getByLabelText('Pergunte sobre o seu dinheiro')).toHaveValue(
+      '',
+    );
+  });
+
+  it('takes a newline on Shift+Enter without sending', async () => {
+    const stream = sseStub();
+    stubStream(stream);
+    renderWithProviders(<AssistantPanel />);
+
+    await userEvent.type(
+      screen.getByLabelText('Pergunte sobre o seu dinheiro'),
+      'Line one{Shift>}{Enter}{/Shift}Line two',
+    );
+
+    expect(screen.getByLabelText('Pergunte sobre o seu dinheiro')).toHaveValue(
+      'Line one\nLine two',
+    );
+    expect(callsTo('/api/assistant/messages')).toBe(0);
+  });
+
+  /** Nothing to send is not a question, so the send is not offered. */
+  it('offers no send until something has been typed', async () => {
+    stubApi({});
+    renderWithProviders(<AssistantPanel />);
+
+    expect(screen.getByRole('button', { name: 'Perguntar' })).toBeDisabled();
+
+    await userEvent.type(
+      screen.getByLabelText('Pergunte sobre o seu dinheiro'),
+      'Why?',
+    );
+
+    expect(screen.getByRole('button', { name: 'Perguntar' })).toBeEnabled();
+  });
+
   it('leaves the question editable rather than reinstating it', async () => {
     stubApi({});
     renderWithProviders(

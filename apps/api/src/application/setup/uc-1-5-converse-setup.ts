@@ -556,7 +556,6 @@ const LABELS: Record<SetupSection, string> = {
   SALARY: 'O salário',
   FIXED_BILLS: 'As contas fixas',
   VARIABLE_BILLS: 'As contas variáveis',
-  CARDS: 'Os cartões',
   BUCKETS: 'As caixinhas',
 };
 
@@ -634,13 +633,6 @@ const CORRECT_TOOL: ToolDeclaration = {
           'for a bill: true when the amount is a guess rather than a known figure',
       },
       ...FALLBACK_FLAG,
-      limitInCents: centsField('for a card: the credit limit'),
-      closingDay: dayField('for a card: the day the invoice closes'),
-      dueDay: dayField('for a card: the day the invoice falls due'),
-      paymentAccountName: {
-        type: 'string',
-        description: 'for a card: the account the invoice is paid from',
-      },
       ...RULE_FIELDS,
       targetAmountInCents: centsField('for a goal bucket: the amount to reach'),
       targetDate: {
@@ -801,63 +793,6 @@ const TOOLS: readonly ToolSpec[] = [
     description:
       'Record one bill whose amount moves from cycle to cycle — electricity, groceries. These count as estimates unless the user says the figure is confirmed.',
   }),
-  {
-    section: SetupSection.Cards,
-    tool: {
-      name: 'record_card',
-      description: 'Record one credit card.',
-      inputSchema: schema(
-        {
-          name: { type: 'string', description: "the card's name" },
-          limitInCents: centsField('the credit limit'),
-          closingDay: dayField('the day of the month the invoice closes'),
-          dueDay: dayField('the day of the month the invoice falls due'),
-          paymentAccountName: {
-            type: 'string',
-            description: 'the name of the account the invoice is paid from',
-          },
-        },
-        ['name'],
-      ),
-    },
-    apply: ({ draft, args }) => {
-      const name = readText(args, 'name');
-      if (name === undefined) return missing(['o nome do cartão']);
-
-      const limit = readCents(args, 'limitInCents');
-      const closingDay = readInteger(args, 'closingDay');
-      const dueDay = readInteger(args, 'dueDay');
-      const paymentAccountName = readText(args, 'paymentAccountName');
-
-      const unanswered = [
-        ...(limit === undefined ? ['o limite do cartão'] : []),
-        ...(closingDay === undefined ? ['o dia em que a fatura fecha'] : []),
-        ...(dueDay === undefined ? ['o dia em que a fatura vence'] : []),
-        ...(paymentAccountName === undefined
-          ? ['qual conta paga a fatura']
-          : []),
-      ];
-      if (
-        limit === undefined ||
-        closingDay === undefined ||
-        dueDay === undefined ||
-        paymentAccountName === undefined
-      ) {
-        return missing(unanswered, name);
-      }
-
-      return {
-        kind: 'record',
-        draft: draft.addCard({
-          name,
-          limit,
-          closingDay,
-          dueDay,
-          paymentAccountName,
-        }),
-      };
-    },
-  },
   {
     section: SetupSection.Buckets,
     tool: {
@@ -1300,7 +1235,7 @@ function centsField(description: string): JsonObject {
 
 const ROLE = `You are the setup assistant of Financial Control, a personal budgeting application with a single user. You are collecting what the app needs before it can show anything, one section at a time.
 
-**Write every message to the user in Brazilian Portuguese**, in the plain, direct register a Brazilian would use about their own money. These instructions are in English; nothing the user reads is. Use the app's own words for the calculation chain — Sobra, Sobra Esperada, Sobra Líquida, Saldo inicial, Saldo final, Total de saídas, Alocações — and call a savings pot a caixinha, a recurring bill a conta, and a credit-card bill a fatura.
+**Write every message to the user in Brazilian Portuguese**, in the plain, direct register a Brazilian would use about their own money. These instructions are in English; nothing the user reads is. Use the app's own words for the calculation chain — Sobra, Sobra Esperada, Sobra Líquida, Saldo inicial, Saldo final, Total de saídas, Alocações — and call a savings pot a caixinha and a recurring bill a conta.
 
 Ask about one section at a time and keep every message short. When more than one record is missing something, ask for all of it in a single question naming each record — never one question per record. Record what the user tells you by calling the tool for the section being asked about, once per item.
 
@@ -1327,8 +1262,6 @@ const BRIEFINGS: Record<SetupSection, string> = {
     'You are on fixed bills: the ones that cost the same every cycle, each with the day of the month it falls due.',
   VARIABLE_BILLS:
     'You are on variable bills: the ones whose amount moves, each with the day of the month it falls due.',
-  CARDS:
-    'You are on credit cards: the limit, the day the invoice closes, the day it falls due, and which account pays it.',
   BUCKETS:
     'You are on savings buckets: either a goal with a target and a date, or an ongoing contribution with neither, and how much goes in each cycle.',
 };
@@ -1342,7 +1275,6 @@ const MORE_QUESTIONS: Partial<Record<SetupSection, string>> = {
   ACCOUNTS: 'Tem mais alguma conta, ou seguimos?',
   FIXED_BILLS: 'Tem mais alguma conta fixa, ou seguimos?',
   VARIABLE_BILLS: 'Tem mais alguma conta variável, ou seguimos?',
-  CARDS: 'Tem mais algum cartão, ou seguimos?',
   BUCKETS: 'Tem mais alguma caixinha, ou seguimos?',
 };
 
@@ -1353,7 +1285,6 @@ const QUESTIONS: Record<SetupSection, string> = {
   FIXED_BILLS: 'Quais contas custam o mesmo todo ciclo, e em que dia vencem?',
   VARIABLE_BILLS:
     'Quais contas mudam de um ciclo para o outro, e em que dia vencem?',
-  CARDS: 'Quais cartões de crédito você usa?',
   BUCKETS:
     'Para o que você está guardando dinheiro, e quanto entra a cada ciclo?',
 };

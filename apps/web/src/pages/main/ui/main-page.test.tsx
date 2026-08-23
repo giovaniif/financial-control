@@ -570,7 +570,7 @@ describe('MainPage and the assistant', () => {
 
     // Switched off is a state, not a breakage: the rail opens and says so.
     await userEvent.click(
-      screen.getByRole('button', { name: 'Abrir o assistente' }),
+      screen.getByRole('button', { name: 'Assistente' }),
     );
 
     expect(screen.getByText(/O assistente está desligado/)).toBeVisible();

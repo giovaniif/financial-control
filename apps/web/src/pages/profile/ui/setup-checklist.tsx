@@ -31,7 +31,6 @@ export function SetupChecklist() {
     recordedStep('Salário', income.length),
     recordedStep('Contas fixas', outgoing.length - variable.length),
     recordedStep('Contas variáveis', variable.length),
-    countStep('Cartões de crédito', data?.cards ?? 0, 'cartões'),
     {
       ...countStep('Caixinhas', data?.buckets ?? 0, 'caixinhas'),
       to: '/savings',

@@ -1,6 +1,5 @@
 import type {
   BackupBucket,
-  BackupCard,
   BackupCycle,
   BackupDocument,
   BackupEntry,
@@ -61,7 +60,6 @@ export function composeSetup(
     accounts,
     cycles: composeCycles(generated),
     templates: generated.map((composed) => composed.template),
-    cards: composeCards(draft, accounts),
     buckets: draft.buckets.map(composeBucket),
   };
 }
@@ -181,42 +179,6 @@ function template(input: {
     isEstimate: input.isEstimate,
     valueSchedule: [],
   };
-}
-
-/**
- * The cards themselves, with no invoices: a conversation produces a snapshot
- * of what is set up, never a history of purchases nobody described.
- */
-function composeCards(
-  draft: SetupDraft,
-  accounts: readonly { id: string; name: string }[],
-): BackupCard[] {
-  const idByName = new Map(
-    accounts.map((account) => [account.name.toLowerCase(), account.id]),
-  );
-
-  return draft.cards.flatMap((card, index) => {
-    // The draft refuses a card paid from an account it does not hold, so a
-    // miss here is impossible rather than tolerated.
-    const paymentAccountId = idByName.get(
-      card.paymentAccountName.toLowerCase(),
-    );
-
-    return paymentAccountId === undefined
-      ? []
-      : [
-          {
-            id: `card-${String(index + 1)}`,
-            name: card.name,
-            limit: card.limit.cents,
-            closingDay: card.closingDay,
-            dueDay: card.dueDay,
-            paymentAccountId,
-            invoices: [],
-            plans: [],
-          },
-        ];
-  });
 }
 
 /**

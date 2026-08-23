@@ -5,6 +5,7 @@ import { CreateBucketButton } from '@/features/create-bucket';
 import {
   AdjustRule,
   ArchiveBucket,
+  CorrectBalance,
   RecordEvent,
 } from '@/features/manage-buckets';
 import { useSelectedCycle } from '@/features/navigate-cycle';
@@ -55,6 +56,11 @@ export function SavingsPage() {
           {selected !== undefined && (
             <div className="flex justify-end gap-2">
               <AdjustRule bucket={selected} month={selectedMonth ?? ''} />
+              <CorrectBalance
+                bucketId={selected.id}
+                bucketName={selected.name}
+                balance={selected.balance}
+              />
               <RecordEvent
                 bucketId={selected.id}
                 bucketName={selected.name}

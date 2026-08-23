@@ -116,7 +116,7 @@ describe('GET /cycles/:month', () => {
       ref: august,
       openingBalance: Money.fromCents(50_000),
       entries: [
-        entry('Big invoice', EntryKind.Invoice, '2026-08-10', -12_000),
+        entry('Big bill', EntryKind.Fixed, '2026-08-10', -12_000),
         entry('Salary', EntryKind.Income, '2026-08-25', 18_000),
       ],
     });

@@ -1,6 +1,6 @@
 # Financial Control — Use Cases
 
-A personal finance application replacing a spreadsheet: payday-cycle budgeting, credit-card invoices, and
+A personal finance application replacing a spreadsheet: payday-cycle budgeting, recurring bills, and
 savings-bucket projections. Single user, no authentication. English UI, Brazilian Real (`R$ 1.234,56`),
 `dd/MM/yyyy` dates.
 
@@ -52,7 +52,7 @@ amount arrives.
 
 **Consequence: every entry carries a due date.** The due date is what assigns an entry to a cycle, and it is
 what lets the app reason about a running balance through time rather than a single monthly total. It is also
-the source of the app's one genuinely counter-intuitive rule — see UC-5.4.
+what lets the app reason about a running balance through time.
 
 The app holds a **rolling 12 cycles**: the current one, and eleven projected ahead. Cycle navigation is global,
 in the header, and every screen respects the selected cycle.
@@ -111,10 +111,8 @@ Checking, savings and cash accounts, each with a name, type and balance. Their t
 cash and is visible permanently in the sidebar (*"In accounts now — R$ 2.160,00 · 3 accounts"*). Balances can
 be corrected manually at any time.
 
-**UC-1.3 — Configure credit cards**
-Name, limit, **closing day**, **due day**, and the account the invoice is paid from. Because the day pair is
-what drives everything downstream, the form shows a plain-language preview:
-*"Purchases from 29 Jul to 28 Aug will be billed on the invoice due 10 Sep — the October cycle."*
+**UC-1.3 — Configure credit cards** — *removed*
+Cards are not configured. A card's invoice is a recurring bill like any other — see UC-5.
 
 **UC-1.4 — Review formatting conventions**
 Read-only confirmation of how the app renders money, dates, outgoing amounts and cycle names. Not
@@ -125,7 +123,7 @@ The app ships empty, so an app that has never been configured opens on a convers
 dashboard of zeros.
 
 Claude asks for one thing at a time, in the order each depends on the last — **the payday cycle → accounts →
-salary → fixed bills → variable bills → credit cards → savings** — and the user answers however they like:
+salary → fixed bills → variable bills → savings** — and the user answers however they like:
 *"18k, always on the 5th"*; *"health plan 320 on the 8th, electricity around 280 on the 15th"*. Each answer
 becomes structured records, shown back immediately in the app's own formatting — `R$ 320,00`, day 8 — with
 confirm and edit. **A record does not count until it is confirmed**, and correcting one does not restart the
@@ -202,8 +200,8 @@ Sortable by amount. Above it, four figures that summarise the user's commitments
 - **Unconfirmed estimates** — the total the user is guessing at
 - **Ending within 12 cycles** — what is about to fall off, and which
 
-Card invoices appear here as `auto` templates: they exist, but their amount comes from the card, not from a
-value the user types.
+A card's invoice is one of these bills, named for the card and due on the day it falls due. Its amount is set
+per cycle like any other bill whose figure moves (UC-2.3, UC-2.4).
 
 ---
 
@@ -225,7 +223,7 @@ and recover before the closing balance ever shows a problem.
 Main shows the consequence: **the lowest point and the date it happens**. The full dated list is available on
 request through the assistant, which is where the detail went when the Ledger screen was removed.
 
-Entry kinds are distinguishable: `income`, `fixed`, `invoice`, `variable`, `alloc`. Statuses are `received`,
+Entry kinds are distinguishable: `income`, `fixed`, `variable`, `alloc`. Statuses are `received`,
 `paid`, `planned`, `projected`, `overdue`, `skipped`.
 
 **UC-3.3 — Navigate to any of the 12 cycles**
@@ -300,7 +298,6 @@ The things that need attention, ranked by severity:
 
 - an entry from a past cycle still unsettled, blocking that cycle from closing
 - a **projected negative balance** on a specific date in a future cycle, naming what caused it
-- a card invoice about to close, and which cycle purchases will roll into
 - an unconfirmed estimate materially changing a closing balance, quantified both ways
 - a bucket behind its target date, or an ongoing bucket's annual cost worth being aware of
 
@@ -308,57 +305,24 @@ Each alert is the thing most worth asking about, so each is answerable in one cl
 
 ---
 
-### UC-5 — Credit cards & invoices
+### UC-5 — Credit cards — *removed*
 
-The two cards together are a large fraction of all spending, so this is not a side feature. Configuration and
-the committed-future figure live on **Profile**; purchases are registered by asking (UC-8.3), which is what
-lets an instalment plan be described in one sentence instead of a form.
+Credit cards are no longer modelled. A card's invoice is an ordinary recurring outcome (UC-2.1) named for the
+card, due on the day the invoice falls due, and its amount is whatever will be paid that month.
 
-**UC-5.1 — Register a purchase**
-Date, description, amount, card, and number of instalments (default 1). The app decides which invoice it
-belongs to from the card's closing day, and says so before the purchase is confirmed.
+**What went with it:** registering a purchase (UC-5.1), splitting one across instalments (UC-5.2), the
+itemized invoice (UC-5.3), the closing/due day pair deciding which cycle a purchase lands in (UC-5.4),
+paying off instalments early (UC-5.6), refunds (UC-5.7), and the limit, committed-future and available
+figures (UC-5.8). The `Cards` bounded context, its four aggregates and their tables went with them.
 
-**UC-5.2 — Split a purchase into instalments**
-An instalment purchase creates one item on each of `N` consecutive invoices, each labelled with its position —
-`3/10`. The user registers it once; the app schedules the rest and **retires the purchase automatically** when
-the last instalment is billed.
+*Why:* the app was tracking every purchase in order to arrive at one number per cycle — the total the card
+will charge. That total is the only figure the user wanted, and a recurring bill already carries it. An
+instalment-heavy month is handled the way any changing bill is: **this cycle only** (UC-2.3) for a one-off
+figure, or a value schedule (UC-2.4) for amounts already known.
 
-*Why it matters:* the spreadsheet carried instalments as manual rows whose counters were incremented by hand
-and which needed manual deletion when they finished.
-
-**UC-5.3 — View an invoice**
-Itemized: every purchase and instalment, the total, the closing date, the due date, and status
-(`open` / `closed` / `paid`). An open invoice updates as purchases are added; a closed one is fixed. Reached
-from the card on Profile, or by asking.
-
-**UC-5.4 — Understand which cycle an invoice hits**
-An invoice appears as a single outcome in **the cycle containing its due date** — frequently not the cycle its
-purchases were made in. The app must make this legible rather than surprising.
-
-> **Worked example.** Payday is the 5th. The Inter card closes on the 28th and is due on the 10th.
->
-> - A purchase on **20 Aug** falls before the 28 Aug closing → invoice **due 10 Sep**. 10 Sep sits in the cycle
->   running 4 Sep → 4 Oct, which is named for the month it is spent in, so it is paid in the **October cycle**.
-> - A purchase on **29 Aug** falls *after* the closing → invoice **due 10 Oct**, in the **November cycle**.
->   Nine days later on the calendar, an entire cycle later in cash terms.
->
-> Registering a purchase therefore always states, before it is confirmed: *"This will be billed 10 Sep, in the
-> October cycle."*
-
-**UC-5.5 — Pay an invoice**
-Settle it from its linked account, recording the amount actually paid. An invoice is a ledger entry like any
-other, so this is UC-3.5 in Main's upcoming list.
-
-**UC-5.6 — Pay off instalments early**
-Anticipate the remaining instalments of a purchase, optionally with a discount. Future invoices recalculate.
-
-**UC-5.7 — Register a refund**
-A negative purchase — a returned item or a chargeback — reducing the invoice total and shown distinctly.
-
-**UC-5.8 — See a card's committed future**
-Per card: limit, current open invoice, available limit, and **the total already committed to future invoices**
-from instalments. That last figure is the one the spreadsheet could not produce and the strongest argument for
-modelling cards properly.
+*What this costs, stated plainly:* the app no longer knows what a card bill is made of, so it cannot warn that
+a purchase made after the closing day lands a cycle later, and it cannot count instalments down. Both are now
+the user's to track. Paying the bill is UC-3.5, the same as any other entry.
 
 ---
 
@@ -434,24 +398,23 @@ Lives on **Investments & Savings**, beneath the buckets that feed it. Deliberate
 models **buckets only**, never individual bills, and reasons in years.
 
 **UC-7.1 — Set an expected yield per bucket**
-An expected annual return, adjustable inline. It is an assumption and must be labelled as one everywhere it
-influences a number.
+An expected annual return, set where the bucket's allocation rule is set. It is an assumption and must be
+labelled as one everywhere it influences a number.
 
 **UC-7.2 — Project net worth over decades**
 Totals at **5, 10, 20 and 30 years**, assuming current contribution rules continue and each bucket compounds
 at its expected yield. Stacked by bucket, so the *composition* of future wealth is visible, not just the total.
 
-**UC-7.3 — Read the answer per bucket**
-One plain sentence each, in the bucket's own terms:
+**UC-7.3 — Read the answer per bucket** — *removed*
+A plain sentence per bucket restating what the stacked bars above it already show. With three buckets it was
+three near-identical clauses, and before there is a contribution rule to project it was three restatements of
+zero. The bars carry the composition and UC-6.10 carries a goal's completion date; neither needed narrating a
+second time. **Goal progress and the projected completion date remain, on the bucket itself (UC-6.10).**
 
-- **Goal:** *"At R$ 1.778 per cycle and 8 % a year, the Apartment reaches R$ 150.000 in March 2031. Target:
-  March 2031."* — tagged `on track` or `behind`, and when behind, the contribution that would fix it.
-- **Ongoing:** *"At R$ 1.778 per cycle and 9 % a year, Investments holds R$ 142k in 5 years and R$ 331k in 10.
-  No target to hit — the question is only whether the rate is right."*
-
-**UC-7.4 — Test the assumptions**
-Adjust a yield or a contribution rate and watch the projection move. The point is not precision — it is
-seeing how sensitive a thirty-year number is to a two-percent assumption.
+**UC-7.4 — Test the assumptions** — *removed*
+The inline what-if lived only in UC-7.3's card and saved nothing: a yield typed there moved the projection
+until the page was left. Changing the assumption for real is UC-7.1, on the bucket's rule, and the projection
+follows from it.
 
 **UC-7.5 — See the retirement picture**
 Projected balance at retirement, and **what sustainable monthly income that balance supports**. Retirement is
@@ -490,9 +453,9 @@ the screens run, with the same rules and the same warnings; dismissing writes no
 the boundary that enforces them. Everything it can do, the app could already do.
 
 **UC-8.4 — Reach the detail the screens no longer show**
-*"Show me every entry in the September cycle."* *"What's on the Inter invoice due in October?"* The dated
-entry list with its running balance (UC-3.2) and an itemized invoice (UC-5.3) are produced on request rather
-than given a permanent screen, because they are read occasionally and read in full when they are read at all.
+*"Show me every entry in the September cycle."* The dated
+entry list with its running balance (UC-3.2) is produced on request rather than given a permanent screen,
+because it is read occasionally and read in full when it is read at all.
 
 **UC-8.5 — Know when it cannot help**
 Without an API key the assistant says so plainly and the three screens carry on working. An app whose figures
@@ -513,16 +476,14 @@ progress; the upcoming list with inline settle; bucket chips; alerts; and the as
 ### Profile
 Everything the user configures, in the order the first run asked for it: the payday anchor with its change
 preview and weekend rule, accounts, salary, the bills in due-day order with the unconfirmed ones tagged
-`~estimate`, credit cards with their committed-future figure, the formatting reference, the setup checklist,
-backup and restore.
-*Primary action:* edit a bill. *Secondary:* re-enter the setup conversation. → UC-1, UC-2, UC-5.8
+`~estimate`, the formatting reference, the setup checklist, backup and restore.
+*Primary action:* edit a bill. *Secondary:* re-enter the setup conversation. → UC-1, UC-2
 
 ### Investments & Savings — *the answer to Q2*
 Bucket cards showing balance and either goal progress or ongoing share; a selected bucket shows its
 planned-vs-real curves, rule configuration and full event history. Beneath them, stacked net-worth bars at
-5/10/20/30 years, per-bucket assumptions adjustable inline, one plain sentence per bucket, and the retirement
-figure as monthly income.
-*Primary action:* adjust an allocation rule. *Secondary:* adjust an assumption. → UC-6, UC-7
+5/10/20/30 years and the retirement figure as monthly income.
+*Primary action:* adjust an allocation rule. *Secondary:* pick a bucket. → UC-6, UC-7
 
 ### First run — *outside the shell*
 Not one of the three. An app that has never been configured opens here instead of on Main: a conversation,
@@ -593,9 +554,9 @@ looks like an oversight:
 | Removed screen | Where its behaviour went |
 |---|---|
 | **Cycle Ledger** | The chain strip and the figures moved to Main; settling moved to Main's upcoming list; the dated entry list with its running balance is produced on request (UC-8.4). Ad-hoc entries, overrides, closing and reopening are proposals (UC-8.3) |
-| **Cards & Invoices** | Card configuration and the committed-future figure moved to Profile; registering a purchase, splitting instalments, refunds, early payoff and viewing an invoice are asked for (UC-5, UC-8.3, UC-8.4); paying an invoice is settling an entry on Main |
+| **Cards & Invoices** | Removed outright along with the rest of UC-5: a card's invoice is a recurring bill, and paying it is settling an entry on Main |
 | **Recurring Templates** | Moved to Profile in full, as the *salary* and the *bills* |
 | **Wealth Projection** | Merged into Investments & Savings, beneath the buckets that feed it |
 
-No use case was dropped in the move. What changed is that the two screens read least often — the full ledger
-and an itemized invoice — stopped occupying permanent navigation and became things the user asks for.
+No use case was dropped when the ledger and the templates moved; the cards screen is a different matter, and
+what its removal cost is recorded under UC-5.

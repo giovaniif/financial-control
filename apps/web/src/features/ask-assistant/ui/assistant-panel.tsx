@@ -1,9 +1,16 @@
 import type { AssistantReadResponse } from '@fin/contracts';
-import { useEffect, useId, useRef, useState, type SyntheticEvent } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type SyntheticEvent,
+} from 'react';
 
 import { ApiError, useSetupState } from '@/shared/api';
 import { useAssistantRail } from '@/shared/model';
-import { Badge, Button, Card, CardTitle } from '@/shared/ui';
+import { Badge } from '@/shared/ui';
 
 import { useAskAssistant } from '../api/use-ask-assistant.js';
 import {
@@ -37,6 +44,8 @@ export function AssistantPanel() {
   const [conversation, setConversation] =
     useState<Conversation>(loadConversation);
   const [streaming, setStreaming] = useState<Streaming | null>(null);
+  const [hasText, setHasText] = useState(false);
+  const transcript = useRef<HTMLDivElement>(null);
   // The frames arrive from outside React's own scheduling, so what has been
   // written so far is held where a handler can read it as well as set it.
   const written = useRef<Streaming | null>(null);
@@ -84,6 +93,13 @@ export function AssistantPanel() {
     saveConversation(conversation);
   }, [conversation]);
 
+  useEffect(() => {
+    const box = transcript.current;
+    if (box !== null) {
+      box.scrollTop = box.scrollHeight;
+    }
+  }, [conversation, streaming]);
+
   /**
    * A question raised elsewhere in the app — an alert on Main — arrives as a
    * draft, exactly as if it had been typed: offered, never sent on the user's
@@ -100,6 +116,8 @@ export function AssistantPanel() {
     }
 
     box.value = pendingQuestion;
+    setHasText(box.value.trim() !== '');
+    grow(box);
     box.focus();
     takePendingQuestion();
   }, [pendingQuestion, takePendingQuestion]);
@@ -119,6 +137,8 @@ export function AssistantPanel() {
     }));
     if (box !== null) {
       box.value = '';
+      setHasText(false);
+      grow(box);
     }
     write({ text: '', reads: [] });
 
@@ -152,34 +172,49 @@ export function AssistantPanel() {
     );
   };
 
+  /**
+   * Enter sends and Shift+Enter breaks the line — the convention every chat
+   * shares, and what keeps a conversation on the keyboard.
+   */
+  const sendOnEnter = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      send(event);
+    }
+  };
+
   const failure = ask.error instanceof ApiError ? ask.error : null;
   const isSwitchedOff =
     setup.data?.assistantAvailable === false ||
     failure?.status === SWITCHED_OFF;
 
   return (
-    <Card className="flex h-full min-h-0 flex-col gap-3">
-      <CardTitle>Perguntar</CardTitle>
-      <p className="text-sm text-zinc-600">
-        Pergunte sobre qualquer número, ou diga o que mudou. Toda mudança é
-        proposta antes — nada é escrito até você confirmar.
-      </p>
-
+    <div className="flex h-full min-h-0 flex-col">
       {/* The transcript scrolls inside the rail so the composer below it is
           always reachable, and streaming text never moves the layout. */}
       <div
+        ref={transcript}
         role="log"
         aria-label="Conversa com o assistente"
-        className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto"
+        className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-1 py-2"
       >
         {conversation.entries.length === 0 && streaming === null && (
-          <p className="text-sm text-zinc-500">
-            Nada perguntado ainda. Tente{' '}
-            <em>&ldquo;por que setembro está mais baixo que agosto?&rdquo;</em>
-          </p>
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 text-center">
+            <p className="text-sm font-medium text-zinc-700">
+              Nada perguntado ainda
+            </p>
+            <p className="text-sm text-zinc-500">
+              Pergunte sobre qualquer número, ou diga o que mudou. Toda mudança
+              é proposta antes — nada é escrito até você confirmar.
+            </p>
+            <p className="text-sm text-zinc-400">
+              <em>
+                &ldquo;por que setembro está mais baixo que agosto?&rdquo;
+              </em>
+            </p>
+          </div>
         )}
 
-        <ol className="flex flex-col gap-3">
+        <ol className="flex flex-col gap-6">
           {conversation.entries.map((entry, index) => (
             <li key={index}>
               <Line
@@ -205,50 +240,112 @@ export function AssistantPanel() {
           <div
             aria-live="polite"
             aria-busy="true"
-            className="flex flex-col gap-1"
+            className="flex flex-col gap-2"
           >
-            <span className="text-xs text-zinc-500">Claude</span>
-            <p className="max-w-prose rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-900">
-              {streaming.text === '' ? 'Lendo seus números…' : streaming.text}
-            </p>
+            <Speaker name="Claude" />
+            {streaming.text === '' ? (
+              <Thinking />
+            ) : (
+              <p className="text-sm whitespace-pre-wrap text-zinc-900">
+                {streaming.text}
+              </p>
+            )}
             <Reads reads={streaming.reads} />
           </div>
         )}
       </div>
 
       {failure !== null && failure.status !== SWITCHED_OFF && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="px-1 pb-2 text-sm text-red-700">
           O assistente não conseguiu responder: {failure.message}
         </p>
       )}
 
       {isSwitchedOff ? (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
           O assistente está desligado — nenhuma chave de API está configurada.
           Todos os números desta tela continuam funcionando sem ele.
         </p>
       ) : (
-        <form onSubmit={send} className="flex shrink-0 flex-col gap-2">
-          <label
-            htmlFor={questionId}
-            className="text-xs font-medium text-zinc-600"
-          >
+        <form onSubmit={send} className="shrink-0 pt-2">
+          <label htmlFor={questionId} className="sr-only">
             Pergunte sobre o seu dinheiro
           </label>
-          <textarea
-            id={questionId}
-            ref={composer}
-            rows={2}
-            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none"
-          />
-          <div>
-            <Button type="submit" variant="primary" disabled={ask.isPending}>
-              Perguntar
-            </Button>
+          {/* One field and its send, framed as a single control: the border
+              belongs to the pair, so the composer reads as somewhere to talk
+              rather than as a form field with a button after it. */}
+          <div className="flex items-end gap-2 rounded-2xl border border-zinc-300 bg-white px-3 py-2 shadow-sm focus-within:border-zinc-400 focus-within:ring-2 focus-within:ring-zinc-900/5">
+            <textarea
+              id={questionId}
+              ref={composer}
+              rows={1}
+              placeholder="Pergunte sobre o seu dinheiro"
+              onChange={(event) => {
+                setHasText(event.target.value.trim() !== '');
+                grow(event.target);
+              }}
+              onKeyDown={sendOnEnter}
+              className="max-h-40 min-h-6 flex-1 resize-none bg-transparent text-sm leading-6 text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={!hasText || ask.isPending}
+              className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-zinc-900 text-zinc-50 transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="size-4"
+              >
+                <path d="M12 19V5" />
+                <path d="m5 12 7-7 7 7" />
+              </svg>
+              <span className="sr-only">Perguntar</span>
+            </button>
           </div>
         </form>
       )}
-    </Card>
+    </div>
+  );
+}
+
+/**
+ * The box grows with what is typed rather than scrolling inside two fixed
+ * rows, up to the cap the class sets — height has to be cleared first or
+ * `scrollHeight` only ever reports the height it already has.
+ */
+function grow(box: HTMLTextAreaElement) {
+  box.style.height = 'auto';
+  box.style.height = `${String(box.scrollHeight)}px`;
+}
+
+/** Who is speaking, above what they said. */
+function Speaker({ name }: { name: string }) {
+  return (
+    <span className="text-xs font-medium tracking-wide text-zinc-500">
+      {name}
+    </span>
+  );
+}
+
+/** The wait before the first token, as something moving rather than a word. */
+function Thinking() {
+  return (
+    <span className="flex items-center gap-1 py-1">
+      {[0, 150, 300].map((delay) => (
+        <span
+          key={delay}
+          className="size-1.5 animate-bounce rounded-full bg-zinc-400"
+          style={{ animationDelay: `${String(delay)}ms` }}
+        />
+      ))}
+      <span className="sr-only">Lendo seus números…</span>
+    </span>
   );
 }
 
@@ -261,21 +358,24 @@ function Line({
   onApplied: (proposalId: string) => void;
   onDismiss: (proposalId: string) => void;
 }) {
+  // The question is a bubble and the answer is not: one side of a chat being
+  // quoted back and the other simply written is what makes a long transcript
+  // scannable.
   if (entry.kind === 'question') {
     return (
-      <div className="flex flex-col items-end gap-1">
-        <span className="text-xs text-zinc-500">Você</span>
-        <span className="max-w-prose rounded-lg bg-zinc-900 px-3 py-2 text-sm text-zinc-50">
+      <div className="flex justify-end">
+        <p className="max-w-[85%] rounded-2xl rounded-br-sm bg-zinc-900 px-3.5 py-2 text-sm whitespace-pre-wrap text-zinc-50">
           {entry.text}
-        </span>
+        </p>
+        <span className="sr-only">Você</span>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs text-zinc-500">Claude</span>
-      <p className="max-w-prose rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-900">
+      <Speaker name="Claude" />
+      <p className="text-sm leading-relaxed whitespace-pre-wrap text-zinc-900">
         {entry.text}
       </p>
 

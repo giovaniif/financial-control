@@ -5,7 +5,6 @@ import { useSelectedCycle } from '@/features/navigate-cycle';
 import { AccountsSection } from './sections/accounts-section.js';
 import { AnchorSection } from './sections/anchor-section.js';
 import { BucketsSection } from './sections/buckets-section.js';
-import { CardsSection } from './sections/cards-section.js';
 import { TemplatesSection } from './sections/templates-section.js';
 import { SetupSummary } from './setup-summary.js';
 
@@ -37,9 +36,6 @@ export function SetupForm() {
       </Section>
       <Section title="Salário e o que se repete a cada ciclo">
         <TemplatesSection currentMonth={selectedMonth ?? ''} />
-      </Section>
-      <Section title="Cartões de crédito e suas faturas">
-        <CardsSection />
       </Section>
       <Section title="Para o que você está guardando">
         <BucketsSection />

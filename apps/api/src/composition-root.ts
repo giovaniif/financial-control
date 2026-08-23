@@ -12,7 +12,6 @@ import { ManageTemplates } from './application/budgeting/uc-2-manage-templates.j
 import { ReadCycle } from './application/budgeting/uc-3-1-read-cycle.js';
 import { CloseCycle } from './application/budgeting/uc-3-8-close-cycle.js';
 import { LedgerActions } from './application/budgeting/uc-3-ledger-actions.js';
-import { ManageCards } from './application/cards/uc-5-manage-cards.js';
 import { ManageBuckets } from './application/goals/uc-6-manage-buckets.js';
 import { BuildDashboard } from './application/projection/uc-4-build-dashboard.js';
 import { ReadSetupState } from './application/projection/uc-1-5-read-setup-state.js';
@@ -36,7 +35,6 @@ import { UuidIdSource } from './infrastructure/ids/uuid-id-source.js';
 import { BrazilianHolidayCalendar } from './infrastructure/holidays/brazilian-holiday-calendar.js';
 import { PrismaAccountRepository } from './infrastructure/prisma/prisma-account-repository.js';
 import { PrismaBucketRepository } from './infrastructure/prisma/prisma-bucket-repository.js';
-import { PrismaCardRepository } from './infrastructure/prisma/prisma-card-repository.js';
 import { PrismaCycleRepository } from './infrastructure/prisma/prisma-cycle-repository.js';
 import { PrismaTemplateRepository } from './infrastructure/prisma/prisma-template-repository.js';
 import { PrismaSettingsRepository } from './infrastructure/prisma/prisma-settings-repository.js';
@@ -82,14 +80,12 @@ export function createApp(): FastifyInstance {
   const cycles = new PrismaCycleRepository(prisma);
   const accounts = new PrismaAccountRepository(prisma);
   const templates = new PrismaTemplateRepository(prisma);
-  const cards = new PrismaCardRepository(prisma);
   const buckets = new PrismaBucketRepository(prisma);
 
   const backup = new BackupRestore(
     cycles,
     accounts,
     templates,
-    cards,
     buckets,
     settings,
     holidays,
@@ -122,7 +118,6 @@ export function createApp(): FastifyInstance {
     clock,
   );
   const ledgerActions = new LedgerActions(cycles, settings, holidays);
-  const manageCards = new ManageCards(cards, cycles, settings, holidays);
   const manageBuckets = new ManageBuckets(buckets, cycles, settings, holidays);
   const buildDashboard = new BuildDashboard(
     cycles,
@@ -142,18 +137,11 @@ export function createApp(): FastifyInstance {
     manageTemplates,
     ledgerActions,
     closeCycle: new CloseCycle(cycles, settings, accounts, holidays, clock),
-    manageCards,
     manageBuckets,
     backupRestore: backup,
     buildDashboard,
     projectWealth,
-    readSetupState: new ReadSetupState(
-      settings,
-      accounts,
-      templates,
-      cards,
-      buckets,
-    ),
+    readSetupState: new ReadSetupState(settings, accounts, templates, buckets),
     converseSetup: new ConverseSetup(
       model,
       conversations,
@@ -190,7 +178,6 @@ export function createApp(): FastifyInstance {
       ledgerActions,
       manageTemplates,
       configureAnchor,
-      manageCards,
       manageBuckets,
       clock,
     ),

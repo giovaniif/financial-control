@@ -49,8 +49,8 @@ const workedExample = () =>
     entries: [
       entry('Salary', EntryKind.Income, '2026-08-05', 18_000),
       entry('Health Plan', EntryKind.Fixed, '2026-08-08', -320),
-      entry('Inter — invoice', EntryKind.Invoice, '2026-08-10', -3_400),
-      entry('Nubank — invoice', EntryKind.Invoice, '2026-08-10', -1_250),
+      entry('Inter — fatura', EntryKind.Fixed, '2026-08-10', -3_400),
+      entry('Nubank — fatura', EntryKind.Fixed, '2026-08-10', -1_250),
       entry('Down Payment', EntryKind.Fixed, '2026-08-12', -890),
       entry('Electricity', EntryKind.Fixed, '2026-08-15', -280),
       entry('Mobile Plan', EntryKind.Fixed, '2026-08-15', -150),
@@ -258,7 +258,7 @@ describe('the running balance', () => {
       ref: september,
       openingBalance: Money.fromCents(50_000),
       entries: [
-        entry('Big invoice', EntryKind.Invoice, '2026-08-10', -12_000),
+        entry('Big bill', EntryKind.Fixed, '2026-08-10', -12_000),
         entry('Salary', EntryKind.Income, '2026-08-25', 18_000),
       ],
     });

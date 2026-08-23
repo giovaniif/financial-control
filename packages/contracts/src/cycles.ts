@@ -1,7 +1,6 @@
 import type { Cents } from './money.js';
 
-export type EntryKind =
-  'INCOME' | 'FIXED' | 'INVOICE' | 'VARIABLE' | 'ALLOCATION';
+export type EntryKind = 'INCOME' | 'FIXED' | 'VARIABLE' | 'ALLOCATION';
 
 export type SettlementStatus =
   'PENDING' | 'PAID' | 'RECEIVED' | 'SKIPPED' | 'OVERDUE';

@@ -1,7 +1,6 @@
 import type {
   BackupBucket,
   BackupBucketEvent,
-  BackupCard,
   BackupCycle,
   BackupDocument,
   BackupEntry,
@@ -16,8 +15,6 @@ import { Cycle } from '../../domain/budgeting/cycle.js';
 import type { EntryOrigin } from '../../domain/budgeting/ledger-entry.js';
 import { LedgerEntry } from '../../domain/budgeting/ledger-entry.js';
 import { RecurringTemplate } from '../../domain/budgeting/recurring-template.js';
-import { Card } from '../../domain/cards/card.js';
-import { Invoice } from '../../domain/cards/invoice.js';
 import type { BucketEvent } from '../../domain/goals/bucket-event.js';
 import { Allocation, Bucket } from '../../domain/goals/bucket.js';
 import { DomainError } from '../../domain/shared/domain-error.js';
@@ -26,12 +23,10 @@ import type { HolidayCalendar } from '../../domain/ports/holiday-calendar.js';
 import type {
   AccountRepository,
   BucketRepository,
-  CardRepository,
   CycleRepository,
   RecurringTemplateRepository,
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
-import { InstallmentRef } from '../../domain/shared/installment-ref.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
 import { Percentage } from '../../domain/shared/percentage.js';
@@ -55,7 +50,6 @@ export class BackupRestore {
     private readonly cycles: CycleRepository,
     private readonly accounts: AccountRepository,
     private readonly templates: RecurringTemplateRepository,
-    private readonly cards: CardRepository,
     private readonly buckets: BucketRepository,
     private readonly settings: SettingsRepository,
     private readonly holidays: HolidayCalendar,
@@ -88,7 +82,6 @@ export class BackupRestore {
       })),
       cycles: stored.filter(isPresent).map(toBackupCycle),
       templates: (await this.templates.findAll()).map(toBackupTemplate),
-      cards: (await this.cards.findAll()).map(toBackupCard),
       buckets: (await this.buckets.findAll()).map(toBackupBucket),
     };
   }
@@ -136,9 +129,6 @@ export class BackupRestore {
     for (const template of document.templates) {
       await this.templates.save(toTemplate(template));
     }
-    for (const card of document.cards) {
-      await this.cards.save(toCard(card));
-    }
     for (const bucket of document.buckets) {
       await this.buckets.save(toBucket(bucket));
     }
@@ -149,7 +139,6 @@ export class BackupRestore {
     await this.cycles.deleteAll();
     await this.accounts.deleteAll();
     await this.templates.deleteAll();
-    await this.cards.deleteAll();
     await this.buckets.deleteAll();
   }
 }
@@ -185,8 +174,6 @@ function toBackupOrigin(origin: EntryOrigin): BackupEntryOrigin {
   switch (origin.kind) {
     case 'FROM_TEMPLATE':
       return { kind: 'FROM_TEMPLATE', ref: origin.templateId };
-    case 'FROM_INVOICE':
-      return { kind: 'FROM_INVOICE', ref: origin.invoiceId };
     case 'FROM_ALLOCATION':
       return { kind: 'FROM_ALLOCATION', ref: origin.bucketId };
     case 'OVERRIDE':
@@ -204,8 +191,6 @@ function toOrigin(origin: BackupEntryOrigin): EntryOrigin {
   switch (origin.kind) {
     case 'FROM_TEMPLATE':
       return { kind: 'FROM_TEMPLATE', templateId: origin.ref };
-    case 'FROM_INVOICE':
-      return { kind: 'FROM_INVOICE', invoiceId: origin.ref };
     case 'FROM_ALLOCATION':
       return { kind: 'FROM_ALLOCATION', bucketId: origin.ref };
     case 'OVERRIDE':
@@ -282,90 +267,6 @@ function toTemplate(template: BackupTemplate): RecurringTemplate {
     valueSchedule: template.valueSchedule.map((step) => ({
       fromMonth: step.fromMonth,
       amount: Money.fromCents(step.amount),
-    })),
-  });
-}
-
-function toBackupCard(card: Card): BackupCard {
-  return {
-    id: card.id,
-    name: card.name,
-    limit: card.limit.cents,
-    closingDay: card.closingDay,
-    dueDay: card.dueDay,
-    paymentAccountId: card.paymentAccountId,
-    invoices: card.invoices.map((invoice) => ({
-      id: invoice.id,
-      periodStart: invoice.periodStart.toISO(),
-      periodEnd: invoice.periodEnd.toISO(),
-      dueDate: invoice.dueDate.toISO(),
-      status: invoice.status,
-      paidAmount: invoice.paidAmount?.cents ?? null,
-      items: invoice.items.map((item) => ({
-        id: item.id,
-        purchaseId: item.purchaseId,
-        description: item.description,
-        purchasedOn: item.purchasedOn.toISO(),
-        amount: item.amount.cents,
-        installment:
-          item.installment === undefined
-            ? null
-            : {
-                number: item.installment.number,
-                total: item.installment.total,
-              },
-      })),
-    })),
-    plans: card.plans.map((plan) => ({
-      purchaseId: plan.purchaseId,
-      description: plan.description,
-      purchasedOn: plan.purchasedOn.toISO(),
-      total: plan.total.cents,
-      totalInstallments: plan.totalInstallments,
-    })),
-  };
-}
-
-function toCard(card: BackupCard): Card {
-  return Card.open({
-    id: card.id,
-    name: card.name,
-    limit: Money.fromCents(card.limit),
-    closingDay: card.closingDay,
-    dueDay: card.dueDay,
-    paymentAccountId: card.paymentAccountId,
-    invoices: card.invoices.map((invoice) =>
-      Invoice.open({
-        id: invoice.id,
-        periodStart: LocalDate.parse(invoice.periodStart),
-        periodEnd: LocalDate.parse(invoice.periodEnd),
-        dueDate: LocalDate.parse(invoice.dueDate),
-        status: invoice.status,
-        ...(invoice.paidAmount === null
-          ? {}
-          : { paidAmount: Money.fromCents(invoice.paidAmount) }),
-        items: invoice.items.map((item) => ({
-          id: item.id,
-          purchaseId: item.purchaseId,
-          description: item.description,
-          purchasedOn: LocalDate.parse(item.purchasedOn),
-          amount: Money.fromCents(item.amount),
-          installment:
-            item.installment === null
-              ? undefined
-              : InstallmentRef.of(
-                  item.installment.number,
-                  item.installment.total,
-                ),
-        })),
-      }),
-    ),
-    plans: card.plans.map((plan) => ({
-      purchaseId: plan.purchaseId,
-      description: plan.description,
-      purchasedOn: LocalDate.parse(plan.purchasedOn),
-      total: Money.fromCents(plan.total),
-      totalInstallments: plan.totalInstallments,
     })),
   });
 }

@@ -21,7 +21,6 @@ export const BACKUP_VERSION = 1;
 export type BackupEntryOrigin =
   | { kind: 'MANUAL' }
   | { kind: 'FROM_TEMPLATE'; ref: string }
-  | { kind: 'FROM_INVOICE'; ref: string }
   | { kind: 'FROM_ALLOCATION'; ref: string }
   | {
       kind: 'OVERRIDE';
@@ -67,42 +66,6 @@ export interface BackupTemplate {
   status: TemplateStatus;
   isEstimate: boolean;
   valueSchedule: { fromMonth: string; amount: Cents }[];
-}
-
-export interface BackupInvoiceItem {
-  id: string;
-  purchaseId: string;
-  description: string;
-  purchasedOn: string;
-  amount: Cents;
-  installment: { number: number; total: number } | null;
-}
-
-export interface BackupInvoice {
-  id: string;
-  periodStart: string;
-  periodEnd: string;
-  dueDate: string;
-  status: 'OPEN' | 'CLOSED' | 'PAID';
-  paidAmount: Cents | null;
-  items: BackupInvoiceItem[];
-}
-
-export interface BackupCard {
-  id: string;
-  name: string;
-  limit: Cents;
-  closingDay: number;
-  dueDay: number;
-  paymentAccountId: string;
-  invoices: BackupInvoice[];
-  plans: {
-    purchaseId: string;
-    description: string;
-    purchasedOn: string;
-    total: Cents;
-    totalInstallments: number;
-  }[];
 }
 
 /** The append-only log, one variant per kind — see `BucketEvent`. */
@@ -153,6 +116,5 @@ export interface BackupDocument {
   accounts: BackupAccount[];
   cycles: BackupCycle[];
   templates: BackupTemplate[];
-  cards: BackupCard[];
   buckets: BackupBucket[];
 }

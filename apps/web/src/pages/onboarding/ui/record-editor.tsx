@@ -106,42 +106,6 @@ export function RecordEditor({ parsed, pending, onSave, onCancel }: Props) {
           </>
         )}
 
-        {parsed.kind === 'CARD' && (
-          <>
-            <Money
-              label="Limite"
-              value={form.limit}
-              error={errors.limit}
-              onChange={(value) => {
-                set('limit', value);
-              }}
-            />
-            <Day
-              label="Dia de fechamento"
-              value={form.closingDay}
-              error={errors.closingDay}
-              onChange={(value) => {
-                set('closingDay', value);
-              }}
-            />
-            <Day
-              label="Dia de vencimento"
-              value={form.dueDay}
-              error={errors.dueDay}
-              onChange={(value) => {
-                set('dueDay', value);
-              }}
-            />
-            <Field
-              label="Pago da conta"
-              value={form.paymentAccountName}
-              onChange={(event) => {
-                set('paymentAccountName', event.target.value);
-              }}
-            />
-          </>
-        )}
-
         {parsed.kind === 'BUCKET' && (
           <>
             <Choice
