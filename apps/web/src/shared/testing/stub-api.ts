@@ -1,3 +1,4 @@
+import type { AssistantStreamEvent } from '@fin/contracts';
 import { vi } from 'vitest';
 
 /** What a stubbed route was asked for, when one answer per call is not enough. */
@@ -91,4 +92,46 @@ function read(body: BodyInit | null | undefined): unknown {
   } catch {
     return body;
   }
+}
+
+/** A server-sent stream a test drives frame by frame. */
+export interface SseStub {
+  /** The answer the stubbed route returns. One stub answers one request. */
+  readonly response: Response;
+  send(event: AssistantStreamEvent): void;
+  /** A frame written by hand, for a chunk boundary in the wrong place. */
+  raw(text: string): void;
+  close(): void;
+}
+
+/**
+ * The assistant answers as it writes, so a test that hands back a finished
+ * body proves nothing about what reaches the screen in between. This one
+ * stays open until the test closes it.
+ */
+export function sseStub(): SseStub {
+  const encoder = new TextEncoder();
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const stream = new ReadableStream<Uint8Array>({
+    start(open) {
+      controller = open;
+    },
+  });
+  const raw = (text: string) => {
+    controller.enqueue(encoder.encode(text));
+  };
+
+  return {
+    response: new Response(stream, {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' },
+    }),
+    raw,
+    send: (event) => {
+      raw(`event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`);
+    },
+    close: () => {
+      controller.close();
+    },
+  };
 }
