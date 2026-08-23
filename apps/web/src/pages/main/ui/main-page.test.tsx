@@ -22,8 +22,8 @@ const dashboard = (
   estimates: 'included',
   headline: {
     cycleMonth: '2026-09',
-    cycleLabel: 'September 2026',
-    range: '4 Sep – 4 Oct',
+    cycleLabel: 'Setembro de 2026',
+    range: '4 set – 4 out',
     incoming: 1_800_000,
     outgoing: 911_000,
     free: 355_600,
@@ -259,7 +259,7 @@ describe('MainPage', () => {
     const headline = await screen.findByText(/fica livre depois das alocações/);
 
     expect(headline).toHaveTextContent(
-      'No ciclo September 2026 você vai receber',
+      'No ciclo Setembro de 2026 você vai receber',
     );
   });
 
@@ -319,7 +319,7 @@ describe('MainPage', () => {
           {
             severity: 'CRITICAL',
             title: 'Projected negative balance on 2026-09-28',
-            body: 'September 2026 runs to -R$ 2.013,22.',
+            body: 'Setembro de 2026 runs to -R$ 2.013,22.',
           },
         ],
       }),
@@ -527,7 +527,7 @@ describe('MainPage and the assistant', () => {
     {
       severity: 'CRITICAL' as const,
       title: 'Projected negative balance on 2026-09-28',
-      body: 'September 2026 runs to -R$ 2.013,22.',
+      body: 'Setembro de 2026 runs to -R$ 2.013,22.',
     },
   ];
 
@@ -546,7 +546,7 @@ describe('MainPage and the assistant', () => {
       screen.getByRole('log', { name: 'Conversa com o assistente' }),
     ).toBeVisible();
     expect(screen.getByLabelText('Pergunte sobre o seu dinheiro')).toHaveValue(
-      'Sobre “Projected negative balance on 2026-09-28”: September 2026 runs ' +
+      'Sobre “Projected negative balance on 2026-09-28”: Setembro de 2026 runs ' +
         'to -R$ 2.013,22. Por que isso acontece, e o que mudaria isso?',
     );
     // The question is offered, never sent on the user's behalf.
@@ -590,20 +590,22 @@ describe('MainPage follows the selected cycle', () => {
     renderPage();
 
     expect(
-      await screen.findByText(/No ciclo September 2026/),
+      await screen.findByText(/No ciclo Setembro de 2026/),
     ).toBeInTheDocument();
   });
 
   it('describes the cycle the nav has selected', async () => {
     respondWith(
       dashboard({
-        headline: { ...dashboard().headline, cycleLabel: 'August 2026' },
+        headline: { ...dashboard().headline, cycleLabel: 'Agosto de 2026' },
       }),
     );
 
     renderPage('/?cycle=2026-08');
 
-    expect(await screen.findByText(/No ciclo August 2026/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/No ciclo Agosto de 2026/),
+    ).toBeInTheDocument();
   });
 
   // UC-3.1 — the chain strip moved here when the Ledger screen went.
@@ -619,7 +621,7 @@ describe('MainPage follows the selected cycle', () => {
   it('does not call a past cycle the next one', async () => {
     renderPage('/?cycle=2026-08');
 
-    await screen.findByText(/No ciclo September 2026/);
+    await screen.findByText(/No ciclo Setembro de 2026/);
 
     expect(screen.queryByText('Próximo ciclo')).not.toBeInTheDocument();
   });

@@ -35,7 +35,7 @@ describe('proposal copy', () => {
         'SETTLE_ENTRY',
         'Settle entry e1 in the 2026-09 cycle as paid, at its planned amount.',
       ),
-    ).toBe('Dá baixa no ciclo September 2026.');
+    ).toBe('Dá baixa no ciclo Setembro de 2026.');
   });
 
   it('names the cycle an override applies to', () => {
@@ -44,7 +44,7 @@ describe('proposal copy', () => {
         'OVERRIDE_CONTRIBUTION',
         'Put R$ 500,00 into bucket b1 for the 2026-10 cycle, this once.',
       ),
-    ).toBe('Vale para o ciclo October 2026.');
+    ).toBe('Vale para o ciclo Outubro de 2026.');
   });
 
   /**
@@ -77,7 +77,7 @@ describe('proposal copy', () => {
         'Add “Dentist” to the 2026-09 cycle — a fixed of R$ 300,00 due on 2026-09-20.',
       ),
     ).toBe(
-      'Add “Dentist” to the September 2026 cycle — a fixed of R$ 300,00 due on 20/09/2026.',
+      'Add “Dentist” to the Setembro de 2026 cycle — a fixed of R$ 300,00 due on 20/09/2026.',
     );
   });
 });

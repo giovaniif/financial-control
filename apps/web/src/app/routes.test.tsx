@@ -32,8 +32,8 @@ const dashboard = {
   estimates: 'included',
   headline: {
     cycleMonth: '2026-08',
-    cycleLabel: 'August 2026',
-    range: '5 Aug – 4 Sep',
+    cycleLabel: 'Agosto de 2026',
+    range: '5 ago – 4 set',
     incoming: 0,
     outgoing: 0,
     free: 0,
