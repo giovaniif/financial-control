@@ -14,10 +14,13 @@ import type { ManageBuckets } from '../../application/goals/uc-6-manage-buckets.
 import type { BuildDashboard } from '../../application/projection/uc-4-build-dashboard.js';
 import type { ReadSetupState } from '../../application/projection/uc-1-5-read-setup-state.js';
 import type { CompleteSetup } from '../../application/setup/compose-setup.js';
+import type { CorrectSetupRecord } from '../../application/setup/uc-1-5-correct-record.js';
 import type { ConverseSetup } from '../../application/setup/uc-1-5-converse-setup.js';
 import type { ProjectWealth } from '../../application/projection/uc-7-project-wealth.js';
 import type { ListCycles } from '../../application/budgeting/uc-3-3-list-cycles.js';
 import type { Clock } from '../../domain/ports/clock.js';
+import type { SpendRateLimits } from './rate-limit.js';
+import { buildSpendGuard } from './rate-limit.js';
 import { registerAccountRoutes } from './routes/accounts.js';
 import { registerAssistantRoutes } from './routes/assistant.js';
 import { registerBackupRoutes } from './routes/backup.js';
@@ -47,9 +50,12 @@ interface Dependencies {
   backupRestore: BackupRestore;
   readSetupState: ReadSetupState;
   converseSetup: ConverseSetup;
+  correctSetupRecord: CorrectSetupRecord;
   completeSetup: CompleteSetup;
   converseAssistant: AssistantConversation;
   applyProposal: ApplyProposal;
+  /** What one caller may spend — FIN-114. */
+  spendLimits: SpendRateLimits;
 }
 
 export function buildServer({
@@ -68,15 +74,16 @@ export function buildServer({
   backupRestore,
   readSetupState,
   converseSetup,
+  correctSetupRecord,
   completeSetup,
   converseAssistant,
   applyProposal,
+  spendLimits,
 }: Dependencies): FastifyInstance {
   const app = Fastify({ logger: false });
 
   registerHealthRoute(app, { clock, startedAt: clock.now() });
   registerSettingsRoutes(app, { configureAnchor });
-  registerSetupRoutes(app, { readSetupState, converseSetup, completeSetup });
   registerAccountRoutes(app, { manageAccounts });
   registerCycleRoutes(app, { readCycle, listCycles });
   registerTemplateRoutes(app, { manageTemplates });
@@ -89,7 +96,27 @@ export function buildServer({
     manageBuckets,
   });
   registerBackupRoutes(app, { backupRestore });
-  registerAssistantRoutes(app, { converseAssistant, applyProposal });
+
+  // The two routes that reach a model are registered together, behind the one
+  // budget they share. Everything above costs a database query and is not
+  // worth limiting; the structured corrections inside the setup routes cost
+  // nothing at all and are left alone there.
+  void app.register(async (scope) => {
+    const spendGuard = await buildSpendGuard(scope, spendLimits);
+
+    registerSetupRoutes(scope, {
+      readSetupState,
+      converseSetup,
+      correctSetupRecord,
+      completeSetup,
+      spendGuard,
+    });
+    registerAssistantRoutes(scope, {
+      converseAssistant,
+      applyProposal,
+      spendGuard,
+    });
+  });
 
   return app;
 }

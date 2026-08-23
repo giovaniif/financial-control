@@ -24,11 +24,8 @@ import { Money } from '../../domain/shared/money.js';
 import { Percentage } from '../../domain/shared/percentage.js';
 import { calendarMonthOf, monthOf } from '../budgeting/month.js';
 
-import type {
-  DraftRecord,
-  ProposedBucket,
-  ProposedGoalBucket,
-} from './setup-draft.js';
+import type { RecordCorrection } from './record-correction.js';
+import { applyCorrection, describeRule } from './record-correction.js';
 import { SETUP_SECTIONS, SetupDraft, SetupSection } from './setup-draft.js';
 
 export class SetupConversationNotFound extends DomainError {}
@@ -402,7 +399,7 @@ interface TurnOutcome {
  * account of it, and a removal takes it out: what the client shows back has to
  * be what the draft actually holds.
  */
-function accumulate(
+export function accumulate(
   existing: readonly EstablishedRecord[],
   established: readonly EstablishedRecord[],
   removed: readonly string[],
@@ -849,7 +846,7 @@ function correct(draft: SetupDraft, args: JsonObject): Correction {
   const held = draft.find(id);
   if (held === undefined) return notHolding(id);
 
-  const corrected = correctRecord(draft, id, held, args);
+  const corrected = applyCorrection(draft, id, held, readCorrection(args));
   if (corrected === undefined) {
     return {
       kind: 'missing',
@@ -863,6 +860,34 @@ function correct(draft: SetupDraft, args: JsonObject): Correction {
     section: held.section,
     id,
     summary: corrected.summary,
+  };
+}
+
+/**
+ * The `correct_record` call's arguments as a {@link RecordCorrection}. The
+ * tool schema is the model's vocabulary — cents, days, a percentage — and
+ * this is the whole of the difference between the conversational path and the
+ * structured one: everything after it is shared.
+ */
+function readCorrection(args: JsonObject): RecordCorrection {
+  return {
+    name: readText(args, 'name'),
+    type: readChoice(args, 'type', [
+      AccountType.Checking,
+      AccountType.Savings,
+      AccountType.Cash,
+    ]),
+    balance: readCents(args, 'balanceInCents'),
+    amount: readCents(args, 'amountInCents'),
+    dueDayOfMonth: readInteger(args, 'dueDayOfMonth'),
+    isEstimate: readFlag(args, 'isEstimate'),
+    limit: readCents(args, 'limitInCents'),
+    closingDay: readInteger(args, 'closingDay'),
+    dueDay: readInteger(args, 'dueDay'),
+    paymentAccountName: readText(args, 'paymentAccountName'),
+    rule: allocationRule(args),
+    targetAmount: readCents(args, 'targetAmountInCents'),
+    targetDate: readDate(args, 'targetDate'),
   };
 }
 
@@ -894,197 +919,6 @@ function notHolding(id: string): Correction {
 }
 
 /**
- * The fields the call carries are merged onto the record it names and the
- * whole thing is offered to the draft again, which validates a correction
- * exactly as it validates an addition. A field belonging to another kind of
- * record is not read: the corrected record is read back to the user, so what
- * did not apply is visible rather than silent.
- *
- * `undefined` means nothing that applies was stated — a question, not a
- * correction that changes nothing.
- */
-function correctRecord(
-  draft: SetupDraft,
-  id: string,
-  held: DraftRecord,
-  args: JsonObject,
-): { draft: SetupDraft; summary: string } | undefined {
-  const name = readText(args, 'name');
-
-  switch (held.section) {
-    case 'ACCOUNTS': {
-      const type = readChoice(args, 'type', [
-        AccountType.Checking,
-        AccountType.Savings,
-        AccountType.Cash,
-      ]);
-      const balance = readCents(args, 'balanceInCents');
-      if (name === undefined && type === undefined && balance === undefined) {
-        return undefined;
-      }
-
-      const account = {
-        name: name ?? held.record.name,
-        type: type ?? held.record.type,
-        balance: balance ?? held.record.balance,
-      };
-
-      return {
-        draft: draft.replaceAccount(id, account),
-        summary: summariseAccount(account),
-      };
-    }
-    case 'FIXED_BILLS':
-    case 'VARIABLE_BILLS': {
-      const amount = readCents(args, 'amountInCents');
-      const dueDayOfMonth = readInteger(args, 'dueDayOfMonth');
-      const isEstimate = readFlag(args, 'isEstimate');
-      if (
-        name === undefined &&
-        amount === undefined &&
-        dueDayOfMonth === undefined &&
-        isEstimate === undefined
-      ) {
-        return undefined;
-      }
-
-      const bill = {
-        name: name ?? held.record.name,
-        amount: amount ?? held.record.amount,
-        dueDayOfMonth: dueDayOfMonth ?? held.record.dueDayOfMonth,
-        isEstimate: isEstimate ?? held.record.isEstimate,
-      };
-
-      return {
-        draft:
-          held.section === SetupSection.FixedBills
-            ? draft.replaceFixedBill(id, bill)
-            : draft.replaceVariableBill(id, bill),
-        summary: summariseBill(bill),
-      };
-    }
-    case 'CARDS': {
-      const limit = readCents(args, 'limitInCents');
-      const closingDay = readInteger(args, 'closingDay');
-      const dueDay = readInteger(args, 'dueDay');
-      const paymentAccountName = readText(args, 'paymentAccountName');
-      if (
-        name === undefined &&
-        limit === undefined &&
-        closingDay === undefined &&
-        dueDay === undefined &&
-        paymentAccountName === undefined
-      ) {
-        return undefined;
-      }
-
-      const card = {
-        name: name ?? held.record.name,
-        limit: limit ?? held.record.limit,
-        closingDay: closingDay ?? held.record.closingDay,
-        dueDay: dueDay ?? held.record.dueDay,
-        paymentAccountName:
-          paymentAccountName ?? held.record.paymentAccountName,
-      };
-
-      return {
-        draft: draft.replaceCard(id, card),
-        summary: summariseCard(card),
-      };
-    }
-    case 'BUCKETS': {
-      const rule = allocationRule(args);
-      const bucket = held.record;
-      const base = {
-        name: name ?? bucket.name,
-        rule: rule ?? bucket.rule,
-        // The funding order is the draft's to hand out, not a correction's to
-        // take: changing it would renumber a bucket nobody mentioned.
-        priority: bucket.priority,
-      };
-
-      if (bucket.mode === 'ONGOING') {
-        if (name === undefined && rule === undefined) return undefined;
-
-        return {
-          draft: draft.replaceOngoingBucket(id, base),
-          summary: summariseBucket({ mode: 'ONGOING', ...base }),
-        };
-      }
-
-      const amount = readCents(args, 'targetAmountInCents');
-      const date = readDate(args, 'targetDate');
-      if (
-        name === undefined &&
-        rule === undefined &&
-        amount === undefined &&
-        date === undefined
-      ) {
-        return undefined;
-      }
-
-      const goal = {
-        ...base,
-        target: {
-          amount: amount ?? bucket.target.amount,
-          date: date ?? bucket.target.date,
-        },
-      };
-
-      return {
-        draft: draft.replaceGoalBucket(id, goal),
-        summary: summariseBucket({ mode: 'GOAL', ...goal }),
-      };
-    }
-    default: {
-      const unreachable: never = held;
-      return unreachable;
-    }
-  }
-}
-
-function summariseAccount(account: {
-  name: string;
-  type: AccountType;
-  balance: Money;
-}): string {
-  return `${account.name} — a ${account.type.toLowerCase()} account holding R$ ${account.balance.toReais()}.`;
-}
-
-function summariseBill(bill: {
-  name: string;
-  amount: Money;
-  dueDayOfMonth: number;
-  isEstimate: boolean;
-}): string {
-  return `${bill.name} — R$ ${bill.amount.abs().toReais()} on day ${String(bill.dueDayOfMonth)}${bill.isEstimate ? ', an estimate' : ''}.`;
-}
-
-function summariseCard(card: {
-  name: string;
-  limit: Money;
-  closingDay: number;
-  dueDay: number;
-  paymentAccountName: string;
-}): string {
-  return `${card.name} — limit R$ ${card.limit.toReais()}, closing on day ${String(card.closingDay)}, due on day ${String(card.dueDay)}, paid from ${card.paymentAccountName}.`;
-}
-
-/** The two shapes a bucket has, with the id the draft has yet to give it. */
-type SummarisedBucket =
-  | ({ readonly mode: 'GOAL' } & ProposedGoalBucket)
-  | ({ readonly mode: 'ONGOING' } & ProposedBucket);
-
-function summariseBucket(bucket: SummarisedBucket): string {
-  const opening = `${bucket.name} — ${describeRule(bucket.rule)} each cycle`;
-  const order = `funded #${String(bucket.priority)}.`;
-
-  return bucket.mode === 'GOAL'
-    ? `${opening} toward R$ ${bucket.target.amount.toReais()} by ${bucket.target.date.toISO()}, ${order}`
-    : `${opening}, ${order}`;
-}
-
-/**
  * The record the draft did not hold before. The specs hand the draft a record
  * without an id — the draft issues it — so this is where the turn learns what
  * a later correction has to name.
@@ -1104,7 +938,7 @@ function establishedId(
  * still something ahead of it, but a conversation with nothing left to ask and
  * a draft that cannot compose would otherwise be stuck.
  */
-function withSomethingLeftToAsk(state: SetupState): SetupState {
+export function withSomethingLeftToAsk(state: SetupState): SetupState {
   return state.section === undefined && !state.draft.isComplete
     ? { ...state, section: state.draft.nextSection }
     : state;
@@ -1187,12 +1021,6 @@ function allocationRule(args: JsonObject): AllocationRule | undefined {
 
   const amount = readCents(args, 'fixedAmountInCents');
   return amount === undefined ? undefined : Allocation.fixed(amount);
-}
-
-function describeRule(rule: AllocationRule): string {
-  return rule.kind === 'PERCENT'
-    ? `${rule.percentage.toString()} of Expected Surplus`
-    : `R$ ${rule.amount.toReais()}`;
 }
 
 /** The lowest order nobody holds: the user is asked about order, not made to. */
