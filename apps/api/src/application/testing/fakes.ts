@@ -13,10 +13,6 @@ import type {
   RecurringTemplateRepository,
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
-import type {
-  SpreadsheetReader,
-  Workbook,
-} from '../../domain/ports/spreadsheet-reader.js';
 
 /**
  * In-memory doubles of the repository ports.
@@ -93,19 +89,6 @@ export class InMemoryCycleRepository implements CycleRepository {
 
   get saved(): Cycle[] {
     return [...this.rows.values()];
-  }
-}
-
-/**
- * Hands back a prepared workbook whatever bytes it is given. The xlsx parsing
- * itself is infrastructure's problem and is tested there; an interactor test
- * only cares what the grid says.
- */
-export class InMemorySpreadsheetReader implements SpreadsheetReader {
-  constructor(private readonly workbook: Workbook) {}
-
-  read(): Workbook {
-    return this.workbook;
   }
 }
 

@@ -17,12 +17,9 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@fastify/multipart": "^10.1.0",
     "@fin/contracts": "workspace:*",
     "@prisma/client": "^6.19.1",
-    "fast-xml-parser": "^5.10.1",
-    "fastify": "^5.6.1",
-    "fflate": "^0.8.3"
+    "fastify": "^5.6.1"
   },
   "devDependencies": {
     "@fin/eslint-config": "workspace:*",

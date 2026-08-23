@@ -20,8 +20,8 @@ export class ApiError extends Error {
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   headers.set('Accept', 'application/json');
-  // Only a JSON body says so. A FormData body has to set its own header,
-  // because only the browser knows the multipart boundary it generated.
+  // Only a body the caller serialised is JSON; a bodiless read must not
+  // claim a content type it does not send.
   if (typeof init?.body === 'string') {
     headers.set('Content-Type', 'application/json');
   }

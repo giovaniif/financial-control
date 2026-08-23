@@ -13,11 +13,7 @@ export interface Wizard {
   toEnd: () => void;
 }
 
-/**
- * The wizard's position. Held in one place because later steps arrive
- * pre-filled from an imported spreadsheet, and that state has to survive
- * moving back and forth.
- */
+/** The wizard's position, so moving back and forth keeps every step's state. */
 export function useWizard(): Wizard {
   const [index, setIndex] = useState(0);
 
