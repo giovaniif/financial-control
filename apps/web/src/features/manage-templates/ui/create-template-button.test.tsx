@@ -24,8 +24,8 @@ function bodyOf(fetchMock: ReturnType<typeof stubPost>) {
   >;
 }
 
-const open = () =>
-  userEvent.click(screen.getByRole('button', { name: 'New template' }));
+const open = (name = 'Add a bill') =>
+  userEvent.click(screen.getByRole('button', { name }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -95,6 +95,57 @@ describe('CreateTemplateButton', () => {
     });
   });
 
+  /**
+   * A screen that asks for income and for bills separately has already
+   * answered the direction, so the form does not ask it again.
+   */
+  it('takes its wording and its direction from the caller', async () => {
+    const fetchMock = stubPost();
+    renderWithProviders(
+      <CreateTemplateButton
+        currentMonth="2026-08"
+        label="Add income"
+        direction="IN"
+      />,
+    );
+
+    await open('Add income');
+    expect(screen.queryByLabelText('Direction')).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Name'), 'Salary');
+    await userEvent.type(screen.getByLabelText('Amount'), '18.000');
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      expect(bodyOf(fetchMock)).toMatchObject({
+        direction: 'IN',
+        amount: 1_800_000,
+      });
+    });
+  });
+
+  // A bill whose amount moves is a guess until the user confirms it.
+  it('flags an item as an estimate by default when the caller says so', async () => {
+    const fetchMock = stubPost();
+    renderWithProviders(
+      <CreateTemplateButton
+        currentMonth="2026-08"
+        label="Add a variable bill"
+        direction="OUT"
+        isEstimateByDefault
+      />,
+    );
+
+    await open('Add a variable bill');
+    await userEvent.type(screen.getByLabelText('Name'), 'Electricity');
+    await userEvent.type(screen.getByLabelText('Amount'), '280');
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      expect(bodyOf(fetchMock)).toMatchObject({ isEstimate: true });
+    });
+  });
+
   it('refuses a due day outside a month', async () => {
     const fetchMock = stubPost();
     renderWithProviders(<CreateTemplateButton currentMonth="2026-08" />);
@@ -112,7 +163,7 @@ describe('CreateTemplateButton', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('refuses an unnamed template', async () => {
+  it('refuses an unnamed item', async () => {
     const fetchMock = stubPost();
     renderWithProviders(<CreateTemplateButton currentMonth="2026-08" />);
 
@@ -120,7 +171,7 @@ describe('CreateTemplateButton', () => {
     await userEvent.type(screen.getByLabelText('Amount'), '100');
     await userEvent.click(screen.getByRole('button', { name: 'Create' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Name the template');
+    expect(screen.getByRole('alert')).toHaveTextContent('Give it a name');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

@@ -18,6 +18,14 @@ const short = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
 });
 
+// A cycle month is written `2026-10` and read back as the name the rest of
+// the app calls that cycle by.
+const monthName = new Intl.DateTimeFormat('en-GB', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
 /** An ISO calendar day, read as UTC so it cannot shift a day either way. */
 function parse(iso: string): Date {
   return new Date(`${iso}T00:00:00.000Z`);
@@ -39,4 +47,9 @@ export function formatDayMonth(iso: string): string {
  */
 export function formatRange(startIso: string, endIso: string): string {
   return `${formatDayMonth(startIso)} – ${formatDayMonth(endIso)}`;
+}
+
+/** `2026-10` → `October 2026`. A cycle is named for the month it is spent in. */
+export function formatMonthLabel(month: string): string {
+  return monthName.format(parse(`${month}-01`));
 }

@@ -83,7 +83,7 @@ describe('BackupRestore', () => {
 
     expect(warning).toHaveTextContent('3 accounts');
     expect(warning).toHaveTextContent('4 cycles');
-    expect(warning).toHaveTextContent('12 templates');
+    expect(warning).toHaveTextContent('12 bills and income');
     expect(warning).toHaveTextContent('2 cards');
     expect(warning).toHaveTextContent('5 buckets');
   });

@@ -116,7 +116,7 @@ describe('setting up without the assistant', () => {
 
     expect(await screen.findByText('configured')).toBeInTheDocument();
     expect(
-      screen.getByText('Recurring templates').closest('div'),
+      screen.getByText('Salary and bills').closest('div'),
     ).toHaveTextContent('4');
     expect(screen.getByRole('link', { name: 'Open Main' })).toHaveAttribute(
       'href',

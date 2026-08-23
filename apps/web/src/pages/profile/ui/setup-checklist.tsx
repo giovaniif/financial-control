@@ -1,59 +1,46 @@
 import { Link } from 'react-router';
 
+import { useTemplates } from '@/entities/template';
 import { useSetupState } from '@/shared/api';
 import { unskipSetup } from '@/shared/model';
 import { Card, CardTitle } from '@/shared/ui';
 
 /**
- * UC-1.5 — the app ships empty, so first run is an ordered checklist: each
- * step depends on the ones before it. Everything but the buckets is
- * configured on this same screen, which is why only that step links away.
+ * UC-1.5 — the same seven questions the setup conversation asks, in the same
+ * order, showing which are still outstanding. Everything but the buckets is
+ * answered on this screen, which is why only that step links away.
  */
 export function SetupChecklist() {
   const { data } = useSetupState();
-  const counts = {
-    accounts: data?.accounts ?? 0,
-    cards: data?.cards ?? 0,
-    templates: data?.templates ?? 0,
-    buckets: data?.buckets ?? 0,
-  };
+  const { data: bills } = useTemplates();
+
+  const recurring = bills?.templates ?? [];
+  const income = recurring.filter((bill) => bill.direction === 'IN');
+  const outgoing = recurring.filter((bill) => bill.direction === 'OUT');
+  const variable = outgoing.filter((bill) => bill.isEstimate);
+  const anchorConfigured = data?.anchorConfigured === true;
 
   const steps = [
     {
-      label: 'Payday anchor',
-      state: data?.anchorConfigured === true ? 'configured' : 'not set yet',
-      done: data?.anchorConfigured === true,
+      label: 'The payday cycle',
+      state: anchorConfigured ? 'configured' : 'not set yet',
+      done: anchorConfigured,
       to: null,
     },
+    countStep('Accounts', data?.accounts ?? 0, 'accounts'),
+    recordedStep('Salary', income.length),
+    recordedStep('Fixed bills', outgoing.length - variable.length),
+    recordedStep('Variable bills', variable.length),
+    countStep('Credit cards', data?.cards ?? 0, 'cards'),
     {
-      label: 'Accounts',
-      state: `${String(counts.accounts)} accounts`,
-      done: counts.accounts > 0,
-      to: null,
-    },
-    {
-      label: 'Credit cards',
-      state: `${String(counts.cards)} cards`,
-      done: counts.cards > 0,
-      to: null,
-    },
-    {
-      label: 'Recurring templates',
-      state: `${String(counts.templates)} templates`,
-      done: counts.templates > 0,
-      to: null,
-    },
-    {
-      label: 'Buckets',
-      state: `${String(counts.buckets)} buckets`,
-      done: counts.buckets > 0,
+      ...countStep('Savings buckets', data?.buckets ?? 0, 'buckets'),
       to: '/savings',
     },
   ];
 
   return (
-    <Card className="flex flex-col gap-3">
-      <CardTitle>First run</CardTitle>
+    <Card label="Setup" className="flex flex-col gap-3">
+      <CardTitle>Setup</CardTitle>
       <ol className="flex flex-col gap-2 text-sm">
         {steps.map((step, index) => (
           <li key={step.label} className="flex items-center gap-3">
@@ -91,4 +78,22 @@ export function SetupChecklist() {
       </div>
     </Card>
   );
+}
+
+function countStep(label: string, count: number, noun: string) {
+  return {
+    label,
+    state: `${String(count)} ${noun}`,
+    done: count > 0,
+    to: null as string | null,
+  };
+}
+
+function recordedStep(label: string, count: number) {
+  return {
+    label,
+    state: `${String(count)} recorded`,
+    done: count > 0,
+    to: null as string | null,
+  };
 }

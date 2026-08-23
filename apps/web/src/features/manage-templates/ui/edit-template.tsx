@@ -15,7 +15,7 @@ interface Props {
   currentMonth: string;
 }
 
-/** UC-2.3 – UC-2.6 — everything that changes a template after it exists. */
+/** UC-2.3 – UC-2.6 — everything that changes a recurring item after it exists. */
 export function EditTemplate({ template, currentMonth }: Props) {
   const [open, setOpen] = useState(false);
   const [changingAmount, setChangingAmount] = useState(false);
@@ -108,7 +108,7 @@ function Menu({
       </div>
 
       <div className="flex flex-col gap-2 border-t border-zinc-100 pt-3">
-        {/* Expenses end, and a paused template resumes with no data lost. */}
+        {/* Expenses end, and a paused one resumes with no data lost. */}
         {template.status === 'PAUSED' ? (
           <Button
             disabled={update.isPending}
@@ -221,7 +221,7 @@ function AmountForm({
             setScope('THIS_CYCLE_ONLY');
           }}
           title="This cycle only"
-          body="Overrides the generated entry. The template keeps its amount."
+          body="Only this cycle changes. Every other cycle keeps the amount it has."
         />
         <Scope
           checked={scope === 'THIS_AND_FUTURE'}
@@ -229,7 +229,7 @@ function AmountForm({
             setScope('THIS_AND_FUTURE');
           }}
           title="This cycle and all future"
-          body="Adds a step to the template's value schedule, so one template carries the change."
+          body="This cycle and every one after it use the new amount, carried as one value schedule."
         />
       </fieldset>
 

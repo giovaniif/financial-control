@@ -246,7 +246,7 @@ function Created({ applied }: { applied: SetupAppliedResponse }) {
       </p>
       <ul className="flex flex-col gap-1 text-sm text-zinc-700">
         <li>{count(applied.accounts, 'account')}</li>
-        <li>{count(applied.templates, 'recurring template')}</li>
+        <li>{applied.templates} recurring bills and income</li>
         <li>{count(applied.cards, 'credit card')}</li>
         <li>{count(applied.buckets, 'bucket')}</li>
       </ul>
