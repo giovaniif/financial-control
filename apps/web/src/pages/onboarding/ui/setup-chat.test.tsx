@@ -1,5 +1,5 @@
 import type { SetupAppliedResponse, SetupTurnResponse } from '@fin/contracts';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -59,15 +59,16 @@ const say = async (text: string) => {
   await userEvent.click(screen.getByRole('button', { name: 'Send' }));
 };
 
+function urlOf(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+
+  return input instanceof URL ? input.href : input.url;
+}
+
 /** What the app actually asked the network for, in call order. */
 function requests(): { url: string; method: string }[] {
   return vi.mocked(fetch).mock.calls.map(([input, init]) => ({
-    url:
-      typeof input === 'string'
-        ? input
-        : input instanceof URL
-          ? input.href
-          : input.url,
+    url: urlOf(input),
     method: init?.method ?? 'GET',
   }));
 }
@@ -281,5 +282,323 @@ describe('the setup conversation', () => {
 
     expect(await screen.findByText(/Credit cards/)).toBeInTheDocument();
     expect(screen.queryByRole('listitem', { current: 'step' })).toBeNull();
+  });
+});
+
+/** What a structured correction actually sent, parsed, in call order. */
+function sentBy(method: string): { url: string; body: unknown }[] {
+  return vi
+    .mocked(fetch)
+    .mock.calls.filter(([, init]) => init?.method === method)
+    .map(([input, init]) => ({
+      url: urlOf(input),
+      body:
+        typeof init?.body === 'string'
+          ? (JSON.parse(init.body) as unknown)
+          : undefined,
+    }));
+}
+
+const bill = (summary: string) => ({
+  section: 'FIXED_BILLS' as const,
+  id: 'rec-1',
+  summary,
+});
+
+/** A turn that established one bill, so there is something to correct. */
+const established = (
+  summary = 'Health plan — R$ 320,00 on day 8.',
+): SetupTurnResponse => turn({ established: [bill(summary)] });
+
+const openEditor = async (name: string) => {
+  await userEvent.click(
+    await screen.findByRole('button', { name: `Edit ${name}` }),
+  );
+};
+
+const retype = async (label: string, value: string) => {
+  const field = screen.getByLabelText(label);
+  await userEvent.clear(field);
+  await userEvent.type(field, value);
+};
+
+describe('correcting a record inside the conversation', () => {
+  it('sends only the field that changed, and shows the record again', async () => {
+    stubApi({
+      '/api/setup/conversation': conversation(established()),
+      '/api/setup/conversation/conv-1/records/rec-1': turn({
+        message: 'Health plan is R$ 350,00 now.',
+        established: [bill('Health plan — R$ 350,00 on day 8.')],
+        nextSection: 'FIXED_BILLS',
+      }),
+    });
+    renderPage();
+
+    await say('health plan 320 on the 8th');
+    await openEditor('Health plan');
+    await retype('Amount', '350');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(
+      await screen.findByText('Health plan — R$ 350,00 on day 8.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Health plan — R$ 320,00 on day 8.'),
+    ).not.toBeInTheDocument();
+    expect(sentBy('PATCH')).toEqual([
+      {
+        url: '/api/setup/conversation/conv-1/records/rec-1',
+        body: { amount: 35_000 },
+      },
+    ]);
+  });
+
+  it('drops a record it should never have understood', async () => {
+    stubApi({
+      '/api/setup/conversation': conversation(established()),
+      '/api/setup/conversation/conv-1/records/rec-1': turn({
+        message: 'Dropped it.',
+        removed: ['rec-1'],
+      }),
+    });
+    renderPage();
+
+    await say('health plan 320 on the 8th');
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Drop Health plan' }),
+    );
+
+    expect(await screen.findByText('Dropped it.')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Health plan — R$ 320,00 on day 8.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('leaves the record as it was when the rule refuses the correction', async () => {
+    stubApi({
+      '/api/setup/conversation': conversation(established()),
+      '/api/setup/conversation/conv-1/records/rec-1': () =>
+        new Response(
+          JSON.stringify({
+            error: 'Day 31 never reaches the September cycle.',
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } },
+        ),
+    });
+    renderPage();
+
+    await say('health plan 320 on the 8th');
+    await openEditor('Health plan');
+    await retype('Due day of month', '31');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Day 31 never reaches the September cycle.',
+    );
+    expect(
+      screen.getByText('Health plan — R$ 320,00 on day 8.'),
+    ).toBeInTheDocument();
+  });
+
+  // The anchor and the salary hold one value each: they are said again, not
+  // corrected, so there is no form to open on them.
+  it('offers no inline edit on a section holding a single value', async () => {
+    stubApi({
+      '/api/setup/conversation': conversation(
+        turn({
+          established: [
+            {
+              section: 'ANCHOR',
+              id: null,
+              summary: 'Paid on day 5, moving to the preceding business day.',
+            },
+          ],
+        }),
+      ),
+    });
+    renderPage();
+
+    await say('the 5th');
+
+    expect(
+      await screen.findByText(
+        'Paid on day 5, moving to the preceding business day.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Edit/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Drop/ })).toBeNull();
+  });
+});
+
+describe('the last moment before anything is written', () => {
+  const complete = turn({
+    nextSection: null,
+    isComplete: true,
+    message: 'That is everything I need.',
+    established: [
+      {
+        section: 'ANCHOR',
+        id: null,
+        summary: 'Paid on day 5, moving to the preceding business day.',
+      },
+      {
+        section: 'ACCOUNTS',
+        id: 'rec-1',
+        summary: 'Checking — a checking account holding R$ 2.160,00.',
+      },
+      {
+        section: 'FIXED_BILLS' as const,
+        id: 'rec-2',
+        summary: 'Health plan — R$ 320,00 on day 8.',
+      },
+    ],
+  });
+
+  it('reads back the whole draft, grouped, before it is created', async () => {
+    stubApi({ '/api/setup/conversation': conversation(complete) });
+    renderPage();
+
+    await say('20% to the reserve');
+
+    const review = within(
+      await screen.findByRole('region', { name: 'Your draft' }),
+    );
+    expect(
+      review.getByText('Paid on day 5, moving to the preceding business day.'),
+    ).toBeInTheDocument();
+    expect(
+      review.getByText('Checking — a checking account holding R$ 2.160,00.'),
+    ).toBeInTheDocument();
+    expect(
+      review.getByText('Health plan — R$ 320,00 on day 8.'),
+    ).toBeInTheDocument();
+    expect(
+      review.getByRole('heading', { name: 'Accounts' }),
+    ).toBeInTheDocument();
+    expect(
+      review.getByRole('button', { name: 'Create everything' }),
+    ).toBeInTheDocument();
+  });
+
+  it('leaves a dropped record out of the review', async () => {
+    stubApi({
+      '/api/setup/conversation': conversation(complete),
+      '/api/setup/conversation/conv-1/records/rec-1': turn({
+        message: 'Dropped it.',
+        removed: ['rec-1'],
+        nextSection: null,
+        isComplete: true,
+      }),
+    });
+    renderPage();
+
+    await say('20% to the reserve');
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Drop Checking' }),
+    );
+    await screen.findByText('Dropped it.');
+
+    const review = within(screen.getByRole('region', { name: 'Your draft' }));
+    expect(
+      review.queryByText('Checking — a checking account holding R$ 2.160,00.'),
+    ).toBeNull();
+    expect(
+      review.getByText('Health plan — R$ 320,00 on day 8.'),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('the fields an edit opens on', () => {
+  const editing = (record: SetupTurnResponse['established'][number]) => {
+    stubApi({
+      '/api/setup/conversation': conversation(turn({ established: [record] })),
+      [`/api/setup/conversation/conv-1/records/${String(record.id)}`]: turn({
+        message: 'Changed.',
+        established: [record],
+      }),
+    });
+    renderPage();
+  };
+
+  it('changes what kind of account it is', async () => {
+    editing({
+      section: 'ACCOUNTS',
+      id: 'rec-1',
+      summary: 'Nubank — a checking account holding R$ 2.160,00.',
+    });
+
+    await say('nubank has 2160');
+    await openEditor('Nubank');
+    await userEvent.selectOptions(screen.getByLabelText('Kind'), 'SAVINGS');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Changed.')).toBeInTheDocument();
+    expect(sentBy('PATCH')[0]?.body).toEqual({ type: 'SAVINGS' });
+  });
+
+  it('changes the day a card closes without touching its due day', async () => {
+    editing({
+      section: 'CARDS',
+      id: 'rec-1',
+      summary:
+        'Inter — limit R$ 10.000,00, closing on day 28, due on day 10, paid from Checking.',
+    });
+
+    await say('inter closes on the 28th, due the 10th');
+    await openEditor('Inter');
+    await retype('Closing day', '25');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Changed.')).toBeInTheDocument();
+    expect(sentBy('PATCH')[0]?.body).toEqual({ closingDay: 25 });
+  });
+
+  it('swaps a fixed contribution for a share of Expected Surplus', async () => {
+    editing({
+      section: 'BUCKETS',
+      id: 'rec-1',
+      summary:
+        'Apartment — R$ 1.778,00 each cycle toward R$ 150.000,00 by 2031-03-05, funded #1.',
+    });
+
+    await say('1778 a cycle to the apartment');
+    await openEditor('Apartment');
+    await userEvent.selectOptions(
+      screen.getByLabelText('Each cycle'),
+      'PERCENT',
+    );
+    await retype('Share of Expected Surplus (%)', '20');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Changed.')).toBeInTheDocument();
+    expect(sentBy('PATCH')[0]?.body).toEqual({
+      rule: { kind: 'PERCENT', percent: 20 },
+    });
+  });
+
+  it('marks a bill as a guess rather than a known figure', async () => {
+    editing(bill('Contractor costs — R$ 1.500,00 on day 8.'));
+
+    await say('contractor costs about 1500 on the 8th');
+    await openEditor('Contractor costs');
+    await userEvent.click(
+      screen.getByLabelText('An estimate, not a confirmed figure'),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Changed.')).toBeInTheDocument();
+    expect(sentBy('PATCH')[0]?.body).toEqual({ isEstimate: true });
+  });
+
+  it('asks for nothing when the edit is abandoned', async () => {
+    editing(bill('Health plan — R$ 320,00 on day 8.'));
+
+    await say('health plan 320 on the 8th');
+    await openEditor('Health plan');
+    await retype('Amount', '350');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByLabelText('Amount')).toBeNull();
+    expect(sentBy('PATCH')).toEqual([]);
   });
 });

@@ -1,5 +1,6 @@
 import type {
   SetupAppliedResponse,
+  SetupRecordCorrectionRequest,
   SetupTurnRequest,
   SetupTurnResponse,
 } from '@fin/contracts';
@@ -18,6 +19,46 @@ export function useSetupTurn() {
         method: 'POST',
         body: JSON.stringify(request),
       }),
+  });
+}
+
+/** Which record of which conversation an inline edit is about. */
+interface RecordRef {
+  conversationId: string;
+  recordId: string;
+}
+
+const pathOf = ({ conversationId, recordId }: RecordRef): string =>
+  `/setup/conversation/${conversationId}/records/${recordId}`;
+
+/**
+ * An inline edit — UC-1.5. It goes straight to the draft with no model in the
+ * path: the fields are already named, so there is nothing to interpret, and
+ * routing a form the user filled in through the assistant would buy a call and
+ * a chance of misreading on the very flow that exists to fix misreadings.
+ *
+ * Nothing is invalidated here because nothing is written yet. The draft lives
+ * in the conversation until it is applied, and applying is what refreshes the
+ * screens it lands on.
+ */
+export function useCorrectSetupRecord() {
+  return useMutation({
+    mutationFn: ({
+      correction,
+      ...ref
+    }: RecordRef & { correction: SetupRecordCorrectionRequest }) =>
+      api<SetupTurnResponse>(pathOf(ref), {
+        method: 'PATCH',
+        body: JSON.stringify(correction),
+      }),
+  });
+}
+
+/** Dropping a record the conversation should never have understood. */
+export function useDropSetupRecord() {
+  return useMutation({
+    mutationFn: (ref: RecordRef) =>
+      api<SetupTurnResponse>(pathOf(ref), { method: 'DELETE' }),
   });
 }
 
