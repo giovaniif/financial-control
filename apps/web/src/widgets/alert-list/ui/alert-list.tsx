@@ -1,6 +1,6 @@
 import type { AlertResponse } from '@fin/contracts';
 
-import { Badge, CardTitle } from '@/shared/ui';
+import { Badge, Button, CardTitle } from '@/shared/ui';
 
 const tones = {
   CRITICAL: 'critical',
@@ -14,8 +14,17 @@ const borders = {
   INFO: 'border-l-blue-500',
 } as const;
 
+interface Props {
+  alerts: AlertResponse[];
+  /**
+   * UC-8 — an alert is the thing most worth asking about, so it carries the
+   * question to the assistant when there is one to ask.
+   */
+  onAsk?: ((alert: AlertResponse) => void) | undefined;
+}
+
 /** UC-4.7 — what needs attention, ranked by severity. */
-export function AlertList({ alerts }: { alerts: AlertResponse[] }) {
+export function AlertList({ alerts, onAsk }: Props) {
   if (alerts.length === 0) {
     return null;
   }
@@ -36,6 +45,18 @@ export function AlertList({ alerts }: { alerts: AlertResponse[] }) {
             <span className="text-sm font-medium">{alert.title}</span>
           </div>
           <p className="text-sm text-zinc-600">{alert.body}</p>
+          {onAsk !== undefined && (
+            <div>
+              <Button
+                aria-label="Ask about this alert"
+                onClick={() => {
+                  onAsk(alert);
+                }}
+              >
+                Ask about this
+              </Button>
+            </div>
+          )}
         </div>
       ))}
     </section>
