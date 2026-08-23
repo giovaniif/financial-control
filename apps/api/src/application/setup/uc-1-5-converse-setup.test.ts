@@ -20,12 +20,16 @@ import {
 import { FixedClock } from '../testing/fixed-clock.js';
 
 import { composeSetup } from './compose-setup.js';
-import type { SetupDraft } from './setup-draft.js';
-import { SetupSection } from './setup-draft.js';
-import type { SetupConversations } from './uc-1-5-converse-setup.js';
+import { SetupDraft, SetupSection } from './setup-draft.js';
+import type {
+  SetupConversations,
+  SetupLimits,
+} from './uc-1-5-converse-setup.js';
 import {
   ConverseSetup,
   SetupConversationNotFound,
+  SetupConversationTooLong,
+  SetupMessageTooLong,
 } from './uc-1-5-converse-setup.js';
 
 const NOW = '2026-08-19T09:00:00.000Z';
@@ -47,9 +51,19 @@ const today = LocalDate.parse('2026-08-19');
 /** Far above anything a test spends, unless the test is about the ceiling. */
 const NO_CEILING = 1_000_000;
 
+/** Far above anything this suite sends, unless the test is about the caps. */
+const NO_LIMITS: SetupLimits = {
+  maxMessageCharacters: 10_000,
+  maxTurnsPerConversation: 1_000,
+};
+
 const wire = (
   script: readonly ScriptedTurn[],
-  budget: { ledger?: FakeSpendLedger; maxTokensPerDay?: number } = {},
+  budget: {
+    ledger?: FakeSpendLedger;
+    maxTokensPerDay?: number;
+    limits?: SetupLimits;
+  } = {},
 ) => {
   const model = new FakeLanguageModel(script);
   const conversations: SetupConversations = new FakeSetupConversationStore();
@@ -72,6 +86,7 @@ const wire = (
       new SequentialIdSource('conv'),
       noHolidays,
       clock,
+      budget.limits ?? NO_LIMITS,
     ),
   };
 };
@@ -1111,5 +1126,109 @@ describe('ConverseSetup — the spend ceiling', () => {
     await converse.execute(me, { message: 'I am paid on the 5th' });
 
     expect(await ledger.spentOn(me, today)).toBe(1_520);
+  });
+});
+
+describe('ConverseSetup — what one conversation may cost', () => {
+  const TIGHT: SetupLimits = {
+    maxMessageCharacters: 40,
+    maxTurnsPerConversation: 3,
+  };
+
+  it('rejects a message past the cap instead of trimming it', async () => {
+    const { converse, model, conversations } = wire([anchorTurn], {
+      limits: TIGHT,
+    });
+
+    await expect(
+      converse.execute(me, {
+        message:
+          'health plan 320 on the 8th, electricity around 280 on the 15th',
+      }),
+    ).rejects.toBeInstanceOf(SetupMessageTooLong);
+    expect(model.requests).toHaveLength(0);
+    expect(await conversations.load('conv-1')).toBeUndefined();
+  });
+
+  it('rejects the turn past the cap rather than dropping earlier ones', async () => {
+    const { converse, model } = wire(OPENING, { limits: TIGHT });
+
+    const turn = await runThrough(converse, 3);
+
+    await expect(
+      converse.execute(me, {
+        conversationId: turn.conversationId,
+        message: 'go on',
+      }),
+    ).rejects.toBeInstanceOf(SetupConversationTooLong);
+    expect(model.requests).toHaveLength(3);
+  });
+
+  /**
+   * The client sends a message and an id and nothing else, so what a
+   * conversation has already cost is read where it cannot reach.
+   */
+  it('counts the turns from the transcript the server holds', async () => {
+    const { converse, conversations, model } = wire([anchorTurn], {
+      limits: TIGHT,
+    });
+    await conversations.save({
+      id: 'held',
+      transcript: [
+        { role: 'user', text: 'First' },
+        { role: 'assistant', text: 'One.', toolCalls: [] },
+        { role: 'user', text: 'Second' },
+        { role: 'assistant', text: 'Two.', toolCalls: [] },
+        { role: 'user', text: 'Third' },
+        { role: 'assistant', text: 'Three.', toolCalls: [] },
+      ],
+      state: {
+        draft: SetupDraft.empty(
+          '2026-09',
+          noHolidays,
+          new SequentialIdSource('rec'),
+        ),
+        section: SetupSection.Anchor,
+      },
+      records: [],
+    });
+
+    await expect(
+      converse.execute(me, { conversationId: 'held', message: 'Fourth' }),
+    ).rejects.toBeInstanceOf(SetupConversationTooLong);
+    expect(model.requests).toHaveLength(0);
+  });
+
+  /**
+   * A correction writes the user's own line into the transcript without
+   * reaching a model, so counting user lines would have the free path spend
+   * the budget of the paid one.
+   */
+  it('spends no turn on the corrections written into the transcript', async () => {
+    const { converse, conversations } = wire([anchorTurn], { limits: TIGHT });
+    await conversations.save({
+      id: 'held',
+      transcript: [
+        { role: 'user', text: 'Corrected. Health Plan — R$ 350,00 on day 8.' },
+        { role: 'user', text: 'Dropped Gym.' },
+        { role: 'user', text: 'Corrected. Checking — R$ 2.160,00.' },
+      ],
+      state: {
+        draft: SetupDraft.empty(
+          '2026-09',
+          noHolidays,
+          new SequentialIdSource('rec'),
+        ),
+        section: SetupSection.Anchor,
+      },
+      records: [],
+    });
+
+    const turn = await converse.execute(me, {
+      conversationId: 'held',
+      message: 'I am paid on the 5th',
+    });
+
+    expect(turn.conversationId).toBe('held');
   });
 });

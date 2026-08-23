@@ -36,6 +36,23 @@ import {
 } from './setup-draft.js';
 
 export class SetupConversationNotFound extends DomainError {}
+export class SetupMessageTooLong extends DomainError {}
+export class SetupConversationTooLong extends DomainError {}
+
+/**
+ * What one setup conversation may cost.
+ *
+ * Injected rather than read here so the whole cost surface — which model
+ * answers, how much it may write, how much may be said to it in one message
+ * and how long a conversation may run — sits in one place beside the model
+ * choices (`infrastructure/anthropic/models.ts`).
+ */
+export interface SetupLimits {
+  /** Of the message the user typed, after trimming. */
+  readonly maxMessageCharacters: number;
+  /** Counted from the transcript the server holds, never from the client. */
+  readonly maxTurnsPerConversation: number;
+}
 
 /** One thing the conversation established, in the user's own terms. */
 export interface EstablishedRecord {
@@ -99,6 +116,7 @@ export class ConverseSetup {
     private readonly ids: IdSource,
     private readonly holidays: HolidayCalendar,
     private readonly clock: Clock,
+    private readonly limits: SetupLimits,
   ) {}
 
   /**
@@ -122,17 +140,33 @@ export class ConverseSetup {
       message: string;
     },
   ): Promise<SetupTurn> {
+    // Every cap here is a rejection, never a truncation. Extracting records
+    // from half of what somebody wrote would record half a sentence as fact,
+    // and they would never learn which half.
+    const message = input.message.trim();
+    if (message.length > this.limits.maxMessageCharacters) {
+      throw new SetupMessageTooLong(
+        `An answer may be ${String(this.limits.maxMessageCharacters)} characters long; this one is ${String(message.length)}. Nothing was sent to the model — send it in more than one answer and I will record each.`,
+      );
+    }
+
     // Before the request, never after: refusing a call already paid for would
     // bound nothing at all.
     await this.spend.check(principal);
 
     const stored = await this.open(input.conversationId);
+    if (turnsOf(stored) >= this.limits.maxTurnsPerConversation) {
+      throw new SetupConversationTooLong(
+        `This setup conversation has had the ${String(this.limits.maxTurnsPerConversation)} turns one may have. Everything it recorded is still held, to correct or to apply — it just cannot go on.`,
+      );
+    }
+
     // What the model is shown is finished before it is asked: the turn is
     // appended to a copy, so nothing this method does afterwards reaches back
     // into the request that has already gone out.
     const asked: readonly ModelMessage[] = [
       ...stored.transcript,
-      { role: 'user', text: input.message },
+      { role: 'user', text: message },
     ];
 
     const tools = toolsFor(stored.state);
@@ -413,6 +447,20 @@ export class ConverseSetup {
       records: accumulate(stored.records, established, removed),
     });
   }
+}
+
+/**
+ * What this conversation has already spent, counted where the client cannot
+ * reach. Assistant lines rather than user ones: exactly one is written per
+ * model call, while a correction (UC-1.5) writes a user line without reaching
+ * a model at all — counting those would have the free path spend the budget
+ * of the paid one.
+ */
+function turnsOf(
+  stored: StoredSetupConversation<SetupState, EstablishedRecord>,
+): number {
+  return stored.transcript.filter((message) => message.role === 'assistant')
+    .length;
 }
 
 interface TurnOutcome {

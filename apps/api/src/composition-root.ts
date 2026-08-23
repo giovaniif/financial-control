@@ -28,6 +28,7 @@ import {
   ASSISTANT_LIMITS,
   DAILY_TOKEN_CEILING,
   MODELS,
+  SETUP_LIMITS,
   SPEND_RATE_LIMITS,
 } from './infrastructure/anthropic/models.js';
 import { SystemClock } from './infrastructure/clock/system-clock.js';
@@ -160,6 +161,7 @@ export function createApp(): FastifyInstance {
       new UuidIdSource(),
       holidays,
       clock,
+      SETUP_LIMITS,
     ),
     correctSetupRecord: new CorrectSetupRecord(conversations),
     completeSetup: new CompleteSetup(conversations, backup, clock),
