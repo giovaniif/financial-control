@@ -144,21 +144,24 @@ describe('the composer', () => {
 });
 
 describe('the shape of the conversation', () => {
-  it('marks the section being asked about in the progress path', async () => {
+  /**
+   * A step indicator turns a conversation back into a wizard: it says there
+   * are seven things to get through rather than one question to answer. What
+   * comes next is Claude's next question, which the transcript already shows.
+   */
+  it('counts no steps — the conversation is its own progress', async () => {
     stubApi({
       '/api/setup/conversation': conversation(turn({ nextSection: 'CARDS' })),
     });
     renderPage();
 
     await say('the 5th');
+    await screen.findByText('And where do you keep your money?');
 
-    const path = within(
-      await screen.findByRole('navigation', { name: 'Setup progress' }),
-    );
-    expect(path.getAllByRole('listitem')).toHaveLength(7);
-    expect(path.getByRole('listitem', { current: true })).toHaveTextContent(
-      'Credit cards',
-    );
+    expect(
+      screen.queryByRole('navigation', { name: 'Setup progress' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('listitem', { current: true })).toBeNull();
   });
 
   it('tells the two voices apart', async () => {
@@ -238,7 +241,6 @@ describe('the setup conversation', () => {
     expect(
       await screen.findByText('Health plan — R$ 320,00 on day 8.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Fixed bills')).toBeInTheDocument();
   });
 
   // The domain writes a date as an ISO day; the app shows dd/MM/yyyy.
@@ -392,18 +394,6 @@ describe('the setup conversation', () => {
         ({ url, method }) => url.includes('/apply') && method === 'POST',
       ),
     ).toHaveLength(1);
-  });
-
-  it("tracks the draft's progress instead of a step indicator", async () => {
-    stubApi({
-      '/api/setup/conversation': conversation(turn({ nextSection: 'CARDS' })),
-    });
-    renderPage();
-
-    await say('the 5th');
-
-    expect(await screen.findByText(/Credit cards/)).toBeInTheDocument();
-    expect(screen.queryByRole('listitem', { current: 'step' })).toBeNull();
   });
 });
 
