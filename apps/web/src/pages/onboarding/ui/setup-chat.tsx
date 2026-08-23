@@ -84,9 +84,12 @@ export function SetupChat() {
         role="log"
         aria-label="Setup conversation"
         tabIndex={0}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-6"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6"
       >
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
+        {/* mt-auto rather than justify-end: a short conversation sits against
+            the composer and grows upward, and a long one still scrolls from
+            the top instead of overflowing where it cannot be reached. */}
+        <div className="mx-auto mt-auto flex w-full max-w-2xl flex-col gap-5">
           <ol className="flex flex-col gap-5">
             {entries.map((entry, index) => (
               <li key={index}>
@@ -193,19 +196,25 @@ function Line({ entry }: { entry: Exclude<Entry, { kind: 'record' }> }) {
   }
 
   return (
-    <p className="max-w-prose text-[15px] leading-7 text-zinc-800">
-      <span className="sr-only">Claude</span>
-      {entry.text}
-    </p>
+    <div className="flex justify-start">
+      {/* The mirror of an answer: same shape, squared on the side it comes
+          from, and a bordered white surface so the two read apart on tone
+          rather than only on which edge they sit against. */}
+      <p className="max-w-[85%] rounded-2xl rounded-bl-sm border border-zinc-200 bg-white px-4 py-2.5 text-sm leading-6 whitespace-pre-line text-zinc-800">
+        <span className="sr-only">Claude</span>
+        {entry.text}
+      </p>
+    </div>
   );
 }
 
 /** Tens of seconds on a local model, so it reads as thinking, not as status. */
+/** Waiting arrives where the answer will: the same bubble, not yet filled. */
 function Thinking() {
   return (
     <p
       role="status"
-      className="flex items-center gap-2.5 text-sm text-zinc-500"
+      className="flex max-w-[85%] items-center gap-2.5 self-start rounded-2xl rounded-bl-sm border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500"
     >
       <span aria-hidden="true" className="flex items-center gap-1">
         <span className="size-1.5 animate-pulse rounded-full bg-zinc-400" />
