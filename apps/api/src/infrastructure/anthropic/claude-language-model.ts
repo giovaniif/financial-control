@@ -114,11 +114,17 @@ function toSdkMessages(
       case 'user':
         return { role: 'user', content: message.text };
 
+      // A turn that only called tools has no prose, and an empty text block is
+      // rejected outright. It is the second turn of every tool-using
+      // conversation, so the omission has to be conditional rather than a
+      // shape the mapping assumes.
       case 'assistant':
         return {
           role: 'assistant',
           content: [
-            { type: 'text', text: message.text },
+            ...(message.text === ''
+              ? []
+              : [{ type: 'text' as const, text: message.text }]),
             ...message.toolCalls.map((call) => ({
               type: 'tool_use' as const,
               id: call.id,
