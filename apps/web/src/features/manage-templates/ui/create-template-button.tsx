@@ -18,11 +18,6 @@ interface Props {
    * and asking it again makes the two forms the same form.
    */
   direction?: Direction;
-  /**
-   * A bill whose amount moves is an unconfirmed estimate unless the user says
-   * otherwise, so a forecast never quietly mixes a guess with a known bill.
-   */
-  isEstimateByDefault?: boolean;
 }
 
 /** UC-2.1, UC-2.2 — the engine that fills every future cycle. */
@@ -30,7 +25,6 @@ export function CreateTemplateButton({
   currentMonth,
   label = 'Add a bill',
   direction: fixedDirection,
-  isEstimateByDefault = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const create = useCreateTemplate();
@@ -39,7 +33,9 @@ export function CreateTemplateButton({
   const [amount, setAmount] = useState('');
   const [chosenDirection, setDirection] = useState<Direction>('OUT');
   const [dueDay, setDueDay] = useState('5');
-  const [isEstimate, setIsEstimate] = useState(isEstimateByDefault);
+  // UC-2.6 — a guess is something the user says, never something the form
+  // assumes, so a forecast never quietly mixes a guess with a known bill.
+  const [isEstimate, setIsEstimate] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const direction = fixedDirection ?? chosenDirection;
