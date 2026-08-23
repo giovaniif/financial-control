@@ -5,6 +5,7 @@ import type {
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { api, queryKeys } from '@/shared/api';
+import { useEstimates } from '@/shared/model';
 
 /**
  * UC-4 — the answer to "how much will I pay, and what is left", for whichever
@@ -12,11 +13,13 @@ import { api, queryKeys } from '@/shared/api';
  * after the current one, which is what the screen opens on.
  */
 export function useDashboard(month?: string) {
-  const query = month === undefined ? '' : `?month=${month}`;
+  const { estimates } = useEstimates();
+  const params = new URLSearchParams({ estimates });
+  if (month !== undefined) params.set('month', month);
 
   return useQuery({
-    queryKey: queryKeys.dashboard(month),
-    queryFn: () => api<DashboardResponse>(`/dashboard${query}`),
+    queryKey: queryKeys.dashboard(month, estimates),
+    queryFn: () => api<DashboardResponse>(`/dashboard?${params.toString()}`),
   });
 }
 

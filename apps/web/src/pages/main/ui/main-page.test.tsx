@@ -5,7 +5,7 @@ import type {
   DashboardResponse,
   EstimateMode,
 } from '@fin/contracts';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -131,6 +131,35 @@ const window_ = (
  * stub answers per endpoint. The cycle answers per estimates mode, which is
  * what makes the header's toggle visible in the figures.
  */
+/**
+ * What the read model answers with estimates switched off, using the same
+ * confirmed chain the cycle fixture carries — so a figure asserted here is the
+ * figure the server would compute, not one invented for the test.
+ */
+function confirmedDashboard(body: DashboardResponse): DashboardResponse {
+  const confirmedChain = cycle('2026-09', 'excluded').chain;
+
+  return {
+    ...body,
+    estimates: 'excluded',
+    headline: {
+      ...body.headline,
+      outgoing: confirmedChain.totalOutcome,
+      free: confirmedChain.netSurplus,
+      closing: confirmedChain.closingBalance,
+      closingWithoutEstimates: confirmedChain.closingBalance,
+    },
+    kpis: body.kpis.map((kpi) =>
+      kpi.label === 'Total Outcome'
+        ? { ...kpi, amount: confirmedChain.totalOutcome }
+        : kpi.label === 'Net Surplus'
+          ? { ...kpi, amount: confirmedChain.netSurplus }
+          : kpi,
+    ),
+    upcoming: body.upcoming.filter((entry) => !entry.isEstimate),
+  };
+}
+
 function respondWith(
   body: DashboardResponse,
   options: {
@@ -149,13 +178,17 @@ function respondWith(
   const months = cycles ?? window_().cycles;
 
   stubApi({
+    // The server builds the dashboard for whichever mode is asked for, so the
+    // stub answers both readings rather than the screen reconciling them.
     '/api/dashboard': ({ search }) => {
       const month = search.get('month');
+      const confirmed = search.get('estimates') === 'excluded';
+      const reading = confirmed ? confirmedDashboard(body) : body;
       return month === null
-        ? body
+        ? reading
         : {
-            ...body,
-            headline: { ...body.headline, cycleMonth: month },
+            ...reading,
+            headline: { ...reading.headline, cycleMonth: month },
           };
     },
     '/api/buckets': buckets,
@@ -452,13 +485,19 @@ describe('MainPage answers the estimates toggle', () => {
     respondWith(dashboard({ upcoming: [upcoming({ isEstimate: true })] }));
     renderPage();
 
-    const headline = await screen.findByText(/stays free after allocations/);
-    expect(headline).toHaveTextContent('R$ 9.110,00');
+    expect(
+      await screen.findByText(/stays free after allocations/),
+    ).toHaveTextContent('R$ 9.110,00');
 
     await switchOff();
 
-    expect(headline).toHaveTextContent('R$ 7.610,00');
-    expect(headline).toHaveTextContent('R$ 5.056,00');
+    // The reading is refetched rather than re-derived on the client, so the
+    // sentence arrives with the answer instead of changing in place.
+    await waitFor(() => {
+      const sentence = screen.getByText(/stays free after allocations/);
+      expect(sentence).toHaveTextContent('R$ 7.610,00');
+      expect(sentence).toHaveTextContent('R$ 5.056,00');
+    });
   });
 
   it('restates the KPI tiles and the chain at the same moment', async () => {

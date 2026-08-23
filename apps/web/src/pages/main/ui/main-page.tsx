@@ -12,7 +12,6 @@ import { useDashboard } from '@/entities/dashboard';
 import { useSelectedCycle } from '@/features/navigate-cycle';
 import { useSetupState } from '@/shared/api';
 import { useMediaQuery } from '@/shared/lib';
-import { useEstimates } from '@/shared/model';
 import { EmptyState, Skeleton } from '@/shared/ui';
 import { AlertList } from '@/widgets/alert-list';
 import { AppShell } from '@/widgets/app-shell';
@@ -59,7 +58,6 @@ export function MainPage() {
 
   const { data, isPending, isError } = useDashboard(month);
   const { data: cycle } = useCycle(month);
-  const { estimates } = useEstimates();
   const setup = useSetupState();
 
   const isWide = useMediaQuery(WIDE);
@@ -85,7 +83,7 @@ export function MainPage() {
         />
       ) : (
         <Screen
-          figures={figuresFor(data, cycle, estimates)}
+          figures={figuresFor(data)}
           progress={data.progress}
           alerts={data.alerts}
           cycle={cycle}
