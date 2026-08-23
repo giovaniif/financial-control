@@ -74,44 +74,19 @@ export function SetupChat() {
   }
 
   return (
-    <div
-      className={
-        hasSpoken
-          ? 'flex min-h-0 flex-1 flex-col'
-          : 'flex min-h-0 flex-1 flex-col items-center justify-center gap-5 overflow-y-auto px-4 py-8'
-      }
-    >
-      {hasSpoken ? null : (
-        <p className="w-full max-w-2xl text-sm text-zinc-500">
-          Setting up is a conversation — seven questions, answered however you
-          like. Nothing is written until you have read the whole draft at the
-          end.
-        </p>
-      )}
-
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* eslint-disable jsx-a11y/no-noninteractive-tabindex --
-          Once the transcript is the region that scrolls, WCAG 2.1.1 requires
-          it to be reachable by keyboard, and a turn can hold no control at all
-          for a tab stop to land on. Before the first answer it scrolls nothing
-          and takes no stop. */}
+          The transcript is the region that scrolls, so WCAG 2.1.1 requires it
+          to be reachable by keyboard, and a turn can hold no control at all
+          for a tab stop to land on. */}
       <div
         ref={transcript}
         role="log"
         aria-label="Setup conversation"
-        tabIndex={hasSpoken ? 0 : undefined}
-        className={
-          hasSpoken
-            ? 'min-h-0 flex-1 overflow-y-auto px-4 py-6'
-            : 'w-full max-w-2xl'
-        }
+        tabIndex={0}
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-6"
       >
-        <div
-          className={
-            hasSpoken
-              ? 'mx-auto flex w-full max-w-2xl flex-col gap-5'
-              : 'flex flex-col gap-5'
-          }
-        >
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
           <ol className="flex flex-col gap-5">
             {entries.map((entry, index) => (
               <li key={index}>
@@ -153,14 +128,18 @@ export function SetupChat() {
       {/* eslint-enable jsx-a11y/no-noninteractive-tabindex */}
 
       {isComplete ? null : (
-        <div
-          className={
-            hasSpoken
-              ? 'shrink-0 border-t border-zinc-200 bg-white px-4 pt-3 pb-4'
-              : 'w-full max-w-2xl'
-          }
-        >
-          <div className="mx-auto w-full max-w-2xl">
+        <div className="shrink-0 border-t border-zinc-200 bg-white px-4 pt-3 pb-4">
+          <div className="mx-auto flex w-full max-w-2xl flex-col gap-2.5">
+            {/* Suggested replies, the way a chat offers them: beside the
+                composer, and only until there is a conversation to read. */}
+            {hasSpoken ? null : (
+              <ExampleAnswers
+                onPick={(example) => {
+                  setDraft(example);
+                  composer.current?.focus();
+                }}
+              />
+            )}
             <Composer
               ref={composer}
               value={draft}
@@ -169,17 +148,6 @@ export function SetupChat() {
               onSend={send}
             />
           </div>
-        </div>
-      )}
-
-      {hasSpoken ? null : (
-        <div className="w-full max-w-2xl">
-          <ExampleAnswers
-            onPick={(example) => {
-              setDraft(example);
-              composer.current?.focus();
-            }}
-          />
         </div>
       )}
     </div>
