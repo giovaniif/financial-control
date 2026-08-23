@@ -1,7 +1,12 @@
 import type { BucketResponse } from '@fin/contracts';
 import { useState } from 'react';
 
-import { formatBRL, parseBRL } from '@/shared/lib';
+import {
+  formatBRL,
+  formatMonthLabel,
+  formatPercent,
+  parseBRL,
+} from '@/shared/lib';
 import { Button, Dialog, Field } from '@/shared/ui';
 
 import {
@@ -10,7 +15,11 @@ import {
 } from '../api/use-manage-buckets.js';
 
 interface Props {
-  bucket: BucketResponse;
+  /** Only what the rule is made of — the form has no business with a target. */
+  bucket: Pick<
+    BucketResponse,
+    'id' | 'name' | 'rule' | 'priority' | 'expectedYieldPercent'
+  >;
   month: string;
 }
 
@@ -205,16 +214,17 @@ function BothWays({
 
     return (
       <p className="text-xs text-zinc-500">
-        {percent}% → {formatBRL(cents)} in this cycle.
+        {formatPercent(percent)} → {formatBRL(cents)} in this cycle.
       </p>
     );
   }
 
-  const share = ((amount / expectedSurplus) * 100).toFixed(1).replace('.', ',');
+  const share = (amount / expectedSurplus) * 100;
 
   return (
     <p className="text-xs text-zinc-500">
-      {formatBRL(amount)} → {share}% of this cycle&rsquo;s Expected Surplus.
+      {formatBRL(amount)} → {formatPercent(share, 1)} of this cycle&rsquo;s
+      Expected Surplus.
     </p>
   );
 }
@@ -251,8 +261,8 @@ function Overcommitment({
       className="flex flex-col gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
     >
       <span>
-        The rules run {formatBRL(preview.shortfall)} short in {month}. The
-        priority order funds:
+        The rules run {formatBRL(preview.shortfall)} short in{' '}
+        {formatMonthLabel(month)}. The priority order funds:
       </span>
       <ul>
         {preview.fundings.map((funding) => (

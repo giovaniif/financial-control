@@ -3,5 +3,8 @@ export {
   formatDate,
   formatDayMonth,
   formatMonthLabel,
+  formatMonthOf,
   formatRange,
+  shiftMonth,
 } from './date.js';
+export { formatPercent } from './percent.js';

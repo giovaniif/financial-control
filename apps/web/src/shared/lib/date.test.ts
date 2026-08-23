@@ -4,7 +4,9 @@ import {
   formatDate,
   formatDayMonth,
   formatMonthLabel,
+  formatMonthOf,
   formatRange,
+  shiftMonth,
 } from './date.js';
 
 describe('formatDate', () => {
@@ -39,5 +41,30 @@ describe('formatMonthLabel', () => {
   it('does not shift the month across a timezone', () => {
     expect(formatMonthLabel('2026-01')).toBe('January 2026');
     expect(formatMonthLabel('2026-12')).toBe('December 2026');
+  });
+});
+
+describe('formatMonthOf', () => {
+  // A target date is a day, but a goal is answered in months: "reaches it in
+  // March 2031" is the sentence UC-7.3 asks for.
+  it('names the month a date falls in', () => {
+    expect(formatMonthOf('2031-03-31')).toBe('March 2031');
+  });
+
+  it('does not shift the month across a timezone', () => {
+    expect(formatMonthOf('2026-01-01')).toBe('January 2026');
+    expect(formatMonthOf('2026-12-31')).toBe('December 2026');
+  });
+});
+
+describe('shiftMonth', () => {
+  it.each([
+    ['forward inside the year', '2026-08', 3, '2026-11'],
+    ['across the year boundary', '2026-08', 5, '2027-01'],
+    ['over several years', '2026-08', 55, '2031-03'],
+    ['backwards', '2026-01', -1, '2025-12'],
+    ['nowhere at all', '2026-08', 0, '2026-08'],
+  ])('%s', (_name, month, by, expected) => {
+    expect(shiftMonth(month, by)).toBe(expected);
   });
 });

@@ -53,3 +53,22 @@ export function formatRange(startIso: string, endIso: string): string {
 export function formatMonthLabel(month: string): string {
   return monthName.format(parse(`${month}-01`));
 }
+
+/**
+ * The month a full date falls in, named the way a cycle is: a goal's target
+ * date is a day, but a goal is answered in months.
+ */
+export function formatMonthOf(iso: string): string {
+  return formatMonthLabel(iso.slice(0, 7));
+}
+
+/**
+ * Cycle arithmetic on a month key. A projection counts in cycles from the one
+ * on screen, and one cycle is one month — `2026-08` plus 55 is `2031-03`.
+ */
+export function shiftMonth(month: string, by: number): string {
+  const [year = 0, index = 1] = month.split('-').map(Number);
+  const shifted = new Date(Date.UTC(year, index - 1 + by, 1));
+
+  return `${String(shifted.getUTCFullYear())}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}`;
+}
