@@ -1,3 +1,6 @@
+import type { AssistantLimits } from '../../application/assistant/assistant-conversation.js';
+import { MAX_TOOL_ROUND_TRIPS } from '../../application/assistant/uc-8-ask-assistant.js';
+
 /**
  * Which model answers, chosen per task rather than per tier.
  *
@@ -32,3 +35,23 @@ export const MODELS = {
     maxTokensStreaming: 32_000,
   },
 } as const satisfies Record<string, ModelChoice>;
+
+/**
+ * What one assistant request may cost, beside the model that bills it — the
+ * whole cost surface of a question in one place: which model answers, how
+ * much it may write, how much may be asked of it and how long a conversation
+ * may run.
+ *
+ * Every one of these is a **rejection**, never a truncation. Quietly dropping
+ * half a transcript or half a question would leave the assistant answering
+ * from a history the user cannot see and has no way to notice.
+ */
+export const ASSISTANT_LIMITS: AssistantLimits = {
+  // A question about your own figures is a sentence or two. Past this, the
+  // model is being pasted at rather than asked.
+  maxQuestionCharacters: 2_000,
+  // Every turn resends the whole transcript, so what a conversation costs
+  // grows with its length rather than with its last message.
+  maxTurnsPerConversation: 20,
+  maxToolRoundTrips: MAX_TOOL_ROUND_TRIPS,
+};

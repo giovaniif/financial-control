@@ -1,5 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 
+import type { AssistantLimits } from '../../../application/assistant/assistant-conversation.js';
+import { AssistantConversation } from '../../../application/assistant/assistant-conversation.js';
+import type { ProposedChange } from '../../../application/assistant/proposed-change.js';
+import { ApplyProposal } from '../../../application/assistant/uc-8-apply-proposal.js';
+import { AskAssistant } from '../../../application/assistant/uc-8-ask-assistant.js';
 import { BackupRestore } from '../../../application/backup/uc-1-6-backup-restore.js';
 import { ConfigurePaydayAnchor } from '../../../application/budgeting/uc-1-1-configure-payday-anchor.js';
 import { ManageAccounts } from '../../../application/budgeting/uc-1-2-manage-accounts.js';
@@ -18,6 +23,8 @@ import { FakeLanguageModel } from '../../../application/testing/fake-language-mo
 import { ProjectWealth } from '../../../application/projection/uc-7-project-wealth.js';
 import { ListCycles } from '../../../application/budgeting/uc-3-3-list-cycles.js';
 import {
+  FakeAssistantConversationStore,
+  FakeProposalStore,
   FakeSetupConversationStore,
   InMemoryAccountRepository,
   InMemoryBucketRepository,
@@ -61,45 +68,69 @@ export function buildTestServer(
   );
 
   const conversations: SetupConversations = new FakeSetupConversationStore();
+  const proposals = new FakeProposalStore<ProposedChange>();
+  const manageAccounts = new ManageAccounts(accounts);
+  const manageTemplates = new ManageTemplates(
+    templates,
+    cycles,
+    settings,
+    noHolidays,
+    clock,
+  );
+  const manageCards = new ManageCards(cards, cycles, settings, noHolidays);
+  const manageBuckets = new ManageBuckets(
+    buckets,
+    cycles,
+    settings,
+    noHolidays,
+  );
+  const ledgerActions = new LedgerActions(cycles, settings, noHolidays);
+  const configureAnchor = new ConfigurePaydayAnchor(
+    settings,
+    cycles,
+    noHolidays,
+    clock,
+  );
+  const readCycle = new ReadCycle(cycles, settings, noHolidays, templates);
+  const listCycles = new ListCycles(
+    cycles,
+    settings,
+    accounts,
+    noHolidays,
+    clock,
+    templates,
+  );
+  const buildDashboard = new BuildDashboard(
+    cycles,
+    buckets,
+    settings,
+    noHolidays,
+    clock,
+  );
+  const projectWealth = new ProjectWealth(buckets);
+
+  // A route test that means to hold a conversation passes its own assistant;
+  // these numbers are this double's, not the app's tuning.
+  const limits: AssistantLimits = {
+    maxQuestionCharacters: 2_000,
+    maxTurnsPerConversation: 20,
+    maxToolRoundTrips: 5,
+  };
 
   return buildServer({
     clock,
-    configureAnchor: new ConfigurePaydayAnchor(
-      settings,
-      cycles,
-      noHolidays,
-      clock,
-    ),
-    manageAccounts: new ManageAccounts(accounts),
-    readCycle: new ReadCycle(cycles, settings, noHolidays, templates),
-    listCycles: new ListCycles(
-      cycles,
-      settings,
-      accounts,
-      noHolidays,
-      clock,
-      templates,
-    ),
-    manageTemplates: new ManageTemplates(
-      templates,
-      cycles,
-      settings,
-      noHolidays,
-      clock,
-    ),
-    ledgerActions: new LedgerActions(cycles, settings, noHolidays),
+    configureAnchor,
+    manageAccounts,
+    readCycle,
+    listCycles,
+    manageTemplates,
+    ledgerActions,
     closeCycle: new CloseCycle(cycles, settings, accounts, noHolidays, clock),
-    manageCards: new ManageCards(cards, cycles, settings, noHolidays),
-    manageBuckets: new ManageBuckets(buckets, cycles, settings, noHolidays),
+    manageCards,
+    manageBuckets,
     backupRestore: backup,
-    buildDashboard: new BuildDashboard(
-      cycles,
-      buckets,
-      settings,
-      noHolidays,
-      clock,
-    ),
-    projectWealth: new ProjectWealth(buckets),
+    buildDashboard,
+    projectWealth,
     readSetupState: new ReadSetupState(
       settings,
       accounts,
@@ -118,6 +149,34 @@ export function buildTestServer(
       clock,
     ),
     completeSetup: new CompleteSetup(conversations, backup, clock),
+    converseAssistant: new AssistantConversation(
+      new AskAssistant(
+        new FakeLanguageModel([]),
+        {
+          cycle: readCycle,
+          dashboard: buildDashboard,
+          cycles: listCycles,
+          buckets: manageBuckets,
+          wealth: projectWealth,
+        },
+        proposals,
+        new SequentialIdSource('proposal'),
+        clock,
+        limits.maxToolRoundTrips,
+      ),
+      new FakeAssistantConversationStore(),
+      new SequentialIdSource('assistant-conv'),
+      limits,
+    ),
+    applyProposal: new ApplyProposal(
+      proposals,
+      ledgerActions,
+      manageTemplates,
+      configureAnchor,
+      manageCards,
+      manageBuckets,
+      clock,
+    ),
     ...overrides,
   });
 }

@@ -90,6 +90,17 @@ export type {
   SetupTurnRequest,
   SetupTurnResponse,
 } from './setup.js';
+export type {
+  AssistantMessageRequest,
+  AssistantProposalResponse,
+  AssistantReadResponse,
+  AssistantStreamError,
+  AssistantStreamEvent,
+  AssistantTurnResponse,
+  ProposalAppliedResponse,
+  ProposalConfirmationRequest,
+  ProposalKind,
+} from './assistant.js';
 export { BACKUP_VERSION } from './backup.js';
 export type {
   BackupAccount,

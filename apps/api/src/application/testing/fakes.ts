@@ -5,6 +5,10 @@ import type { Cycle } from '../../domain/budgeting/cycle.js';
 import type { RecurringTemplate } from '../../domain/budgeting/recurring-template.js';
 import type { Card } from '../../domain/cards/card.js';
 import type { Bucket } from '../../domain/goals/bucket.js';
+import type {
+  AssistantConversationStore,
+  StoredAssistantConversation,
+} from '../../domain/ports/assistant-conversation-store.js';
 import type { IdSource } from '../../domain/ports/id-source.js';
 import type {
   ProposalStore,
@@ -281,5 +285,23 @@ export class FakeProposalStore<TChange> implements ProposalStore<TChange> {
 
   get stored(): StoredProposal<TChange>[] {
     return [...this.rows.values()];
+  }
+}
+
+/**
+ * Assistant conversations as a map, for the same reason as the two stores
+ * above: a test in `application` may not import `infrastructure`, and the
+ * production implementation is the same map behind the same port.
+ */
+export class FakeAssistantConversationStore implements AssistantConversationStore {
+  private readonly rows = new Map<string, StoredAssistantConversation>();
+
+  load(id: string): Promise<StoredAssistantConversation | undefined> {
+    return Promise.resolve(this.rows.get(id));
+  }
+
+  save(conversation: StoredAssistantConversation): Promise<void> {
+    this.rows.set(conversation.id, conversation);
+    return Promise.resolve();
   }
 }
