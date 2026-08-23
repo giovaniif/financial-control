@@ -4,7 +4,7 @@ import { useSetupState } from '@/shared/api';
 import { Skeleton } from '@/shared/ui';
 
 /** UC-1.5 — what was actually set up, and where to go with it. */
-export function DoneStep() {
+export function SetupSummary() {
   const { data, isPending } = useSetupState();
 
   if (isPending) {

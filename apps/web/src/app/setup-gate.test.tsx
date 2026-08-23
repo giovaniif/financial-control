@@ -40,7 +40,7 @@ describe('the first-run gate', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Why this app exists',
+        name: 'Setting up',
       }),
     ).toBeInTheDocument();
   });
@@ -52,7 +52,7 @@ describe('the first-run gate', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Why this app exists',
+        name: 'Setting up',
       }),
     ).toBeInTheDocument();
   });

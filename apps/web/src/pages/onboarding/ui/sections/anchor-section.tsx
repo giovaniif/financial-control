@@ -1,14 +1,15 @@
 import type { AnchorChangeRequest, ShiftPolicy } from '@fin/contracts';
 import { useState } from 'react';
 
-import { useResolveAnchor } from '@/features/configure-anchor';
+import { useChangeAnchor, useResolveAnchor } from '@/features/configure-anchor';
 import { formatRange } from '@/shared/lib';
-import { Field, Skeleton } from '@/shared/ui';
+import { Button, Field, Skeleton } from '@/shared/ui';
 
-interface Props {
-  anchor: AnchorChangeRequest;
-  onChange: (anchor: AnchorChangeRequest) => void;
-}
+/** Salary on the 5th, moving back off a closed bank — the app's default. */
+const DEFAULT_ANCHOR: AnchorChangeRequest = {
+  anchorDay: 5,
+  shiftPolicy: 'PRECEDING',
+};
 
 const policies: { value: ShiftPolicy; label: string }[] = [
   { value: 'PRECEDING', label: 'the preceding business day' },
@@ -19,10 +20,12 @@ const policies: { value: ShiftPolicy; label: string }[] = [
 const SHOWN = 3;
 
 /**
- * UC-1.1 — the app's one genuinely counter-intuitive idea, taught by showing
- * the real boundaries the chosen anchor produces rather than describing them.
+ * UC-1.1 — the app's one genuinely counter-intuitive idea, shown as the real
+ * boundaries the chosen anchor produces rather than described.
  */
-export function CycleStep({ anchor, onChange }: Props) {
+export function AnchorSection() {
+  const [anchor, onChange] = useState(DEFAULT_ANCHOR);
+  const save = useChangeAnchor();
   const { data, isPending } = useResolveAnchor(anchor);
   const cycles = data?.cycles.slice(0, SHOWN) ?? [];
   /**
@@ -128,6 +131,26 @@ export function CycleStep({ anchor, onChange }: Props) {
           Paid on the last day of the month? Use 31 — it clamps to each
           month&rsquo;s length, so February resolves correctly too.
         </p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button
+          variant="primary"
+          disabled={save.isPending}
+          onClick={() => {
+            save.mutate(anchor);
+          }}
+        >
+          Save the payday anchor
+        </Button>
+        {save.isSuccess && (
+          <span className="text-sm text-green-700">Saved.</span>
+        )}
+        {save.isError && (
+          <span role="alert" className="text-sm text-red-700">
+            {save.error.message}
+          </span>
+        )}
       </div>
     </div>
   );

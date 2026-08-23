@@ -7,4 +7,3 @@ export { EmptyState } from './empty-state.js';
 export { Field } from './field.js';
 export { Skeleton } from './skeleton.js';
 export { StatTile } from './stat-tile.js';
-export { Stepper, type Step } from './stepper.js';

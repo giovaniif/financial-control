@@ -37,7 +37,7 @@ describe('routes', () => {
     ['/', 'Main'],
     ['/profile', 'Profile'],
     ['/savings', 'Investments & Savings'],
-    ['/onboarding', 'Why this app exists'],
+    ['/onboarding', 'Setting up'],
   ])('renders %s as the %s screen', async (path, heading) => {
     renderAt(path);
 
