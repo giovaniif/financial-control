@@ -13,7 +13,7 @@ const renderPage = () =>
       router={createMemoryRouter(
         [
           { path: '/onboarding', element: <OnboardingPage /> },
-          { path: '/', element: <p>Dashboard</p> },
+          { path: '/', element: <p>Main</p> },
         ],
         { initialEntries: ['/onboarding'] },
       )}

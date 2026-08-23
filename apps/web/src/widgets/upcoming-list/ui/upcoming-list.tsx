@@ -1,12 +1,14 @@
 import type { UpcomingEntryResponse } from '@fin/contracts';
 
-import { SettleButton } from '@/features/settle-entry';
+import { SettleEntry } from '@/features/settle-entry';
 import { formatDayMonth } from '@/shared/lib';
 import { Amount, Badge, CardTitle, EmptyState } from '@/shared/ui';
 
 /**
- * UC-4.5 — the next obligations, each settleable inline. This is the fastest
- * path to settling something, which is why it sits on the landing screen.
+ * UC-4.5 — the next obligations, each settleable inline. With the Ledger
+ * screen gone this is the only place an entry is settled by hand, so it
+ * carries UC-3.5 in full: one click when the actual equals the planned
+ * amount, two when it does not.
  */
 export function UpcomingList({
   entries,
@@ -47,10 +49,10 @@ export function UpcomingList({
                 </Badge>
               )}
               <Amount cents={entry.amount} signed className="w-28 text-right" />
-              <SettleButton
+              <SettleEntry
                 month={entry.cycleMonth}
                 entryId={entry.id}
-                isIncoming={entry.amount > 0}
+                planned={entry.amount}
               />
             </li>
           ))}

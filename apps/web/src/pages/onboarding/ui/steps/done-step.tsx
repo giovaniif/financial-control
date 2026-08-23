@@ -41,8 +41,8 @@ export function DoneStep() {
       </dl>
 
       <p className="text-sm text-zinc-500">
-        Nothing here is final — every one of these is editable from Settings,
-        and the next cycle you open will show what they add up to.
+        Nothing here is final — every one of these is editable from Profile, and
+        the next cycle you open will show what they add up to.
       </p>
 
       <div>
@@ -50,7 +50,7 @@ export function DoneStep() {
           to="/"
           className="inline-block rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800"
         >
-          Open the Dashboard
+          Open Main
         </Link>
       </div>
     </div>

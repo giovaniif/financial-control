@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 describe('App', () => {
-  it('mounts the data router and lands on the dashboard', async () => {
+  it('mounts the data router and lands on Main', async () => {
     // The first-run gate holds every screen until it knows whether the app has
     // been set up, so even the smoke test has to answer that.
     stubApi({
@@ -26,7 +26,7 @@ describe('App', () => {
     render(<App />);
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Dashboard' }),
+      await screen.findByRole('heading', { level: 1, name: 'Main' }),
     ).toBeInTheDocument();
   });
 });

@@ -34,13 +34,9 @@ afterEach(() => {
 
 describe('routes', () => {
   it.each([
-    ['/', 'Dashboard'],
-    ['/ledger', 'Cycle Ledger'],
-    ['/cards', 'Cards & Invoices'],
-    ['/buckets', 'Buckets & Goals'],
-    ['/wealth', 'Wealth Projection'],
-    ['/templates', 'Recurring Templates'],
-    ['/settings', 'Settings'],
+    ['/', 'Main'],
+    ['/profile', 'Profile'],
+    ['/savings', 'Investments & Savings'],
     ['/onboarding', 'Why this app exists'],
   ])('renders %s as the %s screen', async (path, heading) => {
     renderAt(path);
@@ -57,4 +53,23 @@ describe('routes', () => {
       await screen.findByRole('heading', { level: 1, name: 'Page not found' }),
     ).toBeInTheDocument();
   });
+
+  /**
+   * The seven screens became three. The four that went are reachable through
+   * the assistant instead, so their old paths are ordinary unknown routes —
+   * not redirects to somewhere that half-answers.
+   */
+  it.each(['/ledger', '/cards', '/templates', '/wealth', '/settings'])(
+    'no longer serves %s',
+    async (path) => {
+      renderAt(path);
+
+      expect(
+        await screen.findByRole('heading', {
+          level: 1,
+          name: 'Page not found',
+        }),
+      ).toBeInTheDocument();
+    },
+  );
 });

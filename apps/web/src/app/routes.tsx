@@ -1,14 +1,10 @@
 import type { RouteObject } from 'react-router';
 
-import { BucketsPage } from '@/pages/buckets';
-import { CardsPage } from '@/pages/cards';
-import { DashboardPage } from '@/pages/dashboard';
-import { LedgerPage } from '@/pages/ledger';
+import { MainPage } from '@/pages/main';
 import { NotFoundPage } from '@/pages/not-found';
 import { OnboardingPage } from '@/pages/onboarding';
-import { SettingsPage } from '@/pages/settings';
-import { TemplatesPage } from '@/pages/templates';
-import { WealthPage } from '@/pages/wealth';
+import { ProfilePage } from '@/pages/profile';
+import { SavingsPage } from '@/pages/savings';
 
 import { SetupGate } from './setup-gate.js';
 
@@ -20,6 +16,10 @@ import { SetupGate } from './setup-gate.js';
  * Loaders stay empty on purpose. Server state is TanStack Query's job — see
  * `.claude/architecture.md` — so routes describe structure, not data.
  *
+ * Three screens, per `docs/USE_CASES.md` §5. The detail the removed four used
+ * to show is asked for instead, so nothing here redirects: an old path is an
+ * unknown path.
+ *
  * Every screen sits behind the first-run gate. The wizard itself does not, or
  * the redirect would have nowhere to land.
  */
@@ -28,13 +28,9 @@ export const routes: RouteObject[] = [
   {
     element: <SetupGate />,
     children: [
-      { path: '/', element: <DashboardPage /> },
-      { path: '/ledger', element: <LedgerPage /> },
-      { path: '/cards', element: <CardsPage /> },
-      { path: '/buckets', element: <BucketsPage /> },
-      { path: '/wealth', element: <WealthPage /> },
-      { path: '/templates', element: <TemplatesPage /> },
-      { path: '/settings', element: <SettingsPage /> },
+      { path: '/', element: <MainPage /> },
+      { path: '/profile', element: <ProfilePage /> },
+      { path: '/savings', element: <SavingsPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
