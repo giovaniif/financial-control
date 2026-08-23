@@ -100,7 +100,7 @@ describe('ListCycles.rollingWindow', () => {
   it('states each cycle bounds rather than a bare month name', async () => {
     const [august] = await listing({}).rollingWindow();
 
-    expect(august?.label).toBe('September 2026');
+    expect(august?.label).toBe('Setembro de 2026');
     expect(august?.start).toBe('2026-08-05');
     expect(august?.end).toBe('2026-09-03');
   });

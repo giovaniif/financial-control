@@ -79,22 +79,22 @@ export class ApplyProposal {
 
     if (stored === undefined) {
       throw new ProposalNotFound(
-        `No proposal ${confirmation.proposalId} is waiting to be confirmed.`,
+        `Nenhuma proposta ${confirmation.proposalId} está esperando confirmação.`,
       );
     }
     if (!stored.principal.equals(principal)) {
       throw new ProposalNotYours(
-        `Proposal ${stored.id} was composed for somebody else.`,
+        `A proposta ${stored.id} foi feita para outra pessoa.`,
       );
     }
     if (stored.appliedAt !== undefined) {
       throw new ProposalAlreadyApplied(
-        `Proposal ${stored.id} has already been applied.`,
+        `A proposta ${stored.id} já foi aplicada.`,
       );
     }
     if (stored.summary !== confirmation.summary) {
       throw new ProposalMismatch(
-        `Proposal ${stored.id} is not the change that was confirmed. It says: ${stored.summary}`,
+        `A proposta ${stored.id} não é a mudança que foi confirmada. Ela diz: ${stored.summary}`,
       );
     }
 
@@ -208,9 +208,7 @@ export class ApplyProposal {
         return;
       default: {
         const unhandled: never = change;
-        throw new UnknownProposal(
-          `Nothing applies ${JSON.stringify(unhandled)}.`,
-        );
+        throw new UnknownProposal(`Nada aplica ${JSON.stringify(unhandled)}.`);
       }
     }
   }

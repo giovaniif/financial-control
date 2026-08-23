@@ -65,7 +65,7 @@ describe('POST /restore', () => {
     });
 
     expect(response.statusCode).toBe(400);
-    expect(response.json<{ error: string }>().error).toContain('version 99');
+    expect(response.json<{ error: string }>().error).toContain('versão 99');
   });
 
   it('refuses a body that is not a backup at all', async () => {
@@ -93,7 +93,7 @@ describe('POST /restore', () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json<{ error: string }>().error).toContain(
-      'The backup could not be read',
+      'Não foi possível ler o backup',
     );
   });
 

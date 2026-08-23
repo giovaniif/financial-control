@@ -8,18 +8,18 @@ export class InvalidAnchor extends DomainError {}
 const MONTH = /^(?<year>\d{4})-(?<month>\d{2})$/;
 
 const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
 ] as const;
 
 /** Which way pay moves when the anchor lands on a non-business day. */
@@ -44,7 +44,7 @@ export class PaydayAnchor {
       dayOfMonth > 31
     ) {
       throw new InvalidAnchor(
-        `A payday anchor is a day of the month; received ${String(dayOfMonth)}.`,
+        `O dia do pagamento é um dia do mês; recebido ${String(dayOfMonth)}.`,
       );
     }
     return new PaydayAnchor(dayOfMonth, shiftPolicy);
@@ -129,7 +129,7 @@ export class CycleRef {
   ): CycleRef[] {
     if (!Number.isSafeInteger(count) || count < 1) {
       throw new InvalidAnchor(
-        `A window holds at least one cycle; received ${String(count)}.`,
+        `Uma janela tem pelo menos um ciclo; recebido ${String(count)}.`,
       );
     }
 
@@ -205,7 +205,7 @@ export class CycleRef {
   get label(): string {
     const { year, monthNumber } = parseMonth(this.month);
 
-    return `${MONTH_NAMES[monthNumber - 1] ?? ''} ${String(year)}`;
+    return `${MONTH_NAMES[monthNumber - 1] ?? ''} de ${String(year)}`;
   }
 
   equals(other: CycleRef): boolean {
@@ -225,7 +225,7 @@ function parseMonth(month: string): { year: number; monthNumber: number } {
   const groups = MONTH.exec(month)?.groups;
   const monthNumber = Number(groups?.['month'] ?? 0);
   if (groups === undefined || monthNumber < 1 || monthNumber > 12) {
-    throw new InvalidAnchor(`Not a YYYY-MM month: "${month}".`);
+    throw new InvalidAnchor(`Não é um mês no formato YYYY-MM: "${month}".`);
   }
   return { year: Number(groups['year']), monthNumber };
 }

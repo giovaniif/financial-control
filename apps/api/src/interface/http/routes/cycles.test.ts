@@ -91,7 +91,7 @@ describe('GET /cycles/:month', () => {
       })
     ).json<CycleResponse>();
 
-    expect(body.label).toBe('September 2026');
+    expect(body.label).toBe('Setembro de 2026');
     expect(body.start).toBe('2026-08-05');
     expect(body.end).toBe('2026-09-03');
   });

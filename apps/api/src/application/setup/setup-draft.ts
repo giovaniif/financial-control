@@ -227,7 +227,9 @@ export class SetupDraft {
     ids: IdSource,
   ): SetupDraft {
     if (!MONTH.test(startMonth)) {
-      throw new InvalidSetupRecord(`Not a YYYY-MM month: "${startMonth}".`);
+      throw new InvalidSetupRecord(
+        `Não é um mês no formato YYYY-MM: "${startMonth}".`,
+      );
     }
 
     return new SetupDraft({
@@ -320,7 +322,7 @@ export class SetupDraft {
     const held = this.find(id);
     if (held === undefined) {
       throw new SetupRecordNotFound(
-        `The setup holds nothing recorded as "${id}".`,
+        `A configuração não tem nada registrado como "${id}".`,
       );
     }
     return held;
@@ -372,7 +374,7 @@ export class SetupDraft {
     id: string,
     proposed: { name: string; type: AccountType; balance: Money },
   ): SetupDraft {
-    const previous = existing(this.state.accounts, id, 'account');
+    const previous = existing(this.state.accounts, id, ACCOUNT);
     const account = this.readAccount(id, proposed);
 
     return this.with({
@@ -388,7 +390,7 @@ export class SetupDraft {
   }
 
   withSalary(amount: Money): SetupDraft {
-    return this.with({ salary: requirePositive('A salary', amount) });
+    return this.with({ salary: requirePositive('O salário', amount) });
   }
 
   addFixedBill(proposed: ProposedBill): SetupDraft {
@@ -398,7 +400,7 @@ export class SetupDraft {
   }
 
   replaceFixedBill(id: string, proposed: ProposedBill): SetupDraft {
-    existing(this.state.fixedBills, id, 'fixed bill');
+    existing(this.state.fixedBills, id, FIXED_BILL);
 
     return this.with({
       fixedBills: replacing(
@@ -420,7 +422,7 @@ export class SetupDraft {
   }
 
   replaceVariableBill(id: string, proposed: ProposedBill): SetupDraft {
-    existing(this.state.variableBills, id, 'variable bill');
+    existing(this.state.variableBills, id, VARIABLE_BILL);
 
     return this.with({
       variableBills: replacing(
@@ -437,7 +439,7 @@ export class SetupDraft {
   }
 
   replaceCard(id: string, proposed: ProposedCard): SetupDraft {
-    existing(this.state.cards, id, 'card');
+    existing(this.state.cards, id, CARD);
 
     return this.with({
       cards: replacing(this.state.cards, this.readCard(id, proposed)),
@@ -451,7 +453,7 @@ export class SetupDraft {
   }
 
   replaceGoalBucket(id: string, proposed: ProposedGoalBucket): SetupDraft {
-    existing(this.state.buckets, id, 'bucket');
+    existing(this.state.buckets, id, BUCKET);
 
     return this.with({
       buckets: replacing(this.state.buckets, this.readGoalBucket(id, proposed)),
@@ -465,7 +467,7 @@ export class SetupDraft {
   }
 
   replaceOngoingBucket(id: string, proposed: ProposedBucket): SetupDraft {
-    existing(this.state.buckets, id, 'bucket');
+    existing(this.state.buckets, id, BUCKET);
 
     return this.with({
       buckets: replacing(
@@ -508,7 +510,7 @@ export class SetupDraft {
   skip(section: SetupSection): SetupDraft {
     if (section === SetupSection.Anchor) {
       throw new SectionCannotBeSkipped(
-        'The payday anchor is what every date in the app is measured from, so it cannot be skipped.',
+        'O dia do pagamento é a partir do que toda data do app é medida, então ele não pode ser pulado.',
       );
     }
 
@@ -535,7 +537,7 @@ export class SetupDraft {
     );
     if (card !== undefined) {
       throw new InvalidSetupRecord(
-        `${card.name} is paid from ${account.name}, so the card has to go or be corrected first.`,
+        `${card.name} é pago por ${account.name}, então o cartão precisa sair ou ser corrigido antes.`,
       );
     }
   }
@@ -545,7 +547,7 @@ export class SetupDraft {
     proposed: { name: string; type: AccountType; balance: Money },
   ): DraftAccount {
     const name = requireUnusedName(
-      'account',
+      ACCOUNT,
       proposed.name,
       namesOthersHold(this.state.accounts, id),
     );
@@ -567,17 +569,19 @@ export class SetupDraft {
     const anchor = this.state.anchor;
     if (anchor === undefined) {
       throw new AnchorNotChosen(
-        'A bill is dated inside a cycle, so the payday anchor comes first.',
+        'Uma conta é datada dentro de um ciclo, então o dia do pagamento vem primeiro.',
       );
     }
 
-    const name = requireUnusedName('bill', proposed.name, [
+    const name = requireUnusedName(BILL, proposed.name, [
       ...namesOthersHold(this.state.fixedBills, id),
       ...namesOthersHold(this.state.variableBills, id),
     ]);
-    requireDayOfMonth('due day', proposed.dueDayOfMonth);
+    requireDayOfMonth('vencimento', proposed.dueDayOfMonth);
     if (proposed.amount.isZero()) {
-      throw new InvalidSetupRecord(`${name} cannot be a bill for nothing.`);
+      throw new InvalidSetupRecord(
+        `${name} não pode ser uma conta de valor zero.`,
+      );
     }
 
     const acceptsCycleFallback = proposed.acceptCycleFallback ?? false;
@@ -622,17 +626,17 @@ export class SetupDraft {
 
   private readCard(id: string, proposed: ProposedCard): DraftCard {
     const name = requireUnusedName(
-      'card',
+      CARD,
       proposed.name,
       namesOthersHold(this.state.cards, id),
     );
     if (proposed.limit.isNegative()) {
       throw new InvalidSetupRecord(
-        `${name} cannot have a limit of ${proposed.limit.toReais()}.`,
+        `${name} não pode ter um limite de R$ ${proposed.limit.toReais()}.`,
       );
     }
-    requireDayOfMonth('closing day', proposed.closingDay);
-    requireDayOfMonth('due day', proposed.dueDay);
+    requireDayOfMonth('fechamento', proposed.closingDay);
+    requireDayOfMonth('vencimento', proposed.dueDay);
 
     // An invoice due date is a real date and cycles tile the calendar, so it
     // always lands in one: the gap that catches a bill's due day cannot catch
@@ -644,7 +648,7 @@ export class SetupDraft {
     );
     if (paymentAccount === undefined) {
       throw new InvalidSetupRecord(
-        `${name} is paid from an account called "${proposed.paymentAccountName}", which the setup does not hold.`,
+        `${name} é pago por uma conta chamada "${proposed.paymentAccountName}", que a configuração não tem.`,
       );
     }
 
@@ -663,7 +667,10 @@ export class SetupDraft {
     proposed: ProposedGoalBucket,
   ): DraftBucket {
     const name = this.readBucketName(id, proposed);
-    requirePositive(`${name} is a goal, so its target`, proposed.target.amount);
+    requirePositive(
+      `${name} é uma meta, então o valor-alvo`,
+      proposed.target.amount,
+    );
 
     return {
       mode: 'GOAL',
@@ -737,7 +744,7 @@ export class SetupDraft {
 
   private readBucketName(id: string, proposed: ProposedBucket): string {
     const name = requireUnusedName(
-      'bucket',
+      BUCKET,
       proposed.name,
       namesOthersHold(this.state.buckets, id),
     );
@@ -754,7 +761,7 @@ export class SetupDraft {
   ): void {
     if (!Number.isSafeInteger(priority) || priority < 1) {
       throw new InvalidSetupRecord(
-        `A priority is a whole number of at least 1; received ${String(priority)}.`,
+        `A prioridade é um número inteiro de pelo menos 1; recebido ${String(priority)}.`,
       );
     }
     const taken = this.state.buckets.find(
@@ -762,7 +769,7 @@ export class SetupDraft {
     );
     if (taken !== undefined) {
       throw new InvalidSetupRecord(
-        `${name} cannot be #${String(priority)}; ${taken.name} already is, and the order decides who is funded when the money runs short.`,
+        `${name} não pode ser a #${String(priority)}; ${taken.name} já é, e a ordem decide quem recebe quando o dinheiro não dá para todas.`,
       );
     }
   }
@@ -786,14 +793,14 @@ function offerFallback(
   const day = String(dueDayOfMonth);
   const cycles =
     others === 0
-      ? `the ${first.label} cycle (${first.range}) never reaches`
-      : `the ${first.label} cycle (${first.range}) and ${String(others)} other cycles never reach`;
+      ? `o ciclo de ${first.label} (${first.range}) nunca alcança`
+      : `o ciclo de ${first.label} (${first.range}) e outros ${String(others)} ciclos nunca alcançam`;
   const offer =
     others === 0
-      ? `I can use that cycle's last day, ${first.fallbackDate.toISO()}`
-      : `I can use each of those cycles' last day, starting ${first.fallbackDate.toISO()}`;
+      ? `Posso usar o último dia desse ciclo, ${first.fallbackDate.toISO()}`
+      : `Posso usar o último dia de cada um desses ciclos, a começar por ${first.fallbackDate.toISO()}`;
 
-  return `${name} falls due on day ${day}, which ${cycles}. ${offer}, and keep day ${day} everywhere else.`;
+  return `${name} vence no dia ${day}, que ${cycles}. ${offer}, e manter o dia ${day} em todos os outros.`;
 }
 
 /** What everything but the record being written holds, so a correction may
@@ -808,12 +815,12 @@ function namesOthersHold(
 function existing<T extends { id: string }>(
   held: readonly T[],
   id: string,
-  what: string,
+  what: RecordNoun,
 ): T {
   const found = held.find((record) => record.id === id);
   if (found === undefined) {
     throw new SetupRecordNotFound(
-      `The setup holds no ${what} recorded as "${id}".`,
+      `A configuração não tem ${none(what)} com este id: "${id}".`,
     );
   }
   return found;
@@ -830,18 +837,44 @@ function without<T extends { id: string }>(
   return held.filter((record) => record.id !== id);
 }
 
+/**
+ * What a record is called on screen, with the gender Portuguese needs to
+ * agree with it: `uma conta` against `um cartão`.
+ */
+interface RecordNoun {
+  readonly word: string;
+  readonly isFeminine: boolean;
+}
+
+const ACCOUNT: RecordNoun = { word: 'conta', isFeminine: true };
+const BILL: RecordNoun = { word: 'conta a pagar', isFeminine: true };
+const FIXED_BILL: RecordNoun = { word: 'conta fixa', isFeminine: true };
+const VARIABLE_BILL: RecordNoun = { word: 'conta variável', isFeminine: true };
+const CARD: RecordNoun = { word: 'cartão', isFeminine: false };
+const BUCKET: RecordNoun = { word: 'caixinha', isFeminine: true };
+
+function one(noun: RecordNoun): string {
+  return `${noun.isFeminine ? 'uma' : 'um'} ${noun.word}`;
+}
+
+function none(noun: RecordNoun): string {
+  return `${noun.isFeminine ? 'nenhuma' : 'nenhum'} ${noun.word}`;
+}
+
 function requireUnusedName(
-  what: string,
+  what: RecordNoun,
   name: string,
   taken: readonly string[],
 ): string {
   const trimmed = name.trim();
   if (trimmed === '') {
-    throw new InvalidSetupRecord(`A ${what} needs a name.`);
+    throw new InvalidSetupRecord(
+      `${what.isFeminine ? 'Toda' : 'Todo'} ${what.word} precisa de um nome.`,
+    );
   }
   if (taken.some((used) => used.toLowerCase() === trimmed.toLowerCase())) {
     throw new InvalidSetupRecord(
-      `There is already a ${what} called "${trimmed}".`,
+      `Já existe ${one(what)} com o nome "${trimmed}".`,
     );
   }
   return trimmed;
@@ -850,7 +883,7 @@ function requireUnusedName(
 function requireDayOfMonth(what: string, day: number): void {
   if (!Number.isSafeInteger(day) || day < 1 || day > 31) {
     throw new InvalidSetupRecord(
-      `A ${what} is a day of the month; received ${String(day)}.`,
+      `O dia de ${what} é um dia do mês; recebido ${String(day)}.`,
     );
   }
 }
@@ -858,7 +891,7 @@ function requireDayOfMonth(what: string, day: number): void {
 function requirePositive(what: string, amount: Money): Money {
   if (!amount.isPositive()) {
     throw new InvalidSetupRecord(
-      `${what} must be more than nothing; received ${amount.toReais()}.`,
+      `${what} tem de ser maior que zero; recebido R$ ${amount.toReais()}.`,
     );
   }
   return amount;
@@ -872,7 +905,7 @@ function requireRuleAsksForSomething(name: string, rule: AllocationRule): void {
 
   if (asksForNothing) {
     throw new InvalidSetupRecord(
-      `${name} needs an allocation rule that puts something in it each cycle.`,
+      `${name} precisa de uma regra de alocação que coloque algo nela a cada ciclo.`,
     );
   }
 }

@@ -20,7 +20,7 @@ export class Percentage {
   static ofBasisPoints(basisPoints: number): Percentage {
     if (!Number.isSafeInteger(basisPoints) || basisPoints < 0) {
       throw new InvalidPercentage(
-        `Basis points must be a whole number of at least 0; received ${String(basisPoints)}.`,
+        `Os pontos-base precisam ser um número inteiro de pelo menos 0; recebido ${String(basisPoints)}.`,
       );
     }
     return new Percentage(basisPoints);
@@ -30,7 +30,7 @@ export class Percentage {
     const basisPoints = percent * BASIS_POINTS_PER_PERCENT;
     if (!Number.isInteger(basisPoints)) {
       throw new InvalidPercentage(
-        `A percentage carries at most two decimal places; received ${String(percent)}.`,
+        `Uma porcentagem tem no máximo duas casas decimais; recebido ${String(percent)}.`,
       );
     }
     return Percentage.ofBasisPoints(basisPoints);

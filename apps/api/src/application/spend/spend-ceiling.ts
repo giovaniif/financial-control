@@ -39,7 +39,7 @@ export class SpendCeiling {
     if (spent < this.maxTokensPerDay) return;
 
     throw new SpendCeilingReached(
-      `The assistant has spent the ${this.maxTokensPerDay.toLocaleString('en-US')} tokens one day allows, so it is switched off until tomorrow. Everything else in the app works without it.`,
+      `O assistente já gastou os ${this.maxTokensPerDay.toLocaleString('pt-BR')} tokens que um dia permite, então ele fica desligado até amanhã. Todo o resto do app funciona sem ele.`,
     );
   }
 

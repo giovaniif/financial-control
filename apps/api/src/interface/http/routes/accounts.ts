@@ -71,7 +71,7 @@ export function registerAccountRoutes(
   app.post('/accounts', async (request, reply) => {
     const input = readOpenRequest(request.body);
     if (input === undefined) {
-      return badRequest(reply, 'name, type and balance are required.');
+      return badRequest(reply, 'name, type e balance são obrigatórios.');
     }
 
     try {
@@ -92,7 +92,7 @@ export function registerAccountRoutes(
       const { name } = (asRecord(request.body) ??
         {}) as Partial<RenameAccountRequest>;
       if (typeof name !== 'string') {
-        return badRequest(reply, 'name is required.');
+        return badRequest(reply, 'name é obrigatório.');
       }
 
       try {
@@ -109,7 +109,7 @@ export function registerAccountRoutes(
       const { balance } = (asRecord(request.body) ??
         {}) as Partial<CorrectBalanceRequest>;
       if (typeof balance !== 'number') {
-        return badRequest(reply, 'balance is required.');
+        return badRequest(reply, 'balance é obrigatório.');
       }
 
       try {

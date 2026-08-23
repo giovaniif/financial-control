@@ -166,7 +166,7 @@ describe('CorrectSetupRecord.correct', () => {
         recordId: 'rec-1',
         correction: { dueDayOfMonth: 30 },
       }),
-    ).rejects.toThrow(/never reach.*last day/);
+    ).rejects.toThrow(/nunca alcançam.*último dia/);
 
     const [bill] = (await open(conversations)).state.draft.fixedBills;
     expect(bill?.dueDayOfMonth).toBe(31);
@@ -258,7 +258,7 @@ describe('CorrectSetupRecord.correct', () => {
         recordId: BILL_ID,
         correction: { name: 'Electricity' },
       }),
-    ).rejects.toThrow(/already/);
+    ).rejects.toThrow(/Já existe/);
   });
 
   it('rejects a conversation nobody opened', async () => {

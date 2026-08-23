@@ -53,7 +53,7 @@ export function registerSettingsRoutes(
   app.post('/settings/anchor/resolve', async (request, reply) => {
     const proposed = readAnchorRequest(request.body);
     if (proposed === undefined) {
-      return badRequest(reply, 'anchorDay and shiftPolicy are required.');
+      return badRequest(reply, 'anchorDay e shiftPolicy são obrigatórios.');
     }
 
     try {
@@ -67,7 +67,7 @@ export function registerSettingsRoutes(
   app.post('/settings/anchor/preview', async (request, reply) => {
     const proposed = readAnchorRequest(request.body);
     if (proposed === undefined) {
-      return badRequest(reply, 'anchorDay and shiftPolicy are required.');
+      return badRequest(reply, 'anchorDay e shiftPolicy são obrigatórios.');
     }
 
     try {
@@ -81,7 +81,7 @@ export function registerSettingsRoutes(
   app.put('/settings/anchor', async (request, reply) => {
     const proposed = readAnchorRequest(request.body);
     if (proposed === undefined) {
-      return badRequest(reply, 'anchorDay and shiftPolicy are required.');
+      return badRequest(reply, 'anchorDay e shiftPolicy são obrigatórios.');
     }
 
     try {

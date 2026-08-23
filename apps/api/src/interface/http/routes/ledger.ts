@@ -112,7 +112,10 @@ export function registerLedgerRoutes(
     async (request, reply) => {
       const input = readSettle(request.body);
       if (input === undefined) {
-        return badRequest(reply, 'status must be PAID, RECEIVED or SKIPPED.');
+        return badRequest(
+          reply,
+          'status tem de ser PAID, RECEIVED ou SKIPPED.',
+        );
       }
 
       try {
@@ -143,7 +146,7 @@ export function registerLedgerRoutes(
     async (request, reply) => {
       const { amount } = asRecord(request.body);
       if (typeof amount !== 'number') {
-        return badRequest(reply, 'amount is required.');
+        return badRequest(reply, 'amount é obrigatório.');
       }
 
       try {

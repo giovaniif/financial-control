@@ -356,7 +356,7 @@ describe('SetupDraft bills', () => {
 
   it('names the bill, the day and the cycle that cannot place it', () => {
     expect(() => withAnchor(31).addVariableBill(bill('Rent', 30))).toThrow(
-      /Rent.*day 30.*September 2026 cycle \(2026-08-31 – 2026-09-29\)/,
+      /Rent.*dia 30.*ciclo de Setembro de 2026 \(2026-08-31 – 2026-09-29\)/,
     );
   });
 
@@ -420,9 +420,21 @@ describe('SetupDraft due days a cycle cannot reach', () => {
         cycle.fallbackDate.toISO(),
       ]),
     ).toEqual([
-      ['2026-09', 'September 2026', '2026-08-05 – 2026-09-03', 3, '2026-09-03'],
-      ['2026-12', 'December 2026', '2026-11-05 – 2026-12-03', 3, '2026-12-03'],
-      ['2027-06', 'June 2027', '2027-05-05 – 2027-06-03', 3, '2027-06-03'],
+      [
+        '2026-09',
+        'Setembro de 2026',
+        '2026-08-05 – 2026-09-03',
+        3,
+        '2026-09-03',
+      ],
+      [
+        '2026-12',
+        'Dezembro de 2026',
+        '2026-11-05 – 2026-12-03',
+        3,
+        '2026-12-03',
+      ],
+      ['2027-06', 'Junho de 2027', '2027-05-05 – 2027-06-03', 3, '2027-06-03'],
     ]);
   });
 
@@ -430,7 +442,7 @@ describe('SetupDraft due days a cycle cannot reach', () => {
     const refused = refusal(() => withAnchor(7).addFixedBill(gym(5)));
 
     expect(refused.message).toMatch(
-      /Gym.*day 5.*February 2027 cycle \(2027-01-07 – 2027-02-04\).*2027-02-04.*day 5 everywhere else/,
+      /Gym.*dia 5.*ciclo de Fevereiro de 2027 \(2027-01-07 – 2027-02-04\).*2027-02-04.*dia 5 em todos os outros/,
     );
   });
 

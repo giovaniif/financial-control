@@ -140,7 +140,7 @@ export class ConverseSetup {
     const message = input.message.trim();
     if (message.length > this.limits.maxMessageCharacters) {
       throw new SetupMessageTooLong(
-        `An answer may be ${String(this.limits.maxMessageCharacters)} characters long; this one is ${String(message.length)}. Nothing was sent to the model — send it in more than one answer and I will record each.`,
+        `Uma resposta pode ter ${String(this.limits.maxMessageCharacters)} caracteres; esta tem ${String(message.length)}. Nada foi enviado ao modelo — mande em mais de uma resposta e eu registro cada uma.`,
       );
     }
 
@@ -151,7 +151,7 @@ export class ConverseSetup {
     const stored = await this.open(input.conversationId);
     if (turnsOf(stored) >= this.limits.maxTurnsPerConversation) {
       throw new SetupConversationTooLong(
-        `This setup conversation has had the ${String(this.limits.maxTurnsPerConversation)} turns one may have. Everything it recorded is still held, to correct or to apply — it just cannot go on.`,
+        `Esta conversa de configuração já teve as ${String(this.limits.maxTurnsPerConversation)} rodadas que uma conversa pode ter. Tudo o que ela registrou continua guardado, para corrigir ou aplicar — ela só não pode seguir adiante.`,
       );
     }
 
@@ -243,7 +243,7 @@ export class ConverseSetup {
     const stored = await this.conversations.load(id);
     if (stored === undefined) {
       throw new SetupConversationNotFound(
-        `There is no setup conversation called "${id}".`,
+        `Não existe nenhuma conversa de configuração chamada "${id}".`,
       );
     }
     return stored;
@@ -294,7 +294,7 @@ export class ConverseSetup {
             removed.push(outcome.id);
             results.push({
               callId: call.id,
-              content: `Dropped ${outcome.summary}.`,
+              content: `${outcome.summary} foi removido.`,
               isError: false,
             });
             continue;
@@ -303,7 +303,7 @@ export class ConverseSetup {
           established.push(outcome.established);
           results.push({
             callId: call.id,
-            content: `Corrected. ${outcome.established.summary}`,
+            content: `Corrigido. ${outcome.established.summary}`,
             isError: false,
           });
         } catch (error) {
@@ -315,13 +315,13 @@ export class ConverseSetup {
 
       const section = current.section;
       if (section === undefined) {
-        refuse(call, 'Everything is already recorded.');
+        refuse(call, 'Tudo já está registrado.');
         continue;
       }
 
       if (call.name === FINISH_TOOL.name) {
         if (section === SetupSection.Anchor) {
-          refuse(call, `${LABELS[section]} cannot be skipped.`);
+          refuse(call, `${LABELS[section]} não pode ser pulado.`);
           continue;
         }
         current = {
@@ -330,7 +330,7 @@ export class ConverseSetup {
         };
         results.push({
           callId: call.id,
-          content: 'Moving on.',
+          content: 'Seguindo em frente.',
           isError: false,
         });
         continue;
@@ -341,8 +341,8 @@ export class ConverseSetup {
         refuse(
           call,
           spec === undefined
-            ? `There is nothing called ${call.name} to call here.`
-            : `${LABELS[spec.section]} is already settled, so nothing changed. I can correct or drop a record already recorded — tell me which one.`,
+            ? `Não há nada chamado ${call.name} para chamar aqui.`
+            : `${LABELS[spec.section]} já está resolvido, então nada mudou. Posso corrigir ou remover um registro já feito — diga qual.`,
         );
         continue;
       }
@@ -386,8 +386,8 @@ export class ConverseSetup {
           // correction: nothing else in the conversation carries one.
           content:
             record.id === undefined
-              ? `Recorded. ${record.summary}`
-              : `Recorded as ${record.id}. ${record.summary}`,
+              ? `Registrado. ${record.summary}`
+              : `Registrado como ${record.id}. ${record.summary}`,
           isError: false,
         });
       } catch (error) {
@@ -551,13 +551,13 @@ const SINGULAR: readonly SetupSection[] = [
 ];
 
 const LABELS: Record<SetupSection, string> = {
-  ANCHOR: 'The payday anchor',
-  ACCOUNTS: 'The accounts',
-  SALARY: 'The salary',
-  FIXED_BILLS: 'The fixed bills',
-  VARIABLE_BILLS: 'The variable bills',
-  CARDS: 'The cards',
-  BUCKETS: 'The buckets',
+  ANCHOR: 'O dia do pagamento',
+  ACCOUNTS: 'As contas',
+  SALARY: 'O salário',
+  FIXED_BILLS: 'As contas fixas',
+  VARIABLE_BILLS: 'As contas variáveis',
+  CARDS: 'Os cartões',
+  BUCKETS: 'As caixinhas',
 };
 
 const FINISH_TOOL: ToolDeclaration = {
@@ -589,7 +589,7 @@ const FALLBACK_FLAG: JsonObject = {
 };
 
 const RULE_QUESTION =
-  'how much goes in each cycle — a percentage of Expected Surplus, or a fixed amount';
+  'quanto entra a cada ciclo — um percentual da Sobra Esperada ou um valor fixo';
 
 const RULE_FIELDS: JsonObject = {
   percentOfExpectedSurplus: {
@@ -690,7 +690,7 @@ const TOOLS: readonly ToolSpec[] = [
     apply: ({ args, holidays, clock, ids }) => {
       const day = readInteger(args, 'dayOfMonth');
       if (day === undefined) {
-        return missing(['the day of the month your salary lands']);
+        return missing(['o dia do mês em que o seu salário cai']);
       }
 
       const policy =
@@ -714,7 +714,7 @@ const TOOLS: readonly ToolSpec[] = [
         draft: SetupDraft.empty(startMonth, holidays, ids).withAnchor(anchor),
         established: establishedValue(
           SetupSection.Anchor,
-          `Paid on day ${String(day)}, moving to the ${policy === ShiftPolicy.Preceding ? 'preceding' : 'following'} business day when that one is closed. Setup starts in the ${startMonth} cycle.`,
+          `Pagamento no dia ${String(day)}, indo para o dia útil ${policy === ShiftPolicy.Preceding ? 'anterior' : 'seguinte'} quando esse dia cai em fim de semana ou feriado. A configuração começa no ciclo ${startMonth}.`,
         ),
       };
     },
@@ -740,11 +740,11 @@ const TOOLS: readonly ToolSpec[] = [
     },
     apply: ({ draft, args }) => {
       const name = readText(args, 'name');
-      if (name === undefined) return missing(["the account's name"]);
+      if (name === undefined) return missing(['o nome da conta']);
 
       const balance = readCents(args, 'balanceInCents');
       if (balance === undefined) {
-        return missing(['what is in it right now'], name);
+        return missing(['quanto tem nela agora'], name);
       }
 
       // FIN-128 — nobody says "checking" describing their money, and what a
@@ -779,14 +779,14 @@ const TOOLS: readonly ToolSpec[] = [
     },
     apply: ({ draft, args }) => {
       const amount = readCents(args, 'amountInCents');
-      if (amount === undefined) return missing(['what your salary is']);
+      if (amount === undefined) return missing(['qual é o seu salário']);
 
       return {
         kind: 'value',
         draft: draft.withSalary(amount),
         established: establishedValue(
           SetupSection.Salary,
-          `Salary of R$ ${amount.toReais()} each cycle, dated by the payday anchor.`,
+          `Salário de R$ ${amount.toReais()} por ciclo, datado pelo dia do pagamento.`,
         ),
       };
     },
@@ -822,7 +822,7 @@ const TOOLS: readonly ToolSpec[] = [
     },
     apply: ({ draft, args }) => {
       const name = readText(args, 'name');
-      if (name === undefined) return missing(["the card's name"]);
+      if (name === undefined) return missing(['o nome do cartão']);
 
       const limit = readCents(args, 'limitInCents');
       const closingDay = readInteger(args, 'closingDay');
@@ -830,10 +830,12 @@ const TOOLS: readonly ToolSpec[] = [
       const paymentAccountName = readText(args, 'paymentAccountName');
 
       const unanswered = [
-        ...(limit === undefined ? ['the credit limit'] : []),
-        ...(closingDay === undefined ? ['the day the invoice closes'] : []),
-        ...(dueDay === undefined ? ['the day the invoice falls due'] : []),
-        ...(paymentAccountName === undefined ? ['which account pays it'] : []),
+        ...(limit === undefined ? ['o limite do cartão'] : []),
+        ...(closingDay === undefined ? ['o dia em que a fatura fecha'] : []),
+        ...(dueDay === undefined ? ['o dia em que a fatura vence'] : []),
+        ...(paymentAccountName === undefined
+          ? ['qual conta paga a fatura']
+          : []),
       ];
       if (
         limit === undefined ||
@@ -872,7 +874,7 @@ const TOOLS: readonly ToolSpec[] = [
     },
     apply: ({ draft, args }) => {
       const name = readText(args, 'name');
-      if (name === undefined) return missing(["the bucket's name"]);
+      if (name === undefined) return missing(['o nome da caixinha']);
 
       const rule = allocationRule(args);
       if (rule === undefined) return missing([RULE_QUESTION], name);
@@ -906,7 +908,7 @@ const TOOLS: readonly ToolSpec[] = [
     },
     apply: ({ draft, args }) => {
       const name = readText(args, 'name');
-      if (name === undefined) return missing(["the bucket's name"]);
+      if (name === undefined) return missing(['o nome da caixinha']);
 
       const rule = allocationRule(args);
       const target = readCents(args, 'targetAmountInCents');
@@ -914,8 +916,8 @@ const TOOLS: readonly ToolSpec[] = [
 
       const unanswered = [
         ...(rule === undefined ? [RULE_QUESTION] : []),
-        ...(target === undefined ? ['the amount to reach'] : []),
-        ...(date === undefined ? ['the date to reach it by'] : []),
+        ...(target === undefined ? ['o valor a alcançar'] : []),
+        ...(date === undefined ? ['a data para alcançá-lo'] : []),
       ];
       if (rule === undefined || target === undefined || date === undefined) {
         return missing(unanswered, name);
@@ -956,7 +958,7 @@ function correct(draft: SetupDraft, args: JsonObject): Correction {
   if (id === undefined) {
     return {
       kind: 'missing',
-      question: 'I need to know which record to change.',
+      question: 'Preciso saber qual registro mudar.',
     };
   }
 
@@ -967,7 +969,7 @@ function correct(draft: SetupDraft, args: JsonObject): Correction {
   if (corrected === undefined) {
     return {
       kind: 'missing',
-      question: `I still need to know what to change about ${held.record.name}.`,
+      question: `Ainda preciso saber o que mudar em ${held.record.name}.`,
     };
   }
 
@@ -1012,7 +1014,7 @@ function drop(draft: SetupDraft, args: JsonObject): Correction {
   if (id === undefined) {
     return {
       kind: 'missing',
-      question: 'I need to know which record to drop.',
+      question: 'Preciso saber qual registro remover.',
     };
   }
 
@@ -1030,7 +1032,7 @@ function drop(draft: SetupDraft, args: JsonObject): Correction {
 function notHolding(id: string): Correction {
   return {
     kind: 'missing',
-    question: `I am holding nothing recorded as ${id}, so nothing changed.`,
+    question: `Não tenho nada registrado como ${id}, então nada mudou.`,
   };
 }
 
@@ -1079,12 +1081,12 @@ function billSpec(
       const name = readText(args, 'name');
       const amount = readCents(args, 'amountInCents');
       if (name === undefined || amount === undefined) {
-        return missing(["the bill's name and what it costs"]);
+        return missing(['o nome da conta e quanto ela custa']);
       }
 
       const dueDayOfMonth = readInteger(args, 'dueDayOfMonth');
       if (dueDayOfMonth === undefined) {
-        return missing(['the day of the month it falls due'], name);
+        return missing(['o dia do mês do vencimento'], name);
       }
 
       const isEstimate = readFlag(args, 'isEstimate');
@@ -1189,10 +1191,10 @@ function questionFor(gaps: readonly Gap[]): string {
   const asked = clauses.map((clause) =>
     clause.subjects.length === 0
       ? clause.wants
-      : `${clause.wants} for ${joinWithAnd(clause.subjects)}`,
+      : `${clause.wants} para ${joinWithAnd(clause.subjects)}`,
   );
 
-  return `I still need ${joinClauses(asked)}.`;
+  return `Ainda preciso saber ${joinClauses(asked)}.`;
 }
 
 /** A clause carries an "and" of its own, so the last is set off by a comma. */
@@ -1200,11 +1202,11 @@ function joinClauses(clauses: readonly string[]): string {
   const rest = clauses.slice(0, -1);
   const last = clauses.slice(-1).join('');
 
-  return rest.length === 0 ? last : `${rest.join(', ')}, and ${last}`;
+  return rest.length === 0 ? last : `${rest.join(', ')}, e ${last}`;
 }
 
 function joinWithAnd(parts: readonly string[]): string {
-  return parts.join(', ').replace(/, ([^,]*)$/, ' and $1');
+  return parts.join(', ').replace(/, ([^,]*)$/, ' e $1');
 }
 
 /**
@@ -1298,6 +1300,8 @@ function centsField(description: string): JsonObject {
 
 const ROLE = `You are the setup assistant of Financial Control, a personal budgeting application with a single user. You are collecting what the app needs before it can show anything, one section at a time.
 
+**Write every message to the user in Brazilian Portuguese**, in the plain, direct register a Brazilian would use about their own money. These instructions are in English; nothing the user reads is. Use the app's own words for the calculation chain — Sobra, Sobra Esperada, Sobra Líquida, Saldo inicial, Saldo final, Total de saídas, Alocações — and call a savings pot a caixinha, a recurring bill a conta, and a credit-card bill a fatura.
+
 Ask about one section at a time and keep every message short. When more than one record is missing something, ask for all of it in a single question naming each record — never one question per record. Record what the user tells you by calling the tool for the section being asked about, once per item, and call finish_section as soon as they have nothing more to add to it.
 
 Leave a field out when the user has not said it, and ask about it instead — never fill one in from what is typical. Amounts are Brazilian Real in whole cents: R$ 1.234,56 is 123456.`;
@@ -1322,13 +1326,15 @@ const BRIEFINGS: Record<SetupSection, string> = {
 };
 
 const QUESTIONS: Record<SetupSection, string> = {
-  ANCHOR: 'Which day of the month does your salary land?',
-  ACCOUNTS: 'Which accounts do you keep money in, and how much is in each?',
-  SALARY: 'How much is your salary each cycle?',
-  FIXED_BILLS: 'Which bills cost the same every cycle, and on which day?',
-  VARIABLE_BILLS: 'Which bills change from cycle to cycle, and on which day?',
-  CARDS: 'Which credit cards do you use?',
-  BUCKETS: 'What are you saving toward, and how much goes in each cycle?',
+  ANCHOR: 'Em que dia do mês o seu salário cai?',
+  ACCOUNTS: 'Em quais contas você guarda dinheiro, e quanto tem em cada uma?',
+  SALARY: 'Quanto é o seu salário por ciclo?',
+  FIXED_BILLS: 'Quais contas custam o mesmo todo ciclo, e em que dia vencem?',
+  VARIABLE_BILLS:
+    'Quais contas mudam de um ciclo para o outro, e em que dia vencem?',
+  CARDS: 'Quais cartões de crédito você usa?',
+  BUCKETS:
+    'Para o que você está guardando dinheiro, e quanto entra a cada ciclo?',
 };
 
 function systemPrompt(
@@ -1348,6 +1354,6 @@ function systemPrompt(
 
 function nextQuestion(section: SetupSection | undefined): string {
   return section === undefined
-    ? 'That is everything I need — shall I set the app up?'
+    ? 'É tudo o que eu preciso — posso configurar o app?'
     : QUESTIONS[section];
 }

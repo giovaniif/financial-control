@@ -75,7 +75,7 @@ export class ManageAccounts {
   private async require(id: string): Promise<Account> {
     const account = await this.accounts.findById(id);
     if (account === undefined) {
-      throw new AccountNotFound(`No account ${id}.`);
+      throw new AccountNotFound(`Não há nenhuma conta ${id}.`);
     }
     return account;
   }

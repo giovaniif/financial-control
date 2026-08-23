@@ -280,6 +280,8 @@ describe('AssistantConversation — what one conversation may cost', () => {
     const events = await turn(conversation, { message: 'Why? Why? Why?' });
 
     expect(answerOf(events).answer.hitReadLimit).toBe(true);
-    expect(answerOf(events).answer.message).toContain('as much of your data');
+    expect(answerOf(events).answer.message).toContain(
+      'permite ler dos seus dados',
+    );
   });
 });

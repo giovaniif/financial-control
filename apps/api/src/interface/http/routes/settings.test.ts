@@ -181,7 +181,7 @@ describe('PUT /settings/anchor', () => {
       expect(cycles).toHaveLength(12);
       expect(cycles[0]).toEqual({
         month: '2026-09',
-        label: 'September 2026',
+        label: 'Setembro de 2026',
         start: '2026-08-05',
         end: '2026-09-03',
         shifted: false,

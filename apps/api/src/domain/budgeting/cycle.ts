@@ -131,7 +131,7 @@ export class Cycle {
     this.assertOpen();
     if (!this.state.ref.contains(entry.dueDate)) {
       throw new EntryNotInCycle(
-        `${entry.description} is due ${entry.dueDate.toISO()}, outside ${this.state.ref.toString()}.`,
+        `${entry.description} vence em ${entry.dueDate.toISO()}, fora do ciclo ${this.state.ref.toString()}.`,
       );
     }
     return this.with({ entries: [...this.state.entries, entry] });
@@ -172,7 +172,7 @@ export class Cycle {
     const unsettled = this.unsettledEntries;
     if (unsettled.length > 0) {
       throw new CycleNotSettled(
-        `${this.state.ref.label} has ${String(unsettled.length)} unsettled entr${unsettled.length === 1 ? 'y' : 'ies'}: settle or skip them first.`,
+        `O ciclo de ${this.state.ref.label} tem ${String(unsettled.length)} lançamento${unsettled.length === 1 ? '' : 's'} em aberto: dê baixa ou ignore cada um antes de fechá-lo.`,
       );
     }
     return this.with({ status: CycleStatus.Closed });
@@ -293,7 +293,7 @@ export class Cycle {
     );
     if (entry === undefined) {
       throw new EntryNotFound(
-        `No entry ${entryId} in ${this.state.ref.label}.`,
+        `Não há nenhum lançamento ${entryId} no ciclo de ${this.state.ref.label}.`,
       );
     }
     return entry;
@@ -316,7 +316,7 @@ export class Cycle {
   private assertOpen(): void {
     if (this.isClosed) {
       throw new CycleClosed(
-        `${this.state.ref.label} is closed; reopen it before changing anything.`,
+        `O ciclo de ${this.state.ref.label} está fechado; reabra-o antes de mudar qualquer coisa.`,
       );
     }
   }

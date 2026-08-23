@@ -84,7 +84,7 @@ describe('ReadCycle.byMonth', () => {
   it('states the cycle bounds, never a bare month name', async () => {
     const view = await reading(populated()).byMonth('2026-09');
 
-    expect(view.label).toBe('September 2026');
+    expect(view.label).toBe('Setembro de 2026');
     expect(view.start).toBe('2026-08-05');
     expect(view.end).toBe('2026-09-03');
   });

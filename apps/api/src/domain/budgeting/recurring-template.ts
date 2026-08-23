@@ -66,7 +66,7 @@ export class RecurringTemplate {
     status?: TemplateStatus;
   }): RecurringTemplate {
     if (input.name.trim() === '') {
-      throw new InvalidTemplate('A template needs a name.');
+      throw new InvalidTemplate('Uma recorrência precisa de um nome.');
     }
     if (
       !Number.isSafeInteger(input.dueDayOfMonth) ||
@@ -74,7 +74,7 @@ export class RecurringTemplate {
       input.dueDayOfMonth > 31
     ) {
       throw new InvalidTemplate(
-        `A due day is a day of the month; received ${String(input.dueDayOfMonth)}.`,
+        `O dia de vencimento é um dia do mês; recebido ${String(input.dueDayOfMonth)}.`,
       );
     }
     assertMonth(input.startMonth);
@@ -82,7 +82,7 @@ export class RecurringTemplate {
       assertMonth(input.endMonth);
       if (input.endMonth < input.startMonth) {
         throw new InvalidTemplate(
-          `A template cannot end (${input.endMonth}) before it starts (${input.startMonth}).`,
+          `Uma recorrência não pode terminar (${input.endMonth}) antes de começar (${input.startMonth}).`,
         );
       }
     }
@@ -215,7 +215,7 @@ export class RecurringTemplate {
 
   rename(name: string): RecurringTemplate {
     if (name.trim() === '') {
-      throw new InvalidTemplate('A template needs a name.');
+      throw new InvalidTemplate('Uma recorrência precisa de um nome.');
     }
     return this.with({ name: name.trim() });
   }
@@ -223,7 +223,7 @@ export class RecurringTemplate {
   pause(): RecurringTemplate {
     if (this.state.status === TemplateStatus.Ended) {
       throw new InvalidTemplate(
-        `${this.state.name} has ended; it cannot pause.`,
+        `${this.state.name} já terminou; não dá para pausá-la.`,
       );
     }
     return this.with({ status: TemplateStatus.Paused });
@@ -232,7 +232,7 @@ export class RecurringTemplate {
   resume(): RecurringTemplate {
     if (this.state.status === TemplateStatus.Ended) {
       throw new InvalidTemplate(
-        `${this.state.name} has ended; create a new template instead.`,
+        `${this.state.name} já terminou; crie uma nova recorrência no lugar dela.`,
       );
     }
     return this.with({ status: TemplateStatus.Active });
@@ -243,7 +243,7 @@ export class RecurringTemplate {
     assertMonth(month);
     if (month < this.state.startMonth) {
       throw new InvalidTemplate(
-        `A template cannot end (${month}) before it starts (${this.state.startMonth}).`,
+        `Uma recorrência não pode terminar (${month}) antes de começar (${this.state.startMonth}).`,
       );
     }
     return this.with({ endMonth: month });
@@ -266,6 +266,6 @@ const MONTH = /^\d{4}-(?:0[1-9]|1[0-2])$/;
 
 function assertMonth(month: string): void {
   if (!MONTH.test(month)) {
-    throw new InvalidTemplate(`Not a YYYY-MM month: "${month}".`);
+    throw new InvalidTemplate(`Não é um mês no formato YYYY-MM: "${month}".`);
   }
 }

@@ -90,7 +90,7 @@ export class ReadCycle {
     try {
       return CycleRef.forMonth(month, anchor, this.holidays);
     } catch {
-      throw new UnknownMonth(`Not a YYYY-MM month: "${month}".`);
+      throw new UnknownMonth(`Não é um mês no formato YYYY-MM: "${month}".`);
     }
   }
 }

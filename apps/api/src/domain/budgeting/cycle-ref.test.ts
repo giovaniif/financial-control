@@ -104,7 +104,7 @@ describe('CycleRef boundaries and naming', () => {
 
     // 5 Jul 2026 is a Sunday, so July's pay lands on Friday the 3rd.
     expect(august.start.toISO()).toBe('2026-07-03');
-    expect(august.label).toBe('August 2026');
+    expect(august.label).toBe('Agosto de 2026');
   });
 
   // The span moves with the anchor while the name stays put, which is the
@@ -127,7 +127,7 @@ describe('CycleRef boundaries and naming', () => {
     const june = forMonth('2026-06', anchor(1), calendar);
 
     expect(june.start.toISO()).toBe('2026-04-30');
-    expect(june.label).toBe('June 2026');
+    expect(june.label).toBe('Junho de 2026');
   });
 
   it('exposes its span as an inclusive range', () => {
@@ -183,7 +183,7 @@ describe('CycleRef equality', () => {
 
   it('renders its bounds, never a bare month name', () => {
     expect(forMonth('2026-08').toString()).toBe(
-      'August 2026 (2026-07-03 – 2026-08-04)',
+      'Agosto de 2026 (2026-07-03 – 2026-08-04)',
     );
   });
 });

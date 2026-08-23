@@ -55,7 +55,7 @@ export function establishedIn(
   const known = new Set(before.records.map((held) => held.record.id));
   const added = after.records.find((held) => !known.has(held.record.id));
   if (added === undefined) {
-    throw new SetupRecordNotFound('Nothing new was recorded.');
+    throw new SetupRecordNotFound('Nada de novo foi registrado.');
   }
 
   return establishedOf(added);
@@ -82,27 +82,33 @@ export function summariseRecord(held: DraftRecord): string {
 
 function describeRule(rule: AllocationRule): string {
   return rule.kind === 'PERCENT'
-    ? `${rule.percentage.toString()} of Expected Surplus`
+    ? `${rule.percentage.toString()} da Sobra Esperada`
     : `R$ ${rule.amount.toReais()}`;
 }
 
+const ACCOUNT_TYPES: Record<DraftAccount['type'], string> = {
+  CHECKING: 'uma conta corrente',
+  SAVINGS: 'uma conta poupança',
+  CASH: 'dinheiro em espécie',
+};
+
 function summariseAccount(account: DraftAccount): string {
-  return `${account.name} — a ${account.type.toLowerCase()} account holding R$ ${account.balance.toReais()}.`;
+  return `${account.name} — ${ACCOUNT_TYPES[account.type]} com R$ ${account.balance.toReais()}.`;
 }
 
 function summariseBill(bill: DraftBill): string {
-  return `${bill.name} — R$ ${bill.amount.abs().toReais()} on day ${String(bill.dueDayOfMonth)}${bill.isEstimate ? ', an estimate' : ''}.`;
+  return `${bill.name} — R$ ${bill.amount.abs().toReais()} no dia ${String(bill.dueDayOfMonth)}${bill.isEstimate ? ', uma estimativa' : ''}.`;
 }
 
 function summariseCard(card: DraftCard): string {
-  return `${card.name} — limit R$ ${card.limit.toReais()}, closing on day ${String(card.closingDay)}, due on day ${String(card.dueDay)}, paid from ${card.paymentAccountName}.`;
+  return `${card.name} — limite de R$ ${card.limit.toReais()}, fecha no dia ${String(card.closingDay)}, vence no dia ${String(card.dueDay)}, pago por ${card.paymentAccountName}.`;
 }
 
 function summariseBucket(bucket: DraftBucket): string {
-  const opening = `${bucket.name} — ${describeRule(bucket.rule)} each cycle`;
-  const order = `funded #${String(bucket.priority)}.`;
+  const opening = `${bucket.name} — ${describeRule(bucket.rule)} por ciclo`;
+  const order = `prioridade #${String(bucket.priority)}.`;
 
   return bucket.mode === 'GOAL'
-    ? `${opening} toward R$ ${bucket.target.amount.toReais()} by ${bucket.target.date.toISO()}, ${order}`
+    ? `${opening} rumo a R$ ${bucket.target.amount.toReais()} até ${bucket.target.date.toISO()}, ${order}`
     : `${opening}, ${order}`;
 }

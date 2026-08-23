@@ -113,7 +113,7 @@ export function registerBucketRoutes(
       typeof priority !== 'number' ||
       rule === undefined
     ) {
-      return badRequest(reply, 'name, rule and priority are required.');
+      return badRequest(reply, 'name, rule e priority são obrigatórios.');
     }
 
     try {
@@ -183,7 +183,7 @@ export function registerBucketRoutes(
         if (view === undefined) {
           return await badRequest(
             reply,
-            'One of rule, priority, expectedYieldPercent or status is required.',
+            'É preciso informar rule, priority, expectedYieldPercent ou status.',
           );
         }
         return toResponse(view);
@@ -200,14 +200,14 @@ export function registerBucketRoutes(
       const { kind, amount, date, reason, month } = record;
 
       if (typeof kind !== 'string') {
-        return badRequest(reply, 'kind is required.');
+        return badRequest(reply, 'kind é obrigatório.');
       }
 
       try {
         switch (kind) {
           case 'YIELD':
             if (typeof amount !== 'number' || typeof date !== 'string') {
-              return await badRequest(reply, 'amount and date are required.');
+              return await badRequest(reply, 'amount e date são obrigatórios.');
             }
             return toResponse(
               await manageBuckets.recordYield(request.params.id, date, amount),
@@ -252,7 +252,10 @@ export function registerBucketRoutes(
             );
           case 'OVERRIDE':
             if (typeof amount !== 'number' || typeof month !== 'string') {
-              return await badRequest(reply, 'amount and month are required.');
+              return await badRequest(
+                reply,
+                'amount e month são obrigatórios.',
+              );
             }
             return toResponse(
               await manageBuckets.overrideContribution(

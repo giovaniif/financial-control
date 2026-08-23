@@ -471,7 +471,7 @@ describe('AskAssistant — what one question may cost', () => {
     const answer = await ask(assistant, me, { question: 'Why? Why? Why?' });
 
     expect(answer.hitReadLimit).toBe(true);
-    expect(answer.message).toContain('read as much of your data');
+    expect(answer.message).toContain('permite ler dos seus dados');
     expect(answer.reads).toHaveLength(MAX_TOOL_ROUND_TRIPS);
     // The script would have thrown on a sixth call, so this is the cap
     // holding rather than the fake running out.
@@ -681,7 +681,7 @@ describe('AskAssistant — proposing a change it may not make', () => {
     expect(stored?.summary).toBe(summarise(offer.change));
     expect(stored?.appliedAt).toBeUndefined();
     expect(offer.summary).toBe(
-      'Put R$ 500,00 into bucket reserve for the 2026-10 cycle, this once.',
+      'Colocar R$ 500,00 na caixinha reserve no ciclo 2026-10, só desta vez.',
     );
     expect(offer.proposedAt).toEqual(clock.now());
   });
@@ -699,7 +699,9 @@ describe('AskAssistant — proposing a change it may not make', () => {
     const payload = payloadOf(resultsOf(model, 0)[0]);
     expect(payload['awaitingConfirmation']).toBe(true);
     expect(payload['proposalId']).toBe('proposal-1');
-    expect(payload['summary']).toContain('Move the payday anchor to day 7');
+    expect(payload['summary']).toContain(
+      'Mudar o dia do pagamento para o dia 7',
+    );
   });
 
   it.each<[string, string, JsonObject, ProposedChange]>([

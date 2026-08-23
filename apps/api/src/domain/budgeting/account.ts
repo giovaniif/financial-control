@@ -32,7 +32,7 @@ export class Account {
     balance: Money;
   }): Account {
     if (input.name.trim() === '') {
-      throw new InvalidAccount('An account needs a name.');
+      throw new InvalidAccount('Uma conta precisa de um nome.');
     }
     return new Account({ ...input, name: input.name.trim() });
   }
@@ -59,7 +59,7 @@ export class Account {
 
   rename(name: string): Account {
     if (name.trim() === '') {
-      throw new InvalidAccount('An account needs a name.');
+      throw new InvalidAccount('Uma conta precisa de um nome.');
     }
     return new Account({ ...this.state, name: name.trim() });
   }

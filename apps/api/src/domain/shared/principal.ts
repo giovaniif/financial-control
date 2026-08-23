@@ -22,7 +22,7 @@ export class Principal {
   static of(id: string): Principal {
     const trimmed = id.trim();
     if (trimmed === '') {
-      throw new InvalidPrincipal('A principal needs an id.');
+      throw new InvalidPrincipal('Um principal precisa de um id.');
     }
     return new Principal(trimmed);
   }

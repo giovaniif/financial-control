@@ -55,7 +55,7 @@ export const BucketEvents = {
     amount: Money,
   ): BucketEvent => {
     if (amount.isNegative()) {
-      throw new InvalidBucketEvent('A contribution cannot be negative.');
+      throw new InvalidBucketEvent('Um aporte não pode ser negativo.');
     }
     return { kind: 'CONTRIBUTION', id, cycleMonth, amount };
   },
@@ -67,7 +67,7 @@ export const BucketEvents = {
     ruleWouldHaveBeen: Money,
   ): BucketEvent => {
     if (amount.isNegative()) {
-      throw new InvalidBucketEvent('An override cannot be negative.');
+      throw new InvalidBucketEvent('Um aporte manual não pode ser negativo.');
     }
     return { kind: 'OVERRIDE', id, cycleMonth, amount, ruleWouldHaveBeen };
   },
@@ -88,11 +88,13 @@ export const BucketEvents = {
   ): BucketEvent => {
     if (reason.trim() === '') {
       throw new InvalidBucketEvent(
-        'A correction needs a reason: an unexplained balance is what this log exists to prevent.',
+        'Uma correção precisa de um motivo: um saldo sem explicação é justamente o que este histórico existe para evitar.',
       );
     }
     if (newBalance.isNegative()) {
-      throw new InvalidBucketEvent('A bucket cannot hold less than nothing.');
+      throw new InvalidBucketEvent(
+        'Uma caixinha não pode ficar com saldo negativo.',
+      );
     }
     return { kind: 'CORRECTION', id, date, newBalance, reason: reason.trim() };
   },
@@ -104,10 +106,12 @@ export const BucketEvents = {
     reason: string,
   ): BucketEvent => {
     if (reason.trim() === '') {
-      throw new InvalidBucketEvent('A withdrawal needs a reason.');
+      throw new InvalidBucketEvent('Uma retirada precisa de um motivo.');
     }
     if (!amount.isPositive()) {
-      throw new InvalidBucketEvent('A withdrawal takes out a positive amount.');
+      throw new InvalidBucketEvent(
+        'Uma retirada tira um valor maior que zero.',
+      );
     }
     return { kind: 'WITHDRAWAL', id, date, amount, reason: reason.trim() };
   },
@@ -131,7 +135,7 @@ export function applyEvent(balance: Money, event: BucketEvent): Money {
     default: {
       const unhandled: never = event;
       throw new InvalidBucketEvent(
-        `Unhandled bucket event: ${JSON.stringify(unhandled)}`,
+        `Evento de caixinha não tratado: ${JSON.stringify(unhandled)}`,
       );
     }
   }

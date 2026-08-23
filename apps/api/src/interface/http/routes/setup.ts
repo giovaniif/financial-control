@@ -83,7 +83,7 @@ export function registerSetupRoutes(
       if (input === undefined) {
         return badRequest(
           reply,
-          'message is required, and conversationId must be a string when it is present.',
+          'message é obrigatório, e conversationId tem de ser uma string quando vier.',
         );
       }
 

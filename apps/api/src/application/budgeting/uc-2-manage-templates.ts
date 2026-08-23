@@ -190,7 +190,7 @@ export class ManageTemplates {
   private async require(id: string): Promise<RecurringTemplate> {
     const template = await this.templates.findById(id);
     if (template === undefined) {
-      throw new TemplateNotFound(`No template ${id}.`);
+      throw new TemplateNotFound(`Não há nenhuma recorrência ${id}.`);
     }
     return template;
   }

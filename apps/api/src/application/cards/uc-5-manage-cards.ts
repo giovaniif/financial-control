@@ -294,7 +294,7 @@ export class ManageCards {
   private async require(cardId: string): Promise<Card> {
     const card = await this.cards.findById(cardId);
     if (card === undefined) {
-      throw new CardNotFound(`No card ${cardId}.`);
+      throw new CardNotFound(`Não há nenhum cartão ${cardId}.`);
     }
     return card;
   }
