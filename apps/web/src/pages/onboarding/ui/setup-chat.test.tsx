@@ -1,4 +1,8 @@
-import type { SetupAppliedResponse, SetupTurnResponse } from '@fin/contracts';
+import type {
+  EstablishedRecordResponse,
+  SetupAppliedResponse,
+  SetupTurnResponse,
+} from '@fin/contracts';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -118,6 +122,12 @@ describe('the setup conversation', () => {
               section: 'FIXED_BILLS',
               id: 'rec-1',
               summary: 'Health plan — R$ 320,00 on day 8.',
+              fields: {
+                name: 'Health plan',
+                amount: -32_000,
+                dueDayOfMonth: 8,
+                isEstimate: false,
+              },
             },
           ],
         }),
@@ -144,6 +154,14 @@ describe('the setup conversation', () => {
               id: 'rec-1',
               summary:
                 'Apartment — 20% each cycle toward R$ 150.000,00 by 2031-03-05, funded #1.',
+              fields: {
+                mode: 'GOAL',
+                name: 'Apartment',
+                rule: { kind: 'PERCENT', percent: 20 },
+                priority: 1,
+                target: 15_000_000,
+                targetDate: '2031-03-05',
+              },
             },
           ],
         }),
@@ -244,6 +262,12 @@ describe('the setup conversation', () => {
               section: 'BUCKETS',
               id: 'rec-1',
               summary: 'Reserve — 20% each cycle.',
+              fields: {
+                mode: 'ONGOING',
+                name: 'Reserve',
+                rule: { kind: 'PERCENT', percent: 20 },
+                priority: 1,
+              },
             },
           ],
         }),
@@ -299,10 +323,15 @@ function sentBy(method: string): { url: string; body: unknown }[] {
     }));
 }
 
-const bill = (summary: string) => ({
-  section: 'FIXED_BILLS' as const,
+const bill = (
+  summary: string,
+  name = 'Health plan',
+  amount = 32_000,
+): EstablishedRecordResponse => ({
+  section: 'FIXED_BILLS',
   id: 'rec-1',
   summary,
+  fields: { name, amount: -amount, dueDayOfMonth: 8, isEstimate: false },
 });
 
 /** A turn that established one bill, so there is something to correct. */
@@ -328,7 +357,9 @@ describe('correcting a record inside the conversation', () => {
       '/api/setup/conversation': conversation(established()),
       '/api/setup/conversation/conv-1/records/rec-1': turn({
         message: 'Health plan is R$ 350,00 now.',
-        established: [bill('Health plan — R$ 350,00 on day 8.')],
+        established: [
+          bill('Health plan — R$ 350,00 on day 8.', 'Health plan', 35_000),
+        ],
         nextSection: 'FIXED_BILLS',
       }),
     });
@@ -411,6 +442,7 @@ describe('correcting a record inside the conversation', () => {
               section: 'ANCHOR',
               id: null,
               summary: 'Paid on day 5, moving to the preceding business day.',
+              fields: null,
             },
           ],
         }),
@@ -440,16 +472,24 @@ describe('the last moment before anything is written', () => {
         section: 'ANCHOR',
         id: null,
         summary: 'Paid on day 5, moving to the preceding business day.',
+        fields: null,
       },
       {
         section: 'ACCOUNTS',
         id: 'rec-1',
         summary: 'Checking — a checking account holding R$ 2.160,00.',
+        fields: { name: 'Checking', type: 'CHECKING', balance: 216_000 },
       },
       {
-        section: 'FIXED_BILLS' as const,
+        section: 'FIXED_BILLS',
         id: 'rec-2',
         summary: 'Health plan — R$ 320,00 on day 8.',
+        fields: {
+          name: 'Health plan',
+          amount: -32_000,
+          dueDayOfMonth: 8,
+          isEstimate: false,
+        },
       },
     ],
   });
@@ -525,6 +565,7 @@ describe('the fields an edit opens on', () => {
       section: 'ACCOUNTS',
       id: 'rec-1',
       summary: 'Nubank — a checking account holding R$ 2.160,00.',
+      fields: { name: 'Nubank', type: 'CHECKING', balance: 216_000 },
     });
 
     await say('nubank has 2160');
@@ -542,6 +583,13 @@ describe('the fields an edit opens on', () => {
       id: 'rec-1',
       summary:
         'Inter — limit R$ 10.000,00, closing on day 28, due on day 10, paid from Checking.',
+      fields: {
+        name: 'Inter',
+        limit: 1_000_000,
+        closingDay: 28,
+        dueDay: 10,
+        paymentAccountName: 'Checking',
+      },
     });
 
     await say('inter closes on the 28th, due the 10th');
@@ -559,6 +607,14 @@ describe('the fields an edit opens on', () => {
       id: 'rec-1',
       summary:
         'Apartment — R$ 1.778,00 each cycle toward R$ 150.000,00 by 2031-03-05, funded #1.',
+      fields: {
+        mode: 'GOAL',
+        name: 'Apartment',
+        rule: { kind: 'FIXED', amount: 177_800 },
+        priority: 1,
+        target: 15_000_000,
+        targetDate: '2031-03-05',
+      },
     });
 
     await say('1778 a cycle to the apartment');
@@ -577,7 +633,13 @@ describe('the fields an edit opens on', () => {
   });
 
   it('marks a bill as a guess rather than a known figure', async () => {
-    editing(bill('Contractor costs — R$ 1.500,00 on day 8.'));
+    editing(
+      bill(
+        'Contractor costs — R$ 1.500,00 on day 8.',
+        'Contractor costs',
+        150_000,
+      ),
+    );
 
     await say('contractor costs about 1500 on the 8th');
     await openEditor('Contractor costs');

@@ -11,6 +11,7 @@ import {
   SequentialIdSource,
 } from '../testing/fakes.js';
 
+import { establishedOf } from './established-record.js';
 import type { SetupSection } from './setup-draft.js';
 import {
   DueDayOutsideCycle,
@@ -78,11 +79,7 @@ function wire(
       id: 'conv-1',
       transcript: [],
       state: { draft, section: asking.section },
-      records: draft.records.map((held) => ({
-        section: held.section,
-        id: held.record.id,
-        summary: held.record.name,
-      })),
+      records: draft.records.map(establishedOf),
     },
     correctRecord: new CorrectSetupRecord(conversations),
   };
@@ -109,11 +106,18 @@ describe('CorrectSetupRecord.correct', () => {
     expect(bill?.name).toBe('Health Plan');
     expect(bill?.amount.cents).toBe(-35_000);
     expect(bill?.dueDayOfMonth).toBe(8);
+    // The turn hands back the record as well as the sentence, so an inline
+    // editor never has to read the one out of the other — FIN-124.
     expect(turn.established).toEqual([
       {
         section: 'FIXED_BILLS',
         id: BILL_ID,
         summary: expect.stringContaining('350,00') as string,
+        record: expect.objectContaining({
+          name: 'Health Plan',
+          dueDayOfMonth: 8,
+          isEstimate: false,
+        }) as unknown,
       },
     ]);
   });

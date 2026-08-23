@@ -2,28 +2,12 @@ import type {
   AccountType,
   AllocationRuleRequest,
   Cents,
+  EstablishedBucketFields,
   EstablishedRecordResponse,
   SetupRecordCorrectionRequest,
 } from '@fin/contracts';
 
 import { formatBRL, parseBRL } from '@/shared/lib';
-
-/**
- * A record travels as the one sentence the user is shown, so the fields behind
- * it are read back out of that sentence to pre-fill the form. The patterns
- * mirror the summaries the setup draft writes, and a summary that stops
- * matching one is a record the app offers no inline edit on rather than a form
- * pre-filled with something that was never said.
- */
-const ACCOUNT =
-  /^(.+?) — a (checking|savings|cash) account holding R\$ (.+)\.$/;
-const BILL = /^(.+?) — R\$ (.+?) on day (\d+)(, an estimate)?\.$/;
-const CARD =
-  /^(.+?) — limit R\$ (.+?), closing on day (\d+), due on day (\d+), paid from (.+)\.$/;
-const BUCKET =
-  /^(.+?) — (.+?) each cycle(?: toward R\$ (.+?) by (\d{4}-\d{2}-\d{2}))?, funded #\d+\.$/;
-const PERCENT_RULE = /^(.+) % of Expected Surplus$/;
-const FIXED_RULE = /^R\$ (.+)$/;
 
 export type ParsedRecord =
   | { kind: 'ACCOUNT'; name: string; type: AccountType; balance: Cents }
@@ -50,16 +34,18 @@ export type ParsedRecord =
     };
 
 /** What a record is called, for the label on the buttons that act on it. */
-export function recordName(summary: string): string {
-  const [name] = summary.split(' — ');
-
-  return name ?? summary;
+export function recordName(record: EstablishedRecordResponse): string {
+  return record.fields === null ? record.summary : record.fields.name;
 }
 
 /**
  * The fields behind a record, or `null` when there are none to edit — the
  * anchor and the salary hold a single value each and are answered again
  * rather than corrected.
+ *
+ * The record arrives as fields as well as prose (FIN-124), so this reads what
+ * the turn stated. A summary is written for a person and may be reworded
+ * without anything here noticing.
  */
 export function parseRecord(
   record: EstablishedRecordResponse,
@@ -68,111 +54,41 @@ export function parseRecord(
 
   switch (record.section) {
     case 'ACCOUNTS':
-      return parseAccount(record.summary);
+      return { kind: 'ACCOUNT', ...record.fields };
     case 'FIXED_BILLS':
     case 'VARIABLE_BILLS':
-      return parseBill(record.summary);
+      return {
+        kind: 'BILL',
+        ...record.fields,
+        // Outgoing money is negative in the domain; the editor asks what the
+        // bill costs, and the draft normalises the sign on the way back.
+        amount: Math.abs(record.fields.amount),
+      };
     case 'CARDS':
-      return parseCard(record.summary);
+      return { kind: 'CARD', ...record.fields };
     case 'BUCKETS':
-      return parseBucket(record.summary);
+      return bucketOf(record.fields);
     case 'ANCHOR':
     case 'SALARY':
       return null;
     default: {
-      const unreachable: never = record.section;
+      const unreachable: never = record;
       return unreachable;
     }
   }
 }
 
-function parseAccount(summary: string): ParsedRecord | null {
-  const match = ACCOUNT.exec(summary);
-  if (match === null) return null;
+function bucketOf(bucket: EstablishedBucketFields): ParsedRecord {
+  const { name, rule } = bucket;
 
-  const [, name = '', type = '', balance = ''] = match;
-  const cents = parseBRL(balance);
-
-  return cents === null
-    ? null
-    : {
-        kind: 'ACCOUNT',
+  return bucket.mode === 'GOAL'
+    ? {
+        kind: 'BUCKET',
         name,
-        type: type.toUpperCase() as AccountType,
-        balance: cents,
-      };
-}
-
-function parseBill(summary: string): ParsedRecord | null {
-  const match = BILL.exec(summary);
-  if (match === null) return null;
-
-  const [, name = '', amount = '', day = '', estimate] = match;
-  const cents = parseBRL(amount);
-
-  return cents === null
-    ? null
-    : {
-        kind: 'BILL',
-        name,
-        amount: cents,
-        dueDayOfMonth: Number(day),
-        isEstimate: estimate !== undefined,
-      };
-}
-
-function parseCard(summary: string): ParsedRecord | null {
-  const match = CARD.exec(summary);
-  if (match === null) return null;
-
-  const [, name = '', limit = '', closing = '', due = '', account = ''] = match;
-  const cents = parseBRL(limit);
-
-  return cents === null
-    ? null
-    : {
-        kind: 'CARD',
-        name,
-        limit: cents,
-        closingDay: Number(closing),
-        dueDay: Number(due),
-        paymentAccountName: account,
-      };
-}
-
-function parseBucket(summary: string): ParsedRecord | null {
-  const match = BUCKET.exec(summary);
-  if (match === null) return null;
-
-  const [, name = '', rule = '', target, date] = match;
-  const allocation = parseRule(rule);
-  if (allocation === null) return null;
-
-  if (target === undefined || date === undefined) {
-    return { kind: 'BUCKET', name, rule: allocation, target: null };
-  }
-
-  const amount = parseBRL(target);
-
-  return amount === null
-    ? null
-    : { kind: 'BUCKET', name, rule: allocation, target: { amount, date } };
-}
-
-function parseRule(rule: string): AllocationRuleRequest | null {
-  const share = PERCENT_RULE.exec(rule);
-  if (share !== null) {
-    const percent = readPercent(share[1] ?? '');
-
-    return percent === null ? null : { kind: 'PERCENT', percent };
-  }
-
-  const fixed = FIXED_RULE.exec(rule);
-  if (fixed === null) return null;
-
-  const amount = parseBRL(fixed[1] ?? '');
-
-  return amount === null ? null : { kind: 'FIXED', amount };
+        rule,
+        target: { amount: bucket.target, date: bucket.targetDate },
+      }
+    : { kind: 'BUCKET', name, rule, target: null };
 }
 
 /** Every field the editor can hold, as typed. */

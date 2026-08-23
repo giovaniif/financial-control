@@ -1,12 +1,11 @@
 import type { StoredSetupConversation } from '../../domain/ports/setup-conversation-store.js';
 import { DomainError } from '../../domain/shared/domain-error.js';
 
+import type { EstablishedRecord } from './established-record.js';
+import { establishedOf } from './established-record.js';
 import type { RecordCorrection } from './record-correction.js';
 import { applyCorrection } from './record-correction.js';
-import type { DraftRecord } from './setup-draft.js';
-import { SetupRecordNotFound } from './setup-draft.js';
 import type {
-  EstablishedRecord,
   SetupConversations,
   SetupState,
   SetupTurn,
@@ -46,7 +45,7 @@ export class CorrectSetupRecord {
     correction: RecordCorrection;
   }): Promise<SetupTurn> {
     const stored = await this.open(input.conversationId);
-    const held = locate(stored.state, input.recordId);
+    const held = stored.state.draft.record(input.recordId);
 
     const corrected = applyCorrection(
       stored.state.draft,
@@ -64,19 +63,16 @@ export class CorrectSetupRecord {
     // section already settled, and going back to it would restart the
     // conversation the edit is meant to fit into.
     const state: SetupState = { ...stored.state, draft: corrected.draft };
-    const established: EstablishedRecord = {
-      section: held.section,
-      id: input.recordId,
-      summary: corrected.summary,
-    };
+    const established = establishedOf(corrected.record);
+    const message = `Corrected. ${established.summary}`;
 
-    await this.save(stored, state, `Corrected. ${corrected.summary}`, {
+    await this.save(stored, state, message, {
       established: [established],
       removed: [],
     });
 
     return turn(stored.id, state, {
-      message: `Corrected. ${corrected.summary}`,
+      message,
       established: [established],
       removed: [],
     });
@@ -87,7 +83,7 @@ export class CorrectSetupRecord {
     recordId: string;
   }): Promise<SetupTurn> {
     const stored = await this.open(input.conversationId);
-    const held = locate(stored.state, input.recordId);
+    const held = stored.state.draft.record(input.recordId);
 
     // Dropping the last record of a settled section leaves it unanswered
     // again — the same rule the conversational path applies.
@@ -142,16 +138,6 @@ export class CorrectSetupRecord {
       records: accumulate(stored.records, changed.established, changed.removed),
     });
   }
-}
-
-function locate(state: SetupState, recordId: string): DraftRecord {
-  const held = state.draft.find(recordId);
-  if (held === undefined) {
-    throw new SetupRecordNotFound(
-      `The setup holds nothing recorded as "${recordId}".`,
-    );
-  }
-  return held;
 }
 
 /**
