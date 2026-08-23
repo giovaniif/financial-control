@@ -228,21 +228,6 @@ const renderPage = (entry = '/') =>
     />,
   );
 
-/** A window wide enough for the assistant to sit beside the figures. */
-function renderWide(entry = '/') {
-  vi.stubGlobal(
-    'matchMedia',
-    vi.fn((query: string) => ({
-      media: query,
-      matches: true,
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-    })),
-  );
-
-  return renderPage(entry);
-}
-
 /** The chain strip names the same figures, so the tiles are read on their own. */
 const tiles = () =>
   within(screen.getByRole('region', { name: 'Headline figures' }));
@@ -546,38 +531,8 @@ describe('MainPage and the assistant', () => {
     },
   ];
 
-  it('sits beside the figures on a wide window', async () => {
-    renderWide();
-
-    await screen.findByText('Lowest point in cycle');
-
-    expect(
-      screen.getByRole('log', { name: 'Assistant conversation' }),
-    ).toBeInTheDocument();
-  });
-
-  /**
-   * At a narrow width the chat and the figures would fight for the same
-   * column, so the chat folds down to one control until it is wanted.
-   */
-  it('folds away at a narrow width rather than crowding the figures', async () => {
-    renderPage();
-
-    await screen.findByText('Lowest point in cycle');
-
-    expect(
-      screen.queryByRole('log', { name: 'Assistant conversation' }),
-    ).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Ask Claude' }));
-
-    expect(
-      screen.getByRole('log', { name: 'Assistant conversation' }),
-    ).toBeInTheDocument();
-  });
-
   // UC-4.7 with UC-8: an alert is the thing most worth asking about.
-  it('makes an alert answerable in a click', async () => {
+  it('opens the rail with the alert’s question already written', async () => {
     respondWith(dashboard({ alerts }));
     renderPage();
 
@@ -585,6 +540,9 @@ describe('MainPage and the assistant', () => {
       await screen.findByRole('button', { name: 'Ask about this alert' }),
     );
 
+    expect(
+      screen.getByRole('log', { name: 'Assistant conversation' }),
+    ).toBeVisible();
     expect(screen.getByLabelText('Ask about your money')).toHaveValue(
       'About “Projected negative balance on 2026-09-28”: September 2026 runs ' +
         'to -R$ 2.013,22. Why is that, and what would change it?',
@@ -593,20 +551,25 @@ describe('MainPage and the assistant', () => {
     expect(
       screen.getByRole('log', { name: 'Assistant conversation' }),
     ).toHaveTextContent('Nothing asked yet');
+    expect(screen.getByLabelText('Ask about your money')).toHaveFocus();
   });
 
   // UC-8.5 — the figures are the app; the assistant is how you ask about them.
   it('leaves every figure working when the assistant is switched off', async () => {
     respondWith(dashboard({ alerts }), { assistantAvailable: false });
-    renderWide();
+    renderPage();
 
     expect(
       await screen.findByText(/stays free after allocations/),
     ).toHaveTextContent('R$ 9.110,00');
     expect(tiles().getByText('Total Outcome')).toBeInTheDocument();
-    expect(
-      screen.getByText(/The assistant is switched off/),
-    ).toBeInTheDocument();
+
+    // Switched off is a state, not a breakage: the rail opens and says so.
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Open the assistant' }),
+    );
+
+    expect(screen.getByText(/The assistant is switched off/)).toBeVisible();
     expect(
       screen.queryByLabelText('Ask about your money'),
     ).not.toBeInTheDocument();
