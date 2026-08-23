@@ -21,13 +21,6 @@ const renderPage = () =>
     />,
   );
 
-const attach = async (contents: string) => {
-  await userEvent.upload(
-    screen.getByLabelText('Your backup file'),
-    new File([contents], 'backup.json'),
-  );
-};
-
 beforeEach(() => {
   sessionStorage.clear();
 });
@@ -72,63 +65,15 @@ describe('OnboardingPage', () => {
     expect(hasSkippedSetup()).toBe(true);
   });
 
-  // UC-1.6 — a backup is already a complete dataset, so it needs none of the
-  // conversation.
-  describe('starting from a backup instead', () => {
-    it('warns that restoring replaces everything', async () => {
-      stubApi({});
-      renderPage();
+  // UC-1.6 — restore stays on Profile. On a first run it competes with the one
+  // decision this screen exists to get someone through.
+  it('offers no way to start from a backup instead', async () => {
+    stubApi({});
+    renderPage();
 
-      expect(
-        await screen.findByText(/Restoring replaces the whole dataset/),
-      ).toBeInTheDocument();
-    });
+    await screen.findByLabelText('Your answer');
 
-    it('is not offered once the app has data to lose', async () => {
-      stubApi({
-        '/api/setup': {
-          anchorConfigured: true,
-          accounts: 2,
-          cards: 1,
-          templates: 4,
-          buckets: 3,
-          isPristine: false,
-          assistantAvailable: true,
-        },
-      });
-      renderPage();
-
-      await screen.findByLabelText('Your answer');
-
-      expect(
-        screen.queryByLabelText('Your backup file'),
-      ).not.toBeInTheDocument();
-    });
-
-    it('refuses a file that is not a backup', async () => {
-      stubApi({});
-      renderPage();
-      await screen.findByLabelText('Your backup file');
-      await attach('not json');
-
-      expect(await screen.findByRole('alert')).toHaveTextContent(
-        'That file is not a backup this app wrote.',
-      );
-    });
-
-    it('says the app is ready once a backup is restored', async () => {
-      stubApi({ '/api/restore': null });
-      renderPage();
-      await screen.findByLabelText('Your backup file');
-      await attach(JSON.stringify({ version: 1 }));
-
-      await userEvent.click(
-        screen.getByRole('button', { name: 'Restore this backup' }),
-      );
-
-      expect(
-        await screen.findByText(/Your backup is restored/),
-      ).toBeInTheDocument();
-    });
+    expect(screen.queryByLabelText('Your backup file')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /restore/i })).toBeNull();
   });
 });

@@ -1,11 +1,8 @@
 import type { SetupAppliedResponse, SetupTurnResponse } from '@fin/contracts';
-import { useId, useState, type SyntheticEvent } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 
-import { Badge, Button } from '@/shared/ui';
-
 import { useApplySetup, useSetupTurn } from '../api/use-setup-conversation.js';
-import { describeProgress } from '../model/sections.js';
 import {
   applyTurn,
   draftSections,
@@ -13,8 +10,10 @@ import {
   type Entry,
 } from '../model/transcript.js';
 
+import { Composer } from './composer.js';
 import { DraftReview } from './draft-review.js';
 import { RecordLine } from './record-line.js';
+import { SetupProgress } from './setup-progress.js';
 
 /**
  * UC-1.5 — setup as a conversation: one question at a time, records shown back
@@ -22,10 +21,8 @@ import { RecordLine } from './record-line.js';
  * until the whole draft is read through and applied in the final step.
  */
 export function SetupChat() {
-  const answerId = useId();
   const [entries, setEntries] = useState<Entry[]>([OPENING]);
   const [latest, setLatest] = useState<SetupTurnResponse>();
-  const [answer, setAnswer] = useState('');
   const turn = useSetupTurn();
   const apply = useApplySetup();
 
@@ -42,15 +39,8 @@ export function SetupChat() {
   // Before the first turn there is nothing to ask about but the anchor.
   const nextSection = latest === undefined ? 'ANCHOR' : latest.nextSection;
 
-  const send = (event: SyntheticEvent) => {
-    event.preventDefault();
-    const message = answer.trim();
-    if (message === '' || turn.isPending) {
-      return;
-    }
-
+  const send = (message: string) => {
     setEntries((current) => [...current, { kind: 'user', text: message }]);
-    setAnswer('');
     turn.mutate(
       conversationId === undefined ? { message } : { message, conversationId },
       { onSuccess: record },
@@ -62,19 +52,26 @@ export function SetupChat() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <p className="text-zinc-600">
-        Answer however you like — <em>&ldquo;18k, always on the 5th&rdquo;</em>,{' '}
-        <em>&ldquo;health plan 320 on the 8th&rdquo;</em>. Nothing is written
-        until the whole draft is created at the end.
-      </p>
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-5">
+        <p className="max-w-prose leading-7 text-zinc-600">
+          This is a conversation rather than a form. I ask about one thing at a
+          time — seven of them, the payday cycle first and what you are saving
+          for last — and you answer however you like:{' '}
+          <em>&ldquo;18k, always on the 5th&rdquo;</em>,{' '}
+          <em>&ldquo;health plan 320 on the 8th&rdquo;</em>. Everything I
+          understand is shown back as you go, and nothing is written until you
+          have read the whole draft at the end.
+        </p>
+        <SetupProgress next={isComplete ? null : nextSection} />
+      </div>
 
       <div
         role="log"
         aria-label="Setup conversation"
-        className="rounded-xl border border-zinc-200 bg-white p-4"
+        className="flex flex-col gap-5"
       >
-        <ol className="flex flex-col gap-3">
+        <ol className="flex flex-col gap-5">
           {entries.map((entry, index) => (
             <li key={index}>
               {entry.kind === 'record' ? (
@@ -91,21 +88,11 @@ export function SetupChat() {
         </ol>
       </div>
 
-      {turn.isPending && (
-        <p role="status" className="text-sm text-zinc-500">
-          Working out what you just told me…
-        </p>
-      )}
+      {turn.isPending && <Thinking />}
 
       {turn.isError && (
         <p role="alert" className="text-sm text-red-700">
           {turn.error.message}
-        </p>
-      )}
-
-      {!isComplete && nextSection !== null && (
-        <p className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
-          {describeProgress(nextSection)}
         </p>
       )}
 
@@ -121,58 +108,72 @@ export function SetupChat() {
           error={apply.error?.message}
         />
       ) : (
-        <form onSubmit={send} className="flex flex-col gap-2">
-          <label
-            htmlFor={answerId}
-            className="text-xs font-medium text-zinc-600"
-          >
-            Your answer
-          </label>
-          <textarea
-            id={answerId}
-            rows={3}
-            value={answer}
-            onChange={(event) => {
-              setAnswer(event.target.value);
-            }}
-            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none"
-          />
-          <div>
-            <Button type="submit" variant="primary" disabled={turn.isPending}>
-              Send
-            </Button>
-          </div>
-        </form>
+        <Composer disabled={turn.isPending} onSend={send} />
       )}
     </div>
   );
 }
 
+/**
+ * The two voices. Who is speaking is carried visually by where the line sits
+ * and what it sits on, and named for a screen reader, which has neither.
+ */
 function Line({ entry }: { entry: Exclude<Entry, { kind: 'record' }> }) {
   if (entry.kind === 'correction') {
     return (
-      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm">
-        <Badge tone="warning">Not recorded</Badge>
-        <span className="text-zinc-900">{entry.text}</span>
+      <div className="flex items-start gap-2 rounded-xl bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="mt-0.5 size-4 shrink-0"
+        >
+          <path d="M12 8v5" />
+          <path d="M12 16.5h.01" />
+          <circle cx="12" cy="12" r="9" />
+        </svg>
+        <span>{entry.text}</span>
       </div>
     );
   }
 
-  const mine = entry.kind === 'user';
+  if (entry.kind === 'user') {
+    return (
+      <div className="flex justify-end">
+        <p className="max-w-[85%] rounded-2xl rounded-br-sm bg-zinc-100 px-4 py-2.5 text-sm whitespace-pre-line text-zinc-900">
+          <span className="sr-only">You</span>
+          {entry.text}
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className={mine ? 'flex flex-col items-end gap-1' : 'flex flex-col gap-1'}
+    <p className="max-w-prose text-[15px] leading-7 text-zinc-800">
+      <span className="sr-only">Claude</span>
+      {entry.text}
+    </p>
+  );
+}
+
+/** Tens of seconds on a local model, so it reads as thinking, not as status. */
+function Thinking() {
+  return (
+    <p
+      role="status"
+      className="flex items-center gap-2.5 text-sm text-zinc-500"
     >
-      <span className="text-xs text-zinc-500">{mine ? 'You' : 'Claude'}</span>
-      <span
-        className={`max-w-prose rounded-lg px-3 py-2 text-sm ${
-          mine ? 'bg-zinc-900 text-zinc-50' : 'bg-zinc-100 text-zinc-900'
-        }`}
-      >
-        {entry.text}
+      <span aria-hidden="true" className="flex items-center gap-1">
+        <span className="size-1.5 animate-pulse rounded-full bg-zinc-400" />
+        <span className="size-1.5 animate-pulse rounded-full bg-zinc-400 [animation-delay:200ms]" />
+        <span className="size-1.5 animate-pulse rounded-full bg-zinc-400 [animation-delay:400ms]" />
       </span>
-    </div>
+      Working out what you just told me…
+    </p>
   );
 }
 
@@ -180,13 +181,17 @@ function Created({ applied }: { applied: SetupAppliedResponse }) {
   const shift = applied.shiftPolicy === 'PRECEDING' ? 'preceding' : 'following';
 
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold">Your setup is in</h2>
-      <p className="text-zinc-600">
-        Paid on day {applied.anchorDay}, moving to the {shift} business day when
-        that one is closed.
-      </p>
-      <ul className="flex flex-col gap-1 text-sm text-zinc-700">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-xl font-semibold tracking-tight">
+          Your setup is in
+        </h2>
+        <p className="max-w-prose leading-7 text-zinc-600">
+          Paid on day {applied.anchorDay}, moving to the {shift} business day
+          when that one is closed.
+        </p>
+      </div>
+      <ul className="flex flex-col gap-1.5 text-sm text-zinc-700">
         <li>{count(applied.accounts, 'account')}</li>
         <li>{applied.templates} recurring bills and income</li>
         <li>{count(applied.cards, 'credit card')}</li>
@@ -195,7 +200,7 @@ function Created({ applied }: { applied: SetupAppliedResponse }) {
       <div>
         <Link
           to="/"
-          className="inline-block rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800"
+          className="inline-block rounded-lg bg-zinc-900 px-3.5 py-2 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800"
         >
           Open Main
         </Link>

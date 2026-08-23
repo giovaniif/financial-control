@@ -142,9 +142,9 @@ Profile keeps the same sections as a checklist showing what is still outstanding
 conversation at any time.
 
 **UC-1.6 — Back up and restore**
-A full data export and re-import. The user is the only operator and the only backup, and nothing else takes
-snapshots — so this is the sole recovery mechanism. It is also offered on first run, since a backup is already
-a complete dataset and needs none of the conversation.
+A full data export and re-import, on Profile. The user is the only operator and the only backup, and nothing
+else takes snapshots — so this is the sole recovery mechanism. First run does not offer it: someone arriving
+for the first time has one decision to get through, and a second way in only competes with it.
 
 ---
 
