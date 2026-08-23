@@ -12,9 +12,15 @@ import { ManageCards } from './application/cards/uc-5-manage-cards.js';
 import { ManageBuckets } from './application/goals/uc-6-manage-buckets.js';
 import { BuildDashboard } from './application/projection/uc-4-build-dashboard.js';
 import { ReadSetupState } from './application/projection/uc-1-5-read-setup-state.js';
+import { CompleteSetup } from './application/setup/compose-setup.js';
+import type { SetupConversations } from './application/setup/uc-1-5-converse-setup.js';
+import { ConverseSetup } from './application/setup/uc-1-5-converse-setup.js';
 import { ProjectWealth } from './application/projection/uc-7-project-wealth.js';
 import { ListCycles } from './application/budgeting/uc-3-3-list-cycles.js';
+import { createLanguageModel } from './infrastructure/anthropic/create-language-model.js';
+import { MODELS } from './infrastructure/anthropic/models.js';
 import { SystemClock } from './infrastructure/clock/system-clock.js';
+import { UuidIdSource } from './infrastructure/ids/uuid-id-source.js';
 import { BrazilianHolidayCalendar } from './infrastructure/holidays/brazilian-holiday-calendar.js';
 import { PrismaAccountRepository } from './infrastructure/prisma/prisma-account-repository.js';
 import { PrismaBucketRepository } from './infrastructure/prisma/prisma-bucket-repository.js';
@@ -22,6 +28,7 @@ import { PrismaCardRepository } from './infrastructure/prisma/prisma-card-reposi
 import { PrismaCycleRepository } from './infrastructure/prisma/prisma-cycle-repository.js';
 import { PrismaTemplateRepository } from './infrastructure/prisma/prisma-template-repository.js';
 import { PrismaSettingsRepository } from './infrastructure/prisma/prisma-settings-repository.js';
+import { InMemorySetupConversationStore } from './infrastructure/setup/in-memory-setup-conversation-store.js';
 import { buildServer } from './interface/http/server.js';
 
 /**
@@ -33,6 +40,13 @@ export function createApp(): FastifyInstance {
   const prisma = new PrismaClient();
   const clock = new SystemClock();
   const holidays = new BrazilianHolidayCalendar();
+
+  // Extraction, not the assistant: the setup conversation turns a sentence
+  // into one tool call against a strict schema, and latency is felt on every
+  // turn of it. The only place the key is read.
+  const model = createLanguageModel(process.env, MODELS.extraction);
+  const conversations: SetupConversations =
+    new InMemorySetupConversationStore();
 
   const settings = new PrismaSettingsRepository(prisma);
   const cycles = new PrismaCycleRepository(prisma);
@@ -97,5 +111,13 @@ export function createApp(): FastifyInstance {
       cards,
       buckets,
     ),
+    converseSetup: new ConverseSetup(
+      model,
+      conversations,
+      new UuidIdSource(),
+      holidays,
+      clock,
+    ),
+    completeSetup: new CompleteSetup(conversations, backup, clock),
   });
 }
