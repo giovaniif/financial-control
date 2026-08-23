@@ -1,4 +1,8 @@
-import type { CycleResponse, CycleWindowResponse } from '@fin/contracts';
+import type {
+  CycleResponse,
+  CycleWindowResponse,
+  EstimateMode,
+} from '@fin/contracts';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 
 import type {
@@ -18,7 +22,7 @@ interface Dependencies {
  * The global estimates toggle is a query parameter, not a second endpoint —
  * both readings come from one code path in the domain.
  */
-function readEstimates(value: unknown): Estimates | undefined {
+export function readEstimates(value: unknown): Estimates | undefined {
   if (value === undefined || value === 'included') {
     return Estimates.Included;
   }
@@ -26,6 +30,11 @@ function readEstimates(value: unknown): Estimates | undefined {
     return Estimates.Excluded;
   }
   return undefined;
+}
+
+/** The mode as the contract names it. */
+export function toEstimateMode(estimates: Estimates): EstimateMode {
+  return estimates === Estimates.Included ? 'included' : 'excluded';
 }
 
 export function toResponse(view: CycleView): CycleResponse {
@@ -36,7 +45,7 @@ export function toResponse(view: CycleView): CycleResponse {
     start: view.start,
     end: view.end,
     status: view.status,
-    estimates: view.estimates === Estimates.Included ? 'included' : 'excluded',
+    estimates: toEstimateMode(view.estimates),
     chain: {
       openingBalance: view.chain.openingBalance.cents,
       totalIncome: view.chain.totalIncome.cents,
@@ -89,7 +98,7 @@ export function registerCycleRoutes(
 
       const window = await listCycles.rollingWindow(estimates);
       const body: CycleWindowResponse = {
-        estimates: estimates === Estimates.Included ? 'included' : 'excluded',
+        estimates: toEstimateMode(estimates),
         cycles: window.map((cycle) => ({
           month: cycle.month,
           label: cycle.label,

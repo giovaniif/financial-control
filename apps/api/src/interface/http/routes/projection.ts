@@ -10,6 +10,8 @@ import type { ProjectWealth } from '../../../application/projection/uc-7-project
 import { InvalidAnchor } from '../../../domain/budgeting/cycle-ref.js';
 import { InvalidPercentage } from '../../../domain/shared/percentage.js';
 
+import { readEstimates, toEstimateMode } from './cycles.js';
+
 interface Dependencies {
   buildDashboard: BuildDashboard;
   projectWealth: ProjectWealth;
@@ -21,14 +23,24 @@ export function registerProjectionRoutes(
   app: FastifyInstance,
   { buildDashboard, projectWealth, manageBuckets }: Dependencies,
 ): void {
-  app.get<{ Querystring: { month?: string } }>(
+  app.get<{ Querystring: { month?: string; estimates?: string } }>(
     '/dashboard',
     async (request, reply) => {
+      // The same toggle the cycle route reads, read the same way: one control
+      // switches every figure in the app, so it cannot be two parsers.
+      const estimates = readEstimates(request.query.estimates);
+      if (estimates === undefined) {
+        return reply
+          .status(400)
+          .send({ error: "estimates must be 'included' or 'excluded'." });
+      }
+
       try {
-        const view = await buildDashboard.build(request.query.month);
+        const view = await buildDashboard.build(request.query.month, estimates);
         const body: DashboardResponse = {
           today: view.today,
           currentCycleMonth: view.currentCycleMonth,
+          estimates: toEstimateMode(view.estimates),
           headline: {
             cycleMonth: view.headline.cycleMonth,
             cycleLabel: view.headline.cycleLabel,
