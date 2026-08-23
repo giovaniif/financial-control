@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { Allocation } from '../../domain/goals/bucket.js';
 import { noHolidays } from '../../domain/ports/holiday-calendar.js';
 import type {
   JsonObject,
   ToolCall,
 } from '../../domain/ports/language-model.js';
+import { Money } from '../../domain/shared/money.js';
 import type { ScriptedTurn } from '../testing/fake-language-model.js';
 import { FakeLanguageModel } from '../testing/fake-language-model.js';
 import {
@@ -569,7 +571,378 @@ describe('ConverseSetup', () => {
     });
 
     expect(turn.corrections[0]).toContain('already recorded');
-    expect(model.requests[WHOLE_SETUP.length]?.tools).toEqual([]);
+    // Nothing left to record, but everything recorded is still correctable.
+    expect(
+      model.requests[WHOLE_SETUP.length]?.tools.map((tool) => tool.name),
+    ).toEqual(['correct_record', 'remove_record']);
+  });
+
+  /**
+   * UC-1.5 — a record is shown back so it can be corrected, and extraction is
+   * a model reading prose: it will get an amount or a day wrong. The id comes
+   * from the id source, so a sequential one makes it predictable here.
+   */
+  it('corrects a record the user says is wrong, in place', async () => {
+    const { converse, conversations } = wire([
+      ...OPENING,
+      { text: 'Recorded.', toolCalls: [healthPlan({ dueDayOfMonth: 8 })] },
+      {
+        text: 'Fixed.',
+        toolCalls: [
+          call('correct_record', {
+            recordId: 'conv-3',
+            amountInCents: 35_000,
+          }),
+        ],
+      },
+    ]);
+
+    const turn = await runThrough(converse, 5);
+    const draft = await draftOf(conversations, 'conv-1');
+
+    expect(turn.established[0]?.id).toBe('conv-3');
+    expect(turn.corrections).toEqual([]);
+    expect(draft.fixedBills).toHaveLength(1);
+    expect(draft.fixedBills[0]?.amount.cents).toBe(-35_000);
+    expect(draft.fixedBills[0]?.dueDayOfMonth).toBe(8);
+  });
+
+  /** Correcting one record does not restart the conversation — UC-1.5. */
+  it('corrects a record of a settled section without going back to it', async () => {
+    const { converse, conversations } = wire([
+      ...OPENING,
+      {
+        text: 'Recorded.',
+        toolCalls: [healthPlan({ dueDayOfMonth: 8 }), done()],
+      },
+      {
+        text: 'Fixed.',
+        toolCalls: [
+          call('correct_record', { recordId: 'conv-3', name: 'Health' }),
+        ],
+      },
+    ]);
+
+    const turn = await runThrough(converse, 5);
+
+    expect(turn.nextSection).toBe(SetupSection.VariableBills);
+    expect(turn.established[0]?.section).toBe(SetupSection.FixedBills);
+    expect((await draftOf(conversations, 'conv-1')).fixedBills[0]?.name).toBe(
+      'Health',
+    );
+  });
+
+  /**
+   * The correction runs the placement rule again rather than trusting the
+   * record it replaces — FIN-93 and FIN-117 are both that rule.
+   */
+  it('refuses a correction the draft will not hold and keeps the record', async () => {
+    const { converse, conversations } = wire([
+      {
+        text: 'Noted.',
+        toolCalls: [call('record_payday_anchor', { dayOfMonth: 31 })],
+      },
+      accountTurn,
+      salaryTurn,
+      {
+        text: 'Recorded.',
+        toolCalls: [
+          call('record_fixed_bill', {
+            name: 'Rent',
+            amountInCents: 250_000,
+            dueDayOfMonth: 31,
+          }),
+        ],
+      },
+      {
+        text: 'Fixed.',
+        toolCalls: [
+          call('correct_record', { recordId: 'conv-3', dueDayOfMonth: 30 }),
+        ],
+      },
+    ]);
+
+    const turn = await runThrough(converse, 5);
+    const [bill] = (await draftOf(conversations, 'conv-1')).fixedBills;
+
+    expect(turn.established).toEqual([]);
+    expect(turn.corrections[0]).toContain('Rent');
+    expect(bill?.dueDayOfMonth).toBe(31);
+  });
+
+  it('drops a record the user says should not be there at all', async () => {
+    const { converse, conversations } = wire([
+      ...OPENING,
+      {
+        text: 'Recorded.',
+        toolCalls: [healthPlan({ dueDayOfMonth: 8 })],
+      },
+      {
+        text: 'Dropped.',
+        toolCalls: [call('remove_record', { recordId: 'conv-3' })],
+      },
+    ]);
+
+    const turn = await runThrough(converse, 5);
+    const stored = await conversations.load('conv-1');
+
+    expect(turn.removed).toEqual(['conv-3']);
+    expect(turn.nextSection).toBe(SetupSection.FixedBills);
+    expect((await draftOf(conversations, 'conv-1')).fixedBills).toEqual([]);
+    expect(stored?.records.map((record) => record.id)).not.toContain('conv-3');
+  });
+
+  /**
+   * Dropping the last record of a section the conversation has already passed
+   * leaves nothing there — and a draft that cannot compose has to be asked
+   * about again rather than reported as finished.
+   */
+  it('asks again about a section left empty by a removal', async () => {
+    const { converse } = wire([
+      ...WHOLE_SETUP,
+      {
+        text: 'Dropped.',
+        toolCalls: [call('remove_record', { recordId: 'conv-4' })],
+      },
+    ]);
+
+    const complete = await runThrough(converse, WHOLE_SETUP.length);
+    expect(complete.isComplete).toBe(true);
+
+    const turn = await converse.execute({
+      conversationId: complete.conversationId,
+      message: 'electricity is on the card, drop it',
+    });
+
+    expect(turn.removed).toEqual(['conv-4']);
+    expect(turn.isComplete).toBe(false);
+    expect(turn.nextSection).toBe(SetupSection.VariableBills);
+  });
+
+  it('refuses a correction naming an id it never recorded', async () => {
+    const { converse } = wire([
+      ...OPENING,
+      {
+        text: 'Fixed.',
+        toolCalls: [call('correct_record', { recordId: 'conv-9', name: 'X' })],
+      },
+    ]);
+
+    const turn = await runThrough(converse, 4);
+
+    expect(turn.established).toEqual([]);
+    expect(turn.message).toContain('conv-9');
+  });
+
+  /**
+   * Every kind of record `WHOLE_SETUP` establishes, and the id the sequential
+   * id source gave it: the account, the fixed bill, the card and the bucket.
+   */
+  const corrected: readonly [string, string, JsonObject][] = [
+    ['an account', 'conv-2', { balanceInCents: 500_000 }],
+    ['a fixed bill', 'conv-3', { amountInCents: 35_000 }],
+    ['a variable bill', 'conv-4', { dueDayOfMonth: 16 }],
+    ['a card', 'conv-5', { closingDay: 25, limitInCents: 2_000_000 }],
+    ['a bucket', 'conv-6', { fixedAmountInCents: 177_800 }],
+  ];
+
+  it.each(corrected)(
+    'corrects %s once everything has been recorded',
+    async (_name, recordId, args) => {
+      const { converse } = wire([
+        ...WHOLE_SETUP,
+        {
+          text: 'Fixed.',
+          toolCalls: [call('correct_record', { recordId, ...args })],
+        },
+      ]);
+
+      const turn = await runThrough(converse, WHOLE_SETUP.length + 1);
+
+      expect(turn.corrections).toEqual([]);
+      expect(turn.established[0]?.id).toBe(recordId);
+      expect(turn.isComplete).toBe(true);
+    },
+  );
+
+  it('corrects the card and reads back the account that still pays it', async () => {
+    const { converse, conversations } = wire([
+      ...WHOLE_SETUP,
+      {
+        text: 'Fixed.',
+        toolCalls: [
+          call('correct_record', { recordId: 'conv-5', closingDay: 25 }),
+        ],
+      },
+    ]);
+
+    const turn = await runThrough(converse, WHOLE_SETUP.length + 1);
+    const [card] = (await draftOf(conversations, 'conv-1')).cards;
+
+    expect(card?.closingDay).toBe(25);
+    expect(card?.dueDay).toBe(10);
+    expect(turn.established[0]?.summary).toContain('paid from Checking');
+  });
+
+  it('corrects what an ongoing bucket puts away, keeping its funding order', async () => {
+    const { converse, conversations } = wire([
+      ...WHOLE_SETUP,
+      {
+        text: 'Fixed.',
+        toolCalls: [
+          call('correct_record', {
+            recordId: 'conv-6',
+            fixedAmountInCents: 177_800,
+          }),
+        ],
+      },
+    ]);
+
+    const turn = await runThrough(converse, WHOLE_SETUP.length + 1);
+    const [bucket] = (await draftOf(conversations, 'conv-1')).buckets;
+
+    expect(bucket?.rule).toEqual(Allocation.fixed(Money.fromCents(177_800)));
+    expect(bucket?.priority).toBe(1);
+    expect(turn.established[0]?.summary).toContain('funded #1');
+  });
+
+  const goalSetup: ScriptedTurn[] = [
+    ...TO_BUCKETS,
+    {
+      text: 'Recorded.',
+      toolCalls: [
+        call('record_goal_bucket', {
+          name: 'Apartment',
+          fixedAmountInCents: 177_800,
+          targetAmountInCents: 15_000_000,
+          targetDate: '2031-03-01',
+        }),
+      ],
+    },
+  ];
+
+  it('corrects the target a goal is saving toward', async () => {
+    const { converse, conversations } = wire([
+      ...goalSetup,
+      {
+        text: 'Fixed.',
+        toolCalls: [
+          call('correct_record', {
+            recordId: 'conv-3',
+            targetAmountInCents: 20_000_000,
+            targetDate: '2032-03-01',
+          }),
+        ],
+      },
+    ]);
+
+    const turn = await runThrough(converse, goalSetup.length + 1);
+    const [bucket] = (await draftOf(conversations, 'conv-1')).buckets;
+
+    expect(
+      bucket?.mode === 'GOAL' ? bucket.target.amount.cents : undefined,
+    ).toBe(20_000_000);
+    expect(turn.established[0]?.summary).toContain('2032-03-01');
+  });
+
+  it('asks what to change when a correction to a goal names no field', async () => {
+    const { converse } = wire([
+      ...goalSetup,
+      {
+        text: 'Fixed.',
+        toolCalls: [call('correct_record', { recordId: 'conv-3' })],
+      },
+    ]);
+
+    const turn = await runThrough(converse, goalSetup.length + 1);
+
+    expect(turn.established).toEqual([]);
+    expect(turn.message).toContain('Apartment');
+  });
+
+  const nothingStated: readonly [string, string][] = [
+    ['an account', 'conv-2'],
+    ['a bill', 'conv-3'],
+    ['a card', 'conv-5'],
+    ['an ongoing bucket', 'conv-6'],
+  ];
+
+  it.each(nothingStated)(
+    'asks what to change when a correction to %s names no field',
+    async (_name, recordId) => {
+      const { converse } = wire([
+        ...WHOLE_SETUP,
+        { text: 'Fixed.', toolCalls: [call('correct_record', { recordId })] },
+      ]);
+
+      const turn = await runThrough(converse, WHOLE_SETUP.length + 1);
+
+      expect(turn.established).toEqual([]);
+      expect(turn.message).toContain('what to change');
+    },
+  );
+
+  it('asks which record when neither tool names one', async () => {
+    const { converse } = wire([
+      ...WHOLE_SETUP,
+      {
+        text: 'Fixed.',
+        toolCalls: [call('correct_record', {}), call('remove_record', {})],
+      },
+    ]);
+
+    const turn = await runThrough(converse, WHOLE_SETUP.length + 1);
+
+    expect(turn.corrections).toHaveLength(2);
+    expect(turn.message).toContain('which record');
+  });
+
+  it('refuses to drop a record it never recorded', async () => {
+    const { converse } = wire([
+      ...WHOLE_SETUP,
+      {
+        text: 'Dropped.',
+        toolCalls: [call('remove_record', { recordId: 'conv-9' })],
+      },
+    ]);
+
+    const turn = await runThrough(converse, WHOLE_SETUP.length + 1);
+
+    expect(turn.removed).toEqual([]);
+    expect(turn.message).toContain('conv-9');
+  });
+
+  /** The draft's rule, said back: a card would be left paid from nothing. */
+  it('refuses to drop an account a card is paid from', async () => {
+    const { converse, conversations } = wire([
+      ...WHOLE_SETUP,
+      {
+        text: 'Dropped.',
+        toolCalls: [call('remove_record', { recordId: 'conv-2' })],
+      },
+    ]);
+
+    const turn = await runThrough(converse, WHOLE_SETUP.length + 1);
+
+    expect(turn.removed).toEqual([]);
+    expect(turn.corrections[0]).toContain('Inter');
+    expect((await draftOf(conversations, 'conv-1')).accounts).toHaveLength(1);
+  });
+
+  it('offers the corrections only once there is something to correct', async () => {
+    const { converse, model } = wire(OPENING);
+
+    await runThrough(converse, 3);
+
+    expect(model.requests[0]?.tools.map((tool) => tool.name)).toEqual([
+      'record_payday_anchor',
+    ]);
+    expect(model.requests[2]?.tools.map((tool) => tool.name)).toEqual([
+      'record_salary',
+      'finish_section',
+      'correct_record',
+      'remove_record',
+    ]);
   });
 
   /** The wizard always has something to say, even when the model does not. */
