@@ -8,6 +8,7 @@ import type {
   ModelResponse,
   ModelStopReason,
   ModelStreamEvent,
+  ModelUsage,
   ToolCall,
   ToolDeclaration,
 } from '../../domain/ports/language-model.js';
@@ -168,7 +169,27 @@ function toModelResponse(reply: Anthropic.Message): ModelResponse {
       arguments: asJsonObject(block.input),
     }));
 
-  return { text, toolCalls, stopReason: toStopReason(reply.stop_reason) };
+  return {
+    text,
+    toolCalls,
+    stopReason: toStopReason(reply.stop_reason),
+    usage: toUsage(reply.usage),
+  };
+}
+
+/**
+ * The vendor's four input counters collapse into one: tokens written to or
+ * served from the cache were still read by the model and still billed, so
+ * anything above this file would have to add them back to get a true figure.
+ */
+function toUsage(usage: Anthropic.Usage): ModelUsage {
+  return {
+    inputTokens:
+      usage.input_tokens +
+      (usage.cache_creation_input_tokens ?? 0) +
+      (usage.cache_read_input_tokens ?? 0),
+    outputTokens: usage.output_tokens,
+  };
 }
 
 function toStopReason(reason: Anthropic.StopReason | null): ModelStopReason {

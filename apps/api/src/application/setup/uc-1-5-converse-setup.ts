@@ -22,7 +22,9 @@ import { DomainError } from '../../domain/shared/domain-error.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
 import { Percentage } from '../../domain/shared/percentage.js';
+import type { Principal } from '../../domain/shared/principal.js';
 import { calendarMonthOf, monthOf } from '../budgeting/month.js';
+import type { SpendCeiling } from '../spend/spend-ceiling.js';
 
 import type { RecordCorrection } from './record-correction.js';
 import { applyCorrection, describeRule } from './record-correction.js';
@@ -88,6 +90,7 @@ export class ConverseSetup {
   constructor(
     private readonly model: LanguageModel,
     private readonly conversations: SetupConversations,
+    private readonly spend: SpendCeiling,
     private readonly ids: IdSource,
     private readonly holidays: HolidayCalendar,
     private readonly clock: Clock,
@@ -102,10 +105,22 @@ export class ConverseSetup {
     return this.model.isAvailable;
   }
 
-  async execute(input: {
-    conversationId?: string;
-    message: string;
-  }): Promise<SetupTurn> {
+  /**
+   * The principal is a separate argument from the message because identity is
+   * ambient: it comes from whatever knows who is calling, never from the body
+   * that was sent. It is what the day's spend is counted against.
+   */
+  async execute(
+    principal: Principal,
+    input: {
+      conversationId?: string;
+      message: string;
+    },
+  ): Promise<SetupTurn> {
+    // Before the request, never after: refusing a call already paid for would
+    // bound nothing at all.
+    await this.spend.check(principal);
+
     const stored = await this.open(input.conversationId);
     // What the model is shown is finished before it is asked: the turn is
     // appended to a copy, so nothing this method does afterwards reaches back
@@ -121,6 +136,8 @@ export class ConverseSetup {
       messages: asked,
       tools,
     });
+
+    await this.spend.record(principal, response.usage);
 
     const transcript: ModelMessage[] = [
       ...asked,

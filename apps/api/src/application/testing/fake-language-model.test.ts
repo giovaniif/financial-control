@@ -105,7 +105,12 @@ describe('FakeLanguageModel', () => {
       { kind: 'text', delta: ' words' },
       {
         kind: 'done',
-        response: { text: 'Two words', toolCalls: [], stopReason: 'end' },
+        response: {
+          text: 'Two words',
+          toolCalls: [],
+          stopReason: 'end',
+          usage: { inputTokens: 0, outputTokens: 0 },
+        },
       },
     ]);
   });

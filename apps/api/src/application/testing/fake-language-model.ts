@@ -5,6 +5,7 @@ import type {
   ModelResponse,
   ModelStopReason,
   ModelStreamEvent,
+  ModelUsage,
   ToolCall,
 } from '../../domain/ports/language-model.js';
 import { LanguageModelUnavailable } from '../../domain/ports/language-model.js';
@@ -21,6 +22,8 @@ export interface ScriptedTurn {
    * different outcomes and a caller has to be able to tell them apart.
    */
   fails?: Error;
+  /** What the turn cost. A turn costs nothing unless the test says so. */
+  usage?: ModelUsage;
 }
 
 const NO_KEY =
@@ -100,6 +103,7 @@ export class FakeLanguageModel implements LanguageModel {
       toolCalls,
       stopReason:
         turn.stopReason ?? (toolCalls.length > 0 ? 'toolCalls' : 'end'),
+      usage: turn.usage ?? { inputTokens: 0, outputTokens: 0 },
     };
   }
 }

@@ -356,6 +356,7 @@ describe('ClaudeLanguageModel', () => {
           text: 'Looking.',
           toolCalls: [{ id: 'toolu_1', name: 'read_cycle', arguments: {} }],
           stopReason: 'toolCalls',
+          usage: { inputTokens: 1, outputTokens: 1 },
         },
       },
     ]);
@@ -379,5 +380,62 @@ describe('ClaudeLanguageModel', () => {
     await expect(collect(modelFor(stub).stream(ask()))).rejects.toBeInstanceOf(
       LanguageModelFailed,
     );
+  });
+
+  /**
+   * What a call cost is what the spend ceiling counts, so a mapping that
+   * dropped it would leave the ceiling counting zero forever.
+   */
+  it('reports what a completion cost, in the port own names', async () => {
+    const stub = new StubMessages(
+      reply({
+        usage: { input_tokens: 1_820, output_tokens: 240 } as Anthropic.Usage,
+      }),
+    );
+
+    const response = await modelFor(stub).complete(ask());
+
+    expect(response.usage).toEqual({ inputTokens: 1_820, outputTokens: 240 });
+  });
+
+  /**
+   * Only the final message carries the totals — the deltas do not — so a
+   * stream that read usage anywhere else would report nothing.
+   */
+  it('reports the usage of a stream from its final message', async () => {
+    const stub = new StubMessages(
+      reply({
+        usage: { input_tokens: 6_400, output_tokens: 910 } as Anthropic.Usage,
+      }),
+      [textDelta('Reading.')],
+    );
+
+    const events = await collect(modelFor(stub).stream(ask()));
+
+    expect(events.at(-1)).toMatchObject({
+      kind: 'done',
+      response: { usage: { inputTokens: 6_400, outputTokens: 910 } },
+    });
+  });
+
+  /**
+   * Tokens served from or written to the cache were still read by the model
+   * and still billed, so they are input like any other.
+   */
+  it('counts cached input tokens as input', async () => {
+    const stub = new StubMessages(
+      reply({
+        usage: {
+          input_tokens: 100,
+          output_tokens: 20,
+          cache_creation_input_tokens: 1_000,
+          cache_read_input_tokens: 4_000,
+        } as Anthropic.Usage,
+      }),
+    );
+
+    const response = await modelFor(stub).complete(ask());
+
+    expect(response.usage.inputTokens).toBe(5_100);
   });
 });

@@ -22,9 +22,11 @@ import type { SetupConversations } from './application/setup/uc-1-5-converse-set
 import { ConverseSetup } from './application/setup/uc-1-5-converse-setup.js';
 import { ProjectWealth } from './application/projection/uc-7-project-wealth.js';
 import { ListCycles } from './application/budgeting/uc-3-3-list-cycles.js';
+import { SpendCeiling } from './application/spend/spend-ceiling.js';
 import { createLanguageModel } from './infrastructure/anthropic/create-language-model.js';
 import {
   ASSISTANT_LIMITS,
+  DAILY_TOKEN_CEILING,
   MODELS,
   SPEND_RATE_LIMITS,
 } from './infrastructure/anthropic/models.js';
@@ -40,6 +42,7 @@ import { PrismaSettingsRepository } from './infrastructure/prisma/prisma-setting
 import { InMemoryAssistantConversationStore } from './infrastructure/assistant/in-memory-assistant-conversation-store.js';
 import { InMemoryProposalStore } from './infrastructure/assistant/in-memory-proposal-store.js';
 import { InMemorySetupConversationStore } from './infrastructure/setup/in-memory-setup-conversation-store.js';
+import { InMemorySpendLedger } from './infrastructure/spend/in-memory-spend-ledger.js';
 import { buildServer } from './interface/http/server.js';
 
 /**
@@ -63,6 +66,14 @@ export function createApp(): FastifyInstance {
   // real answer, which is a different job from turning one sentence into one
   // tool call. The key is read in the same one place.
   const assistantModel = createLanguageModel(process.env, MODELS.assistant);
+
+  // One ceiling across both callers, because it is one bill: bounding each
+  // separately would bound the day at twice whatever the figure says.
+  const spend = new SpendCeiling(
+    new InMemorySpendLedger(),
+    clock,
+    DAILY_TOKEN_CEILING,
+  );
   const assistantConversations = new InMemoryAssistantConversationStore();
   const proposals = new InMemoryProposalStore<ProposedChange>();
 
@@ -145,6 +156,7 @@ export function createApp(): FastifyInstance {
     converseSetup: new ConverseSetup(
       model,
       conversations,
+      spend,
       new UuidIdSource(),
       holidays,
       clock,
@@ -162,6 +174,7 @@ export function createApp(): FastifyInstance {
           wealth: projectWealth,
         },
         proposals,
+        spend,
         new UuidIdSource(),
         clock,
         ASSISTANT_LIMITS.maxToolRoundTrips,

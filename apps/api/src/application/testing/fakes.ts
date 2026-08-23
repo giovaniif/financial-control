@@ -18,6 +18,11 @@ import type {
   SetupConversationStore,
   StoredSetupConversation,
 } from '../../domain/ports/setup-conversation-store.js';
+import type { SpendLedger } from '../../domain/ports/spend-ledger.js';
+import { tokensOf } from '../../domain/ports/spend-ledger.js';
+import type { ModelUsage } from '../../domain/ports/language-model.js';
+import type { LocalDate } from '../../domain/shared/local-date.js';
+import type { Principal } from '../../domain/shared/principal.js';
 import type {
   AccountRepository,
   CycleRepository,
@@ -304,4 +309,30 @@ export class FakeAssistantConversationStore implements AssistantConversationStor
     this.rows.set(conversation.id, conversation);
     return Promise.resolve();
   }
+}
+
+/**
+ * The spend ledger as a map, for the same reason as the stores above: a test
+ * in `application` may not import `infrastructure`, and the production
+ * implementation counts the same way behind the same port.
+ */
+export class FakeSpendLedger implements SpendLedger {
+  private readonly totals = new Map<string, number>();
+
+  spentOn(principal: Principal, day: LocalDate): Promise<number> {
+    return Promise.resolve(this.totals.get(keyOf(principal, day)) ?? 0);
+  }
+
+  async record(
+    principal: Principal,
+    day: LocalDate,
+    usage: ModelUsage,
+  ): Promise<void> {
+    const spent = await this.spentOn(principal, day);
+    this.totals.set(keyOf(principal, day), spent + tokensOf(usage));
+  }
+}
+
+function keyOf(principal: Principal, day: LocalDate): string {
+  return `${principal.id}@${day.toISO()}`;
 }

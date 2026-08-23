@@ -19,9 +19,11 @@ import { BuildDashboard } from '../projection/uc-4-build-dashboard.js';
 import { ProjectWealth } from '../projection/uc-7-project-wealth.js';
 import type { ScriptedTurn } from '../testing/fake-language-model.js';
 import { FakeLanguageModel } from '../testing/fake-language-model.js';
+import { SpendCeiling } from '../spend/spend-ceiling.js';
 import {
   FakeAssistantConversationStore,
   FakeProposalStore,
+  FakeSpendLedger,
   InMemoryAccountRepository,
   InMemoryBucketRepository,
   InMemoryCycleRepository,
@@ -30,6 +32,9 @@ import {
   SequentialIdSource,
 } from '../testing/fakes.js';
 import { FixedClock } from '../testing/fixed-clock.js';
+
+/** Far above anything this suite spends: the ceiling is tested elsewhere. */
+const NO_CEILING = 1_000_000;
 
 import type {
   AssistantLimits,
@@ -106,6 +111,7 @@ const wire = (
       wealth: new ProjectWealth(buckets),
     },
     new FakeProposalStore<ProposedChange>(),
+    new SpendCeiling(new FakeSpendLedger(), clock, NO_CEILING),
     new SequentialIdSource('proposal'),
     clock,
     limits.maxToolRoundTrips,
