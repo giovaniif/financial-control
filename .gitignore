@@ -34,3 +34,6 @@ coverage/
 .vscode/*
 !.vscode/extensions.json
 *.log
+
+# Workspace scratch for tsx and vitest workers, kept out of a shared /tmp.
+.tmp/

@@ -5,7 +5,7 @@ import { BackupSection } from './backup-section.js';
 import { BillsSection } from './bills-section.js';
 import { Formatting } from './formatting.js';
 import { PaydayAnchor } from './payday-anchor.js';
-import { SetupChecklist } from './setup-checklist.js';
+import { RerunSetup } from './rerun-setup.js';
 
 /**
  * UC-1 and UC-2 — everything the user configures, in the order the setup
@@ -25,10 +25,10 @@ export function ProfilePage() {
         </div>
         <BillsSection />
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <SetupChecklist />
           <Formatting />
           <BackupSection />
         </div>
+        <RerunSetup />
       </div>
     </AppShell>
   );

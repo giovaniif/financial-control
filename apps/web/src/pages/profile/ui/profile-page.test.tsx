@@ -10,14 +10,6 @@ import { ProfilePage } from './profile-page.js';
 
 const anchor = { anchorDay: 5, shiftPolicy: 'PRECEDING' };
 
-const pristine = {
-  anchorConfigured: false,
-  accounts: 0,
-  templates: 0,
-  buckets: 0,
-  isPristine: true,
-};
-
 const template = (
   overrides: Partial<TemplateResponse> = {},
 ): TemplateResponse => ({
@@ -108,7 +100,6 @@ describe('ProfilePage', () => {
       'Compromissos por ciclo',
       'Salário',
       'Contas a pagar',
-      'Configuração',
       'Formatação',
       'Backup',
     ]);
@@ -395,67 +386,23 @@ describe('ProfilePage', () => {
     ).not.toBeChecked();
   });
 
-  // UC-1.5 — the checklist is the conversation's own sections, still outstanding.
-  it('shows the setup checklist in the order the conversation asks', async () => {
-    stubApi({ '/api/settings/anchor': anchor });
-    renderPage();
-
-    const setup = await screen.findByRole('region', { name: 'Configuração' });
-
-    expect(
-      within(setup)
-        .getAllByRole('listitem')
-        .map((item) => item.textContent),
-    ).toEqual([
-      '1O ciclo de pagamentoainda não definido',
-      '2Contas0 contas',
-      '3Salário0 registrados',
-      '4Contas fixas0 registrados',
-      '5Contas variáveis0 registrados',
-      '6Caixinhas0 caixinhas',
-    ]);
-  });
-
   /**
-   * The anchor reads back a default whether or not anyone chose it, so the
-   * checklist used to claim step one was done on a completely empty app.
+   * The checklist that used to carry this is gone: it restated, as six rows
+   * of counts, what the sections above it already show — and none of it was
+   * outstanding work the screen could not simply display. Re-running the
+   * conversation is the one thing it offered that nothing else does, so it
+   * stays, on its own.
    */
-  it('leaves the anchor step outstanding until it has been configured', async () => {
-    stubApi({ '/api/settings/anchor': anchor });
-    renderPage();
-
-    expect(await screen.findByText('ainda não definido')).toBeInTheDocument();
-  });
-
-  it('marks the anchor step done once it has been configured', async () => {
-    stubApi({
-      '/api/settings/anchor': anchor,
-      '/api/setup': { ...pristine, anchorConfigured: true },
-    });
-    renderPage();
-
-    expect(await screen.findByText('configurado')).toBeInTheDocument();
-  });
-
-  // The buckets are the one step this screen does not itself carry.
-  it('links the buckets step to where the buckets live', async () => {
+  it('offers to run the setup again, without a checklist around it', async () => {
     stubApi({ '/api/settings/anchor': anchor });
     renderPage();
 
     expect(
-      await screen.findByRole('link', { name: 'Caixinhas' }),
-    ).toHaveAttribute('href', '/savings');
-  });
-
-  it('offers to run the setup again whatever the setup state', async () => {
-    stubApi({ '/api/settings/anchor': anchor });
-    renderPage();
-
-    expect(
-      await screen.findByRole('link', {
-        name: 'Executar a configuração novamente',
-      }),
+      await screen.findByRole('link', { name: 'Refazer a configuração' }),
     ).toHaveAttribute('href', '/onboarding');
+    expect(
+      screen.queryByRole('region', { name: 'Configuração' }),
+    ).not.toBeInTheDocument();
   });
 
   it('states the formatting conventions explicitly', async () => {

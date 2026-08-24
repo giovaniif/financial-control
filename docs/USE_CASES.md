@@ -141,8 +141,9 @@ The conversation needs the Claude API. **Without a key the app is not unusable**
 offered as a plain form, and the app says plainly why it is asking that way. Every question is skippable, the
 whole conversation is skippable, and the app stays usable with parts of it unanswered.
 
-Profile keeps the same sections as a checklist showing what is still outstanding, and can re-enter the
-conversation at any time.
+Profile can re-enter the conversation at any time. It carries no checklist of the sections: each one is a
+section on that screen already, showing what it holds, and a second list counting those same rows told the
+user nothing the rows did not.
 
 **UC-1.6 — Back up and restore**
 A full data export and re-import, on Profile. The user is the only operator and the only backup, and nothing
@@ -476,7 +477,7 @@ progress; the upcoming list with inline settle; bucket chips; alerts; and the as
 ### Profile
 Everything the user configures, in the order the first run asked for it: the payday anchor with its change
 preview and weekend rule, accounts, salary, the bills in due-day order with the unconfirmed ones tagged
-`~estimate`, the formatting reference, the setup checklist, backup and restore.
+`~estimate`, the formatting reference, backup and restore, and the way back into the setup conversation.
 *Primary action:* edit a bill. *Secondary:* re-enter the setup conversation. → UC-1, UC-2
 
 ### Investments & Savings — *the answer to Q2*
