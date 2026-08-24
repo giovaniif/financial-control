@@ -1,7 +1,7 @@
 import type { CyclePosition, HeadlineResponse } from '@fin/contracts';
 import type { ReactNode } from 'react';
 
-import { formatBRL, formatDate } from '@/shared/lib';
+import { formatBRL } from '@/shared/lib';
 
 /** How the cycle on screen relates to today, since it is no longer always next. */
 const eyebrows: Record<CyclePosition, string> = {
@@ -52,15 +52,6 @@ export function HeadlineSection({ headline, position, action }: Props) {
       </p>
 
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-zinc-800 pt-3 text-xs">
-        <Qualifier
-          label="Ponto mais baixo"
-          value={headline.lowestPoint}
-          note={
-            headline.lowestPointDate === null
-              ? 'nada agendado'
-              : `em ${formatDate(headline.lowestPointDate)}`
-          }
-        />
         <Qualifier label="Fecha com" value={headline.closing} />
         {/* Never let a guess masquerade as a fact. */}
         <Qualifier

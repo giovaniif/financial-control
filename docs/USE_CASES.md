@@ -196,7 +196,7 @@ in the list, dimmed.
 **UC-2.6 — Flag a template as an unconfirmed estimate**
 A placeholder the user knows is roughly right but has not verified — *Contractor Costs (to detail)* at
 R$ 1.500. Estimates are tagged `~estimate` **everywhere they appear**, and every total in the app can be shown
-two ways via a global toggle (UC-4.4). A forecast that silently mixes a guess with a known bill is the failure
+two ways by the API. A forecast that silently mixes a guess with a known bill is the failure
 mode this exists to prevent — and it applies to the assistant as much as to the screens (UC-8.2).
 
 **UC-2.7 — Review all commitments**
@@ -229,8 +229,8 @@ Entries carry a date, a description, a planned amount, an actual amount, a statu
 them**. That fold is what makes the app answer "when" and not just "how much" — cash can bottom out mid-cycle
 and recover before the closing balance ever shows a problem.
 
-Main shows the consequence: **the lowest point and the date it happens**. The full dated list is available on
-request through the assistant, which is where the detail went when the Ledger screen was removed.
+The full dated list is available on request through the assistant, which is where the detail went when the
+Ledger screen was removed.
 
 Entry kinds are distinguishable: `income`, `fixed`, `variable`, `alloc`. Statuses are `received`,
 `paid`, `planned`, `projected`, `overdue`, `skipped`.
@@ -277,21 +277,30 @@ one — the user's question is always asked from the middle of the cycle they ar
 **UC-4.1 — Read the answer as one sentence**
 The headline, in plain language:
 *"In the August cycle you'll receive R$ 18.000, pay R$ 9.110, and R$ 3.556 stays free after allocations."*
-Beside it, the three numbers that qualify it: the **lowest point** the balance reaches and the date it happens,
-the **closing balance**, and **the closing balance without the unconfirmed estimates**. Everything else on the
-screen is evidence for that sentence.
+Beside it, the two numbers that qualify it: the **closing balance**, and **the closing balance without the
+unconfirmed estimates**. Everything else on the screen is evidence for that sentence.
 
-**UC-4.2 — See the four headline figures**
-Total Outcome, Expected Surplus, Net Surplus, and the lowest point in the cycle — each with a note explaining
-what it is made of.
+**UC-4.2 — See the headline figures**
+Total Outcome, Expected Surplus and Net Surplus — the calculation chain's three stages, each with a note
+explaining what it is made of.
+
+*The lowest point in the cycle was removed*, here and everywhere. It answered "could this bounce mid-cycle",
+which is a real question — but it answered it with a number and a date rather than with the dated list that
+would show why, and it was read as a fourth headline figure competing with the three that make up the chain.
+The dated running balance is still there, on request (UC-8.4).
 
 **UC-4.3 — See where the current cycle stands**
 How far through the cycle today is, and how much has actually been spent against what was planned. Two
 progress readings side by side; the gap between them is the signal.
 
-**UC-4.4 — Toggle estimates globally**
-A single header control switching every figure in the app between **Confirmed only** and **Including
-estimates**. Not a per-screen setting — the whole app answers consistently, the assistant included.
+**UC-4.4 — Toggle estimates globally** — *removed*
+A header control switched every figure between **Confirmed only** and **Including estimates**. It asked the
+user to hold two readings of every number in their head, and the one place the difference actually decides
+something — the closing balance — states both readings side by side without being asked (UC-4.1).
+
+The app answers **including estimates**, and `~estimate` still tags every unconfirmed figure at its source
+(UC-2.6), which is where the warning belongs. The API keeps both readings: the assistant can still be asked
+for either, and the headline's second number is computed from the confirmed one.
 
 **UC-4.5 — Work the upcoming list**
 The next obligations by date, each settleable inline. Overdue items are called out with how late they are and
@@ -302,15 +311,15 @@ it carries UC-3.5 in full.
 Each bucket as a compact chip: current balance, and either progress toward its target (goal buckets) or its
 per-cycle contribution (ongoing buckets). One click through to UC-6.
 
-**UC-4.7 — Read the alerts**
-The things that need attention, ranked by severity:
+**UC-4.7 — Read the alerts** — *removed*
+A ranked list of things needing attention sat at the foot of Main. Every entry in it restated something the
+screen already showed — the unsettled entries are the upcoming list, the estimate's two closing balances are
+the headline's qualifying pair — and it repeated once per cycle in the window, so a single unconfirmed bill
+produced an identical card for every month it touched.
 
-- an entry from a past cycle still unsettled, blocking that cycle from closing
-- a **projected negative balance** on a specific date in a future cycle, naming what caused it
-- an unconfirmed estimate materially changing a closing balance, quantified both ways
-- a bucket behind its target date, or an ongoing bucket's annual cost worth being aware of
-
-Each alert is the thing most worth asking about, so each is answerable in one click (UC-8.1).
+What the app now says unprompted is what the figures themselves say. Anything else is asked for (UC-8.1),
+which was always the intent: *"the alerts are the only analysis the app performs unprompted"* is now *"the app
+performs none"*.
 
 ---
 
@@ -477,9 +486,9 @@ become unreachable because a key is missing would have made the assistant a depe
 Three screens, plus the first run. Every use case above maps to exactly one.
 
 ### Main — *the answer to Q1*
-Opens on the current cycle, speaks about the next. Headline sentence; the qualifying trio (lowest point,
-closing, closing without estimates); four KPI tiles; the calculation-chain strip; cycle progress against spend
-progress; the upcoming list with inline settle; bucket chips; alerts; and the assistant alongside them.
+Opens on the current cycle, speaks about the next. Headline sentence; the qualifying pair (closing, closing
+without estimates); three KPI tiles; the calculation-chain strip; cycle progress against spend progress; the
+upcoming list with inline settle; bucket chips; and the assistant alongside them.
 *Primary action:* settle the next due entry. *Secondary:* ask. → UC-3.1, UC-3.5, UC-4, UC-8
 
 ### Profile
@@ -511,7 +520,7 @@ carrying the screen title, global cycle navigation, and the estimates toggle.
   actual one. Future entries have only a planned value; the design needs one consistent way to show both.
 
 - **Estimates must never masquerade as facts.** `~estimate` tagging is consistent everywhere, and the global
-  toggle (UC-4.4) makes every total answerable both ways — on screen and in the assistant's sentences alike.
+  headline states the closing balance both ways, and the assistant can be asked for either.
 
 - **The assistant proposes; the app disposes.** No figure it states is one it computed, and no change it
   suggests takes effect without a confirmation. Both rules exist so that adding the assistant added a surface,
@@ -541,7 +550,8 @@ Recorded as decisions, not oversights:
   categorization rules, and no AI classification. The assistant does not add one by the back door: it can be
   asked what the biggest bills are, and it answers from descriptions and amounts.
 - **Reports and insights.** No spend-by-category, savings-rate trend, top movers or year summary. The
-  alerts (UC-4.7) are the only analysis the app performs unprompted; anything else is asked for.
+  app performs no analysis unprompted at all — the figures are the analysis, and anything beyond them is
+  asked for.
 - **A forecast grid.** Twelve cycles are modelled and navigable one at a time, but there is no
   all-cycles-at-once table and no what-if scenarios.
 - **Bank statement import** (CSV / OFX). All ongoing data is entered by hand, generated from templates, or

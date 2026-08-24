@@ -259,28 +259,6 @@ export class Cycle {
     });
   }
 
-  /** The lowest the balance gets, and the entry that took it there. */
-  lowWaterMark(
-    estimates: Estimates = Estimates.Included,
-  ): LowWaterMark | undefined {
-    return this.runningBalance(estimates).reduce<LowWaterMark | undefined>(
-      (lowest, row) =>
-        lowest === undefined || row.balance.isLessThan(lowest.balance)
-          ? { balance: row.balance, date: row.entry.dueDate, entry: row.entry }
-          : lowest,
-      undefined,
-    );
-  }
-
-  /** The first date the balance crosses zero, if it ever does. */
-  firstNegativeDate(
-    estimates: Estimates = Estimates.Included,
-  ): LocalDate | undefined {
-    return this.runningBalance(estimates).find((row) =>
-      row.balance.isNegative(),
-    )?.entry.dueDate;
-  }
-
   private countedEntries(estimates: Estimates): readonly LedgerEntry[] {
     return estimates === Estimates.Included
       ? this.entries

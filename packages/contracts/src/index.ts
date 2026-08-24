@@ -23,7 +23,6 @@ export type {
   EntryKind,
   EstimateMode,
   LedgerEntryResponse,
-  LowWaterMarkResponse,
   CyclePosition,
   CycleSummaryResponse,
   CycleWindowResponse,
@@ -58,8 +57,6 @@ export type {
   FundingResponse,
 } from './buckets.js';
 export type {
-  AlertResponse,
-  AlertSeverity,
   BucketProjectionResponse,
   CycleProgressResponse,
   DashboardResponse,

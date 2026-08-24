@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
-import { EstimatesToggle } from '@/features/toggle-estimates';
 import { useMediaQuery } from '@/shared/lib';
 import { useAssistantRail, WIDE_ENOUGH_FOR_SHELL } from '@/shared/model';
 
@@ -87,18 +86,10 @@ export function AppShell({ title, subtitle, children }: Props) {
                 <p className="truncate text-xs text-zinc-500">{subtitle}</p>
               )}
             </div>
-            {/* On a phone the toggle rides the title's row rather than
-                claiming one of its own. */}
-            {!isWide && (
-              <div className="ml-auto shrink-0">
-                <EstimatesToggle compact />
-              </div>
-            )}
           </div>
           <div className="flex w-full items-center gap-2 lg:w-auto lg:shrink-0">
             {isWide && isOpen && <AccountsTotal layout="compact" />}
             <CycleNav />
-            {isWide && <EstimatesToggle compact={isTight} />}
           </div>
         </header>
         {/* The bottom padding clears the floating chat button, which sits over

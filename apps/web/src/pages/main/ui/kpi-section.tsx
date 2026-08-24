@@ -7,7 +7,7 @@ export function KpiSection({ kpis }: { kpis: KpiResponse[] }) {
   return (
     <section
       aria-label="Figuras principais"
-      className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4"
+      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
     >
       {kpis.map((kpi) => (
         <StatTile

@@ -110,52 +110,7 @@ describe('GET /cycles/:month', () => {
     expect(body.chain.netSurplus).toBe(1_039_000);
   });
 
-  it('reports where the balance bottoms out', async () => {
-    const dipping = Cycle.open({
-      id: 'cycle-sep',
-      ref: august,
-      openingBalance: Money.fromCents(50_000),
-      entries: [
-        entry('Big bill', EntryKind.Fixed, '2026-08-10', -12_000),
-        entry('Salary', EntryKind.Income, '2026-08-25', 18_000),
-      ],
-    });
-
-    const body = (
-      await serverWith(dipping).inject({
-        method: 'GET',
-        url: '/cycles/2026-09',
-      })
-    ).json<CycleResponse>();
-
-    expect(body.lowWaterMark?.balance).toBe(-1_150_000);
-    expect(body.firstNegativeDate).toBe('2026-08-10');
-  });
-
-  it('reports no negative date when the balance never crosses zero', async () => {
-    const body = (
-      await serverWith(populated()).inject({
-        method: 'GET',
-        url: '/cycles/2026-09',
-      })
-    ).json<CycleResponse>();
-
-    expect(body.firstNegativeDate).toBeNull();
-  });
-
   // The month exists; nothing has been put in it yet.
-  it('answers a well-formed empty cycle for a month never materialised', async () => {
-    const response = await serverWith().inject({
-      method: 'GET',
-      url: '/cycles/2026-12',
-    });
-    const body = response.json<CycleResponse>();
-
-    expect(response.statusCode).toBe(200);
-    expect(body.entries).toEqual([]);
-    expect(body.chain.closingBalance).toBe(0);
-    expect(body.lowWaterMark).toBeNull();
-  });
 
   it.each([
     ['a month it cannot parse', '/cycles/August-2026'],

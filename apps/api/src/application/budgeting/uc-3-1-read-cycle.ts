@@ -9,7 +9,6 @@ import type {
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
 import { DomainError } from '../../domain/shared/domain-error.js';
-import type { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
 import { generateInto } from '../../domain/budgeting/template-generation.js';
 
@@ -39,9 +38,6 @@ export interface CycleView {
   readonly estimates: Estimates;
   readonly chain: CalculationChain;
   readonly entries: readonly EntryRowView[];
-  readonly lowWaterMark:
-    { balanceCents: number; date: string; description: string } | undefined;
-  readonly firstNegativeDate: string | undefined;
 }
 
 /**
@@ -97,7 +93,6 @@ export class ReadCycle {
 
 export function toView(cycle: Cycle, estimates: Estimates): CycleView {
   const rows = cycle.runningBalance(estimates);
-  const low = cycle.lowWaterMark(estimates);
 
   return {
     id: cycle.id,
@@ -121,23 +116,10 @@ export function toView(cycle: Cycle, estimates: Estimates): CycleView {
       varianceCents: entry.amount.variance?.cents,
       balanceCents: balance.cents,
     })),
-    lowWaterMark:
-      low === undefined
-        ? undefined
-        : {
-            balanceCents: low.balance.cents,
-            date: low.date.toISO(),
-            description: low.entry.description,
-          },
-    firstNegativeDate: isoOrUndefined(cycle.firstNegativeDate(estimates)),
   };
 }
 
 /** Stable and derived, so regenerating the same cycle reuses the same row. */
 export function entryId(templateId: string, month: string): string {
   return `${templateId}@${month}`;
-}
-
-function isoOrUndefined(date: LocalDate | undefined): string | undefined {
-  return date?.toISO();
 }

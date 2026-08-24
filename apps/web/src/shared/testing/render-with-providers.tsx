@@ -3,7 +3,7 @@ import type { RenderResult } from '@testing-library/react';
 import { render } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 
-import { AssistantRailProvider, EstimatesProvider } from '../model/index.js';
+import { AssistantRailProvider } from '../model/index.js';
 
 /**
  * Every screen reads server state, the estimates toggle and the assistant
@@ -19,9 +19,7 @@ export function renderWithProviders(ui: ReactElement): RenderResult {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={client}>
-        <EstimatesProvider>
-          <AssistantRailProvider>{children}</AssistantRailProvider>
-        </EstimatesProvider>
+        <AssistantRailProvider>{children}</AssistantRailProvider>
       </QueryClientProvider>
     );
   }

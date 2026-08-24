@@ -70,15 +70,6 @@ export function toResponse(view: CycleView): CycleResponse {
       variance: entry.varianceCents ?? null,
       balance: entry.balanceCents,
     })),
-    lowWaterMark:
-      view.lowWaterMark === undefined
-        ? null
-        : {
-            balance: view.lowWaterMark.balanceCents,
-            date: view.lowWaterMark.date,
-            description: view.lowWaterMark.description,
-          },
-    firstNegativeDate: view.firstNegativeDate ?? null,
   };
 }
 

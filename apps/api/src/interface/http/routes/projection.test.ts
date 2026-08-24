@@ -78,13 +78,7 @@ const serverWith = (options: { cycles?: Cycle[]; buckets?: Bucket[] } = {}) => {
 
   return buildTestServer({
     clock,
-    buildDashboard: new BuildDashboard(
-      cycles,
-      buckets,
-      settings,
-      noHolidays,
-      clock,
-    ),
+    buildDashboard: new BuildDashboard(cycles, settings, noHolidays, clock),
     projectWealth: new ProjectWealth(buckets),
     manageBuckets: new ManageBuckets(buckets, cycles, settings, noHolidays),
   });
@@ -125,7 +119,7 @@ describe('GET /dashboard', () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it('carries the four KPIs and the progress reading', async () => {
+  it('carries the KPIs and the progress reading', async () => {
     const body = (
       await serverWith({ cycles: [september()] }).inject({
         method: 'GET',
@@ -133,7 +127,7 @@ describe('GET /dashboard', () => {
       })
     ).json<DashboardResponse>();
 
-    expect(body.kpis).toHaveLength(4);
+    expect(body.kpis).toHaveLength(3);
     expect(body.progress.cycleLength).toBeGreaterThan(0);
   });
 
@@ -155,7 +149,6 @@ describe('GET /dashboard', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json<DashboardResponse>().alerts).toEqual([]);
   });
 });
 

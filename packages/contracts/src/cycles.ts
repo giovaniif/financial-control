@@ -41,13 +41,6 @@ export interface LedgerEntryResponse {
   balance: Cents;
 }
 
-/** The lowest the balance gets, and what took it there. */
-export interface LowWaterMarkResponse {
-  balance: Cents;
-  date: string;
-  description: string;
-}
-
 export interface CycleResponse {
   id: string;
   /** `YYYY-MM`, the month the cycle is named for. */
@@ -60,9 +53,6 @@ export interface CycleResponse {
   estimates: EstimateMode;
   chain: CalculationChainResponse;
   entries: LedgerEntryResponse[];
-  lowWaterMark: LowWaterMarkResponse | null;
-  /** The first date the balance crosses zero, if it ever does. */
-  firstNegativeDate: string | null;
 }
 
 export type CyclePosition = 'past' | 'current' | 'next' | 'projected';

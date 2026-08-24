@@ -5,7 +5,7 @@ import type {
   DashboardResponse,
   EstimateMode,
 } from '@fin/contracts';
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -27,8 +27,6 @@ const dashboard = (
     incoming: 1_800_000,
     outgoing: 911_000,
     free: 355_600,
-    lowestPoint: 355_600,
-    lowestPointDate: '2026-09-28',
     closing: 355_600,
     closingWithoutEstimates: 505_600,
     ...overrides.headline,
@@ -56,7 +54,6 @@ const dashboard = (
     spentPercent: 50,
   },
   upcoming: [],
-  alerts: [],
   ...overrides,
 });
 
@@ -91,12 +88,6 @@ const cycle = (
       closingBalance: including ? 455_600 : 605_600,
     },
     entries: [],
-    lowWaterMark: {
-      balance: including ? 355_600 : 505_600,
-      date: '2026-09-28',
-      description: 'Contractor Costs',
-    },
-    firstNegativeDate: null,
     ...overrides,
   };
 };
@@ -312,24 +303,30 @@ describe('MainPage', () => {
     expect(await screen.findByText('Nada a vencer')).toBeInTheDocument();
   });
 
-  it('announces a critical alert to a screen reader', async () => {
-    respondWith(
-      dashboard({
-        alerts: [
-          {
-            severity: 'CRITICAL',
-            title: 'Projected negative balance on 2026-09-28',
-            body: 'Setembro de 2026 runs to -R$ 2.013,22.',
-          },
-        ],
-      }),
-    );
-
+  /**
+   * Main carries no alert list. Every alert it raised restated a figure
+   * already on the screen — the closing balance with and without estimates
+   * sits in the headline — and a card that says what the number above it
+   * already says is a second place to keep correct.
+   */
+  /** The lowest-point figure is gone from the headline trio too. */
+  it('states no lowest point', async () => {
+    respondWith(dashboard());
     renderPage();
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Projected negative balance',
-    );
+    await screen.findByText(/fica livre depois das alocações/);
+
+    expect(screen.queryByText('Ponto mais baixo')).not.toBeInTheDocument();
+  });
+
+  it('raises no alerts of its own', async () => {
+    respondWith(dashboard());
+    renderPage();
+
+    await screen.findByText(/fica livre depois das alocações/);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Precisa de atenção')).not.toBeInTheDocument();
   });
 
   it('lists an overdue entry with how late it is', async () => {
@@ -400,21 +397,6 @@ describe('MainPage', () => {
   });
 
   // UC-4.1 — a cycle with nothing scheduled has no lowest point to name.
-  it('says so when there is no lowest point', async () => {
-    respondWith(
-      dashboard({
-        headline: {
-          ...dashboard().headline,
-          lowestPoint: null,
-          lowestPointDate: null,
-        },
-      }),
-    );
-
-    renderPage();
-
-    expect(await screen.findByText('nada agendado')).toBeInTheDocument();
-  });
 
   it('shows no bucket chips before there are any buckets', async () => {
     renderPage();
@@ -462,105 +444,10 @@ describe('MainPage', () => {
 });
 
 // UC-4.4 — one control, and every figure on the screen answers the same way.
-describe('MainPage answers the estimates toggle', () => {
-  const switchOff = async () =>
-    userEvent.click(screen.getByRole('button', { name: 'Com estimativas' }));
-
-  it('restates the headline from the confirmed figures', async () => {
-    respondWith(dashboard({ upcoming: [upcoming({ isEstimate: true })] }));
-    renderPage();
-
-    expect(
-      await screen.findByText(/fica livre depois das alocações/),
-    ).toHaveTextContent('R$ 9.110,00');
-
-    await switchOff();
-
-    // The reading is refetched rather than re-derived on the client, so the
-    // sentence arrives with the answer instead of changing in place.
-    await waitFor(() => {
-      const sentence = screen.getByText(/fica livre depois das alocações/);
-      expect(sentence).toHaveTextContent('R$ 7.610,00');
-      expect(sentence).toHaveTextContent('R$ 5.056,00');
-    });
-  });
-
-  it('restates the KPI tiles and the chain at the same moment', async () => {
-    respondWith(dashboard());
-    renderPage();
-
-    await screen.findByText('Lowest point in cycle');
-    expect(tiles().getByText('R$ 9.110,00')).toBeInTheDocument();
-
-    await switchOff();
-
-    expect(await tiles().findByText('R$ 7.610,00')).toBeInTheDocument();
-    // The chain strip closes at the confirmed figure too.
-    expect(
-      within(
-        screen.getByRole('region', { name: 'Cadeia de cálculo' }),
-      ).getByText('R$ 6.056,00'),
-    ).toBeInTheDocument();
-  });
-
-  it('drops the unconfirmed placeholders from what is due', async () => {
-    respondWith(
-      dashboard({
-        upcoming: [
-          upcoming({ description: 'Contractor Costs', isEstimate: true }),
-        ],
-      }),
-    );
-    renderPage();
-
-    expect(await screen.findByText('Contractor Costs')).toBeInTheDocument();
-
-    await switchOff();
-
-    expect(screen.queryByText('Contractor Costs')).not.toBeInTheDocument();
-  });
-});
-
-// UC-8 — the assistant is part of the screen, not a widget in the corner.
 describe('MainPage and the assistant', () => {
-  const alerts = [
-    {
-      severity: 'CRITICAL' as const,
-      title: 'Projected negative balance on 2026-09-28',
-      body: 'Setembro de 2026 runs to -R$ 2.013,22.',
-    },
-  ];
-
-  // UC-4.7 with UC-8: an alert is the thing most worth asking about.
-  it('opens the rail with the alert’s question already written', async () => {
-    respondWith(dashboard({ alerts }));
-    renderPage();
-
-    await userEvent.click(
-      await screen.findByRole('button', {
-        name: 'Perguntar sobre este alerta',
-      }),
-    );
-
-    expect(
-      screen.getByRole('log', { name: 'Conversa com o assistente' }),
-    ).toBeVisible();
-    expect(screen.getByLabelText('Pergunte sobre o seu dinheiro')).toHaveValue(
-      'Sobre “Projected negative balance on 2026-09-28”: Setembro de 2026 runs ' +
-        'to -R$ 2.013,22. Por que isso acontece, e o que mudaria isso?',
-    );
-    // The question is offered, never sent on the user's behalf.
-    expect(
-      screen.getByRole('log', { name: 'Conversa com o assistente' }),
-    ).toHaveTextContent('Nada perguntado ainda');
-    expect(
-      screen.getByLabelText('Pergunte sobre o seu dinheiro'),
-    ).toHaveFocus();
-  });
-
   // UC-8.5 — the figures are the app; the assistant is how you ask about them.
   it('leaves every figure working when the assistant is switched off', async () => {
-    respondWith(dashboard({ alerts }), { assistantAvailable: false });
+    respondWith(dashboard(), { assistantAvailable: false });
     renderPage();
 
     expect(
@@ -574,9 +461,6 @@ describe('MainPage and the assistant', () => {
     expect(screen.getByText(/O assistente está desligado/)).toBeVisible();
     expect(
       screen.queryByLabelText('Pergunte sobre o seu dinheiro'),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Perguntar sobre este alerta' }),
     ).not.toBeInTheDocument();
   });
 });

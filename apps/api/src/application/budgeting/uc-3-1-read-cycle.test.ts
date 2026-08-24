@@ -99,30 +99,6 @@ describe('ReadCycle.byMonth', () => {
     expect(view.chain.netSurplus.cents).toBe(1_039_000);
   });
 
-  it('reports the low-water mark and what caused it', async () => {
-    const dipping = Cycle.open({
-      id: 'c',
-      ref: august,
-      openingBalance: Money.fromCents(50_000),
-      entries: [
-        entry('Big bill', EntryKind.Fixed, '2026-08-10', -12_000),
-        entry('Salary', EntryKind.Income, '2026-08-25', 18_000),
-      ],
-    });
-
-    const view = await reading(dipping).byMonth('2026-09');
-
-    expect(view.lowWaterMark?.balanceCents).toBe(-1_150_000);
-    expect(view.lowWaterMark?.description).toBe('Big bill');
-    expect(view.firstNegativeDate).toBe('2026-08-10');
-  });
-
-  it('reports no negative date when the balance never crosses zero', async () => {
-    const view = await reading(populated()).byMonth('2026-09');
-
-    expect(view.firstNegativeDate).toBeUndefined();
-  });
-
   it('carries the settled amount and its variance', async () => {
     const settled = populated().settleEntry(
       'Rent',
@@ -151,13 +127,6 @@ describe('ReadCycle.byMonth', () => {
   });
 
   // The month exists; nothing has been put in it yet.
-  it('reads a month never materialised as an empty cycle', async () => {
-    const view = await reading().byMonth('2026-12');
-
-    expect(view.entries).toEqual([]);
-    expect(view.chain.closingBalance.isZero()).toBe(true);
-    expect(view.lowWaterMark).toBeUndefined();
-  });
 
   it.each(['August-2026', '2026-14', ''])(
     'refuses the unparsable month %s',

@@ -102,7 +102,6 @@ export function buildTestServer(
   );
   const buildDashboard = new BuildDashboard(
     cycles,
-    buckets,
     settings,
     noHolidays,
     clock,

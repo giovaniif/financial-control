@@ -127,7 +127,7 @@ const wire = (
 
   const reads = {
     cycle: new ReadCycle(cycles, settings, noHolidays, templates),
-    dashboard: new BuildDashboard(cycles, buckets, settings, noHolidays, clock),
+    dashboard: new BuildDashboard(cycles, settings, noHolidays, clock),
     cycles: new ListCycles(
       cycles,
       settings,

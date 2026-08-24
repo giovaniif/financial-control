@@ -119,6 +119,24 @@ afterEach(() => {
 });
 
 describe('AppShell', () => {
+  /**
+   * The estimates toggle is gone. It asked the user to hold two readings of
+   * every figure in their head, when the one place the difference matters —
+   * the closing balance — already states both on the headline.
+   */
+  it('offers no estimates toggle', async () => {
+    stubApi({ '/api/cycles': window_ });
+    renderShell();
+    await screen.findByText('screen body');
+
+    expect(
+      screen.queryByRole('button', { name: 'Com estimativas' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Somente confirmados' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('carries the screen title and its body', async () => {
     stubApi({ '/api/cycles': window_ });
     renderShell();
@@ -324,9 +342,6 @@ describe('AppShell and the assistant rail', () => {
 
     await openRail();
 
-    expect(
-      screen.getByRole('button', { name: 'Com estimativas' }),
-    ).toBeInTheDocument();
     expect(await screen.findByTitle(/Nas contas agora/)).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Ciclo anterior' }),
@@ -440,10 +455,6 @@ describe('AppShell on a phone', () => {
     expect(screen.queryByText('O próximo pagamento')).not.toBeInTheDocument();
     expect(
       screen.getByRole('heading', { level: 1, name: 'Principal' }),
-    ).toBeInTheDocument();
-    // Still reachable, still named — it just stopped spelling itself out.
-    expect(
-      screen.getByRole('button', { name: 'Com estimativas' }),
     ).toBeInTheDocument();
   });
 

@@ -118,13 +118,7 @@ export function createApp(): FastifyInstance {
   );
   const ledgerActions = new LedgerActions(cycles, settings, holidays);
   const manageBuckets = new ManageBuckets(buckets, cycles, settings, holidays);
-  const buildDashboard = new BuildDashboard(
-    cycles,
-    buckets,
-    settings,
-    holidays,
-    clock,
-  );
+  const buildDashboard = new BuildDashboard(cycles, settings, holidays, clock);
   const projectWealth = new ProjectWealth(buckets);
 
   return buildServer({

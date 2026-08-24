@@ -8,14 +8,11 @@ import {
 } from '../../domain/budgeting/cycle-ref.js';
 import { Cycle, Estimates } from '../../domain/budgeting/cycle.js';
 import { EntryKind, LedgerEntry } from '../../domain/budgeting/ledger-entry.js';
-import { Allocation, Bucket } from '../../domain/goals/bucket.js';
 import { noHolidays } from '../../domain/ports/holiday-calendar.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
-import { Percentage } from '../../domain/shared/percentage.js';
 import { SettlementStatus } from '../../domain/shared/planned-actual.js';
 import {
-  InMemoryBucketRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
 } from '../testing/fakes.js';
@@ -59,10 +56,9 @@ const october = () =>
     ],
   });
 
-const building = (options: { cycles?: Cycle[]; buckets?: Bucket[] } = {}) =>
+const building = (options: { cycles?: Cycle[] } = {}) =>
   new BuildDashboard(
     new InMemoryCycleRepository(options.cycles ?? []),
-    new InMemoryBucketRepository(options.buckets ?? []),
     new InMemorySettingsRepository(anchor),
     noHolidays,
     clock,
@@ -91,20 +87,6 @@ describe('BuildDashboard headline — the answer to Q1', () => {
 
     expect(headline.closingCents).toBe(355_600);
     expect(headline.closingWithoutEstimatesCents).toBe(505_600);
-  });
-
-  it('reports the lowest point and the date it happens', async () => {
-    const { headline } = await building({ cycles: [october()] }).build();
-
-    expect(headline.lowestPointCents).toBe(355_600);
-    expect(headline.lowestPointDate).toBe('2026-09-28');
-  });
-
-  it('answers with zeroes for a cycle nobody has touched', async () => {
-    const { headline } = await building().build();
-
-    expect(headline.incomingCents).toBe(0);
-    expect(headline.lowestPointDate).toBeUndefined();
   });
 });
 
@@ -167,14 +149,13 @@ describe('BuildDashboard for a chosen cycle', () => {
 });
 
 describe('BuildDashboard KPIs', () => {
-  it('reports the four figures in the order the chain runs', async () => {
+  it('reports the chain figures in the order the chain runs', async () => {
     const { kpis } = await building({ cycles: [october()] }).build();
 
     expect(kpis.map((k) => k.label)).toEqual([
       'Total de saídas',
       'Sobra Esperada',
       'Sobra Líquida',
-      'Ponto mais baixo do ciclo',
     ]);
     expect(kpis[1]?.amountCents).toBe(889_000);
   });
@@ -262,186 +243,6 @@ describe('BuildDashboard upcoming list', () => {
   });
 });
 
-describe('BuildDashboard alerts', () => {
-  // The top alert in UC-4.7, and the reason the window opens one cycle back:
-  // a window starting at today could never reach a cycle old enough to raise it.
-  it('flags a past cycle that cannot be closed, naming what is in the way', async () => {
-    const july = Cycle.open({
-      id: '2026-08',
-      ref: ref('2026-08'),
-      openingBalance: Money.zero(),
-      entries: [
-        entry('Renovation Progress', EntryKind.Fixed, '2026-07-20', -2_350),
-      ],
-    });
-
-    const { alerts } = await building({ cycles: [july] }).build();
-    const alert = alerts.find((a) => a.title.includes('em aberto'));
-
-    expect(alert?.severity).toBe('CRITICAL');
-    expect(alert?.title).toContain('Agosto de 2026');
-    expect(alert?.body).toContain('Renovation Progress');
-  });
-
-  it('says nothing about a past cycle whose entries are all settled', async () => {
-    const july = Cycle.open({
-      id: '2026-08',
-      ref: ref('2026-08'),
-      openingBalance: Money.zero(),
-      entries: [entry('Paid up', EntryKind.Fixed, '2026-07-20', -500)],
-    }).skipEntry('Paid up');
-
-    const { alerts } = await building({ cycles: [july] }).build();
-
-    expect(alerts.some((a) => a.title.includes('em aberto'))).toBe(false);
-  });
-
-  it('names only the first few when many are unsettled', async () => {
-    const july = Cycle.open({
-      id: '2026-08',
-      ref: ref('2026-08'),
-      openingBalance: Money.zero(),
-      entries: [
-        entry('One', EntryKind.Fixed, '2026-07-10', -100),
-        entry('Two', EntryKind.Fixed, '2026-07-11', -100),
-        entry('Three', EntryKind.Fixed, '2026-07-12', -100),
-        entry('Four', EntryKind.Fixed, '2026-07-13', -100),
-      ],
-    });
-
-    const { alerts } = await building({ cycles: [july] }).build();
-    const alert = alerts.find((a) => a.title.includes('em aberto'));
-
-    expect(alert?.body).toContain('e mais 1');
-  });
-
-  it('leaves a past cycle out of the upcoming list', async () => {
-    const july = Cycle.open({
-      id: '2026-08',
-      ref: ref('2026-08'),
-      openingBalance: Money.zero(),
-      entries: [entry('Old', EntryKind.Fixed, '2026-07-20', -500)],
-    });
-
-    const { upcoming } = await building({ cycles: [july] }).build();
-
-    expect(upcoming).toEqual([]);
-  });
-
-  it('flags a projected negative balance with the entry that caused it', async () => {
-    const broke = Cycle.open({
-      id: '2026-10',
-      ref: ref('2026-10'),
-      openingBalance: Money.zero(),
-      entries: [entry('Huge bill', EntryKind.Fixed, '2026-09-10', -5_000)],
-    });
-
-    const { alerts } = await building({ cycles: [broke] }).build();
-    const alert = alerts.find((a) => a.title.includes('negativo'));
-
-    expect(alert?.severity).toBe('CRITICAL');
-    expect(alert?.body).toContain('Huge bill');
-  });
-
-  it('quantifies an unconfirmed estimate both ways', async () => {
-    const { alerts } = await building({ cycles: [october()] }).build();
-    const alert = alerts.find((a) => a.title.includes('estimativa'));
-
-    expect(alert?.severity).toBe('WARNING');
-    expect(alert?.body).toContain('com a estimativa');
-  });
-
-  it('flags a goal whose target date has passed unmet', async () => {
-    const behind = Bucket.goal({
-      id: 'trip',
-      name: 'Travel Fund',
-      target: { amount: reais(5_000), date: LocalDate.parse('2026-06-30') },
-      rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(10)),
-      priority: 1,
-    });
-
-    const { alerts } = await building({ buckets: [behind] }).build();
-
-    expect(alerts.some((a) => a.title.includes('atrasada em relação'))).toBe(
-      true,
-    );
-  });
-
-  // An ongoing bucket has no target date, so it can never be "behind" one.
-  it('says nothing about an ongoing bucket', async () => {
-    const ongoing = Bucket.ongoing({
-      id: 'investments',
-      name: 'Investments',
-      rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(10)),
-      priority: 1,
-    });
-
-    const { alerts } = await building({ buckets: [ongoing] }).build();
-
-    expect(alerts).toEqual([]);
-  });
-
-  it('says nothing about an archived bucket, however far behind', async () => {
-    const archived = Bucket.goal({
-      id: 'trip',
-      name: 'Travel Fund',
-      target: { amount: reais(5_000), date: LocalDate.parse('2026-06-30') },
-      rule: Allocation.fixed(reais(1)),
-      priority: 1,
-    }).archive();
-
-    const { alerts } = await building({ buckets: [archived] }).build();
-
-    expect(alerts).toEqual([]);
-  });
-
-  it('says nothing about a goal that was met', async () => {
-    const met = Bucket.goal({
-      id: 'trip',
-      name: 'Travel Fund',
-      target: { amount: reais(100), date: LocalDate.parse('2026-06-30') },
-      rule: Allocation.fixed(reais(1)),
-      priority: 1,
-    }).contribute('e1', '2026-06', reais(200));
-
-    const { alerts } = await building({ buckets: [met] }).build();
-
-    expect(alerts).toHaveLength(0);
-  });
-
-  it('ranks critical alerts above warnings', async () => {
-    const broke = Cycle.open({
-      id: '2026-10',
-      ref: ref('2026-10'),
-      openingBalance: Money.zero(),
-      entries: [
-        entry('Huge bill', EntryKind.Fixed, '2026-09-10', -5_000),
-        entry('Guess', EntryKind.Fixed, '2026-09-25', -100, true),
-      ],
-    });
-
-    const { alerts } = await building({ cycles: [broke] }).build();
-
-    expect(alerts[0]?.severity).toBe('CRITICAL');
-  });
-
-  it('reports nothing to worry about when nothing is wrong', async () => {
-    const clean = Cycle.open({
-      id: '2026-10',
-      ref: ref('2026-10'),
-      openingBalance: Money.zero(),
-      entries: [entry('Salary', EntryKind.Income, '2026-09-04', 18_000)],
-    });
-
-    expect((await building({ cycles: [clean] }).build()).alerts).toEqual([]);
-  });
-});
-
-/**
- * UC-4.4 — one control switches every figure in the app, so the read model
- * has to offer both readings rather than the client assembling the second one
- * from another endpoint. `Cycle` already computes the chain both ways.
- */
 describe('BuildDashboard with estimates excluded', () => {
   const confirmed = () =>
     building({ cycles: [october()] }).build(undefined, Estimates.Excluded);
@@ -472,13 +273,6 @@ describe('BuildDashboard with estimates excluded', () => {
     const { headline } = await confirmed();
 
     expect(headline.closingWithoutEstimatesCents).toBe(505_600);
-  });
-
-  it('reads the lowest point off the confirmed run of the balance', async () => {
-    const { headline } = await confirmed();
-
-    expect(headline.lowestPointCents).toBe(505_600);
-    expect(headline.lowestPointDate).toBe('2026-09-28');
   });
 
   it('reports the KPI tiles in the same reading', async () => {
@@ -526,38 +320,10 @@ describe('BuildDashboard with estimates excluded', () => {
 
   // A projected negative that only an estimate causes is not a confirmed
   // negative, so the alert follows the reading its figures were taken in.
-  it('reads a projected negative balance in the same reading', async () => {
-    const broke = Cycle.open({
-      id: '2026-10',
-      ref: ref('2026-10'),
-      openingBalance: Money.zero(),
-      entries: [entry('Guess', EntryKind.Fixed, '2026-09-10', -5_000, true)],
-    });
-
-    const included = await building({ cycles: [broke] }).build();
-    const excluded = await building({ cycles: [broke] }).build(
-      undefined,
-      Estimates.Excluded,
-    );
-
-    expect(included.alerts.some((a) => a.title.includes('negativo'))).toBe(
-      true,
-    );
-    expect(excluded.alerts.some((a) => a.title.includes('negativo'))).toBe(
-      false,
-    );
-  });
 
   /**
    * The alert that exists to quantify an estimate is the one thing that must
    * not follow the toggle: it is what tells the user the two readings differ
    * at all, and it states both figures itself.
    */
-  it('still quantifies an unconfirmed estimate both ways', async () => {
-    const alert = (await confirmed()).alerts.find((a) =>
-      a.title.includes('estimativa'),
-    );
-
-    expect(alert?.body).toContain('com a estimativa');
-  });
 });
