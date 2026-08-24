@@ -426,6 +426,27 @@ describe('AppShell on a phone', () => {
     stubWidth(false);
   });
 
+  /**
+   * Three stacked rows of chrome — title, subtitle, cycle, toggle — was most
+   * of the fold on a phone before a single figure. The subtitle goes (it
+   * truncated to nothing useful anyway) and the toggle joins the title's row
+   * as an icon, leaving two rows: what screen this is, and which cycle.
+   */
+  it('spends two rows on the header, not four', async () => {
+    stubApi({ '/api/cycles': window_ });
+    renderShell();
+    await screen.findByText('screen body');
+
+    expect(screen.queryByText('O próximo pagamento')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Principal' }),
+    ).toBeInTheDocument();
+    // Still reachable, still named — it just stopped spelling itself out.
+    expect(
+      screen.getByRole('button', { name: 'Com estimativas' }),
+    ).toBeInTheDocument();
+  });
+
   it('keeps the nav behind a menu rather than beside the figures', async () => {
     stubApi({ '/api/cycles': window_ });
     renderShell();

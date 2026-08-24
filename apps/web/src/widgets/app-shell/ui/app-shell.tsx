@@ -37,10 +37,11 @@ export function AppShell({ title, subtitle, children }: Props) {
   const { isOpen } = useAssistantRail();
   const isWide = useMediaQuery(WIDE_ENOUGH_FOR_SHELL);
   const [isNavOpen, setIsNavOpen] = useState(false);
-  // The rail takes a third of the width. What is left has to seat the title
-  // and three controls on one line, and the subtitle is the only thing there
-  // that repeats what the screen already makes obvious.
-  const isTight = isWide && isOpen;
+  // Two ways to run out of room: the rail takes a third of a desktop, and a
+  // phone never had it. Both fold the same way — the controls become icons
+  // and the subtitle goes, being the one line that repeats what the screen
+  // already makes obvious.
+  const isTight = !isWide || isOpen;
 
   const dismissNav = () => {
     setIsNavOpen(false);
@@ -53,7 +54,7 @@ export function AppShell({ title, subtitle, children }: Props) {
       <AssistantRail />
       {!isOpen && <ChatTab />}
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex flex-col gap-3 border-b border-zinc-200 bg-white/85 px-4 py-3 backdrop-blur lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:gap-6 lg:px-8 lg:py-4">
+        <header className="sticky top-0 z-20 flex flex-col gap-2 border-b border-zinc-200 bg-white/85 px-4 py-2.5 backdrop-blur lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:gap-6 lg:px-8 lg:py-4">
           <div className="flex min-w-0 items-center gap-3">
             {!isWide && (
               <button
@@ -86,13 +87,18 @@ export function AppShell({ title, subtitle, children }: Props) {
                 <p className="truncate text-xs text-zinc-500">{subtitle}</p>
               )}
             </div>
+            {/* On a phone the toggle rides the title's row rather than
+                claiming one of its own. */}
+            {!isWide && (
+              <div className="ml-auto shrink-0">
+                <EstimatesToggle compact />
+              </div>
+            )}
           </div>
-          {/* The rail takes a third of the width, so what is left folds to
-              icons rather than wrapping onto a second row. */}
-          <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
-            {isTight && <AccountsTotal layout="compact" />}
+          <div className="flex w-full items-center gap-2 lg:w-auto lg:shrink-0">
+            {isWide && isOpen && <AccountsTotal layout="compact" />}
             <CycleNav />
-            <EstimatesToggle compact={isTight} />
+            {isWide && <EstimatesToggle compact={isTight} />}
           </div>
         </header>
         {/* The bottom padding clears the floating chat button, which sits over
