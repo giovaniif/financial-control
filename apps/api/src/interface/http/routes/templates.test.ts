@@ -60,8 +60,6 @@ describe('GET /templates', () => {
 
     expect(response.statusCode).toBe(200);
     expect(body.templates).toHaveLength(2);
-    expect(body.summary.fixedIncome).toBe(1_800_000);
-    expect(body.summary.fixedCommitment).toBe(32_000);
   });
 
   it('reports an empty list rather than failing', async () => {
@@ -70,7 +68,6 @@ describe('GET /templates', () => {
     ).json<TemplatesResponse>();
 
     expect(body.templates).toEqual([]);
-    expect(body.summary.activeOutcomeCount).toBe(0);
   });
 });
 

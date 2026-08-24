@@ -44,13 +44,6 @@ export function stubApi(routes: Record<string, StubRoute>): void {
     },
     '/api/templates': {
       templates: [],
-      summary: {
-        fixedCommitment: 0,
-        activeOutcomeCount: 0,
-        fixedIncome: 0,
-        unconfirmedEstimates: 0,
-        endingWithinTwelve: [],
-      },
     },
   };
   const table = { ...defaults, ...routes };

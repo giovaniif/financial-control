@@ -103,13 +103,6 @@ export function registerTemplateRoutes(
 
     return {
       templates: view.templates.map(toResponse),
-      summary: {
-        fixedCommitment: view.summary.fixedCommitmentCents,
-        activeOutcomeCount: view.summary.activeOutcomeCount,
-        fixedIncome: view.summary.fixedIncomeCents,
-        unconfirmedEstimates: view.summary.unconfirmedEstimatesCents,
-        endingWithinTwelve: [...view.summary.endingWithinTwelve],
-      },
     };
   });
 

@@ -36,7 +36,6 @@ export type {
   EditScope,
   TemplateResponse,
   TemplateStatus,
-  TemplateSummaryResponse,
   TemplatesResponse,
   ValueScheduleStepResponse,
 } from './templates.js';

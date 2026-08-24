@@ -194,12 +194,13 @@ mode this exists to prevent — and it applies to the assistant as much as to th
 
 **UC-2.7 — Review all commitments**
 One list: name, due day, amount, next occurrence, status, and the `~estimate` / `value schedule` tags.
-Sortable by amount. Above it, four figures that summarise the user's commitments:
+Sortable by amount.
 
-- **Fixed commitment per cycle** and how many active outcome templates make it up
-- **Fixed income per cycle**
-- **Unconfirmed estimates** — the total the user is guessing at
-- **Ending within 12 cycles** — what is about to fall off, and which
+The four summary figures that used to sit above it — fixed commitment, fixed income, unconfirmed estimates,
+and what ends within twelve cycles — are **removed**. Three of them totalled the list directly beneath them,
+which already carries every bill and its amount; the fourth reads "nothing ends" until end dates exist, which
+they do not by default. The cycle's own totals are on Main, where they are the answer to a question rather
+than a restatement of a list.
 
 A card's invoice is one of these bills, named for the card and due on the day it falls due. Its amount is set
 per cycle like any other bill whose figure moves (UC-2.3, UC-2.4).

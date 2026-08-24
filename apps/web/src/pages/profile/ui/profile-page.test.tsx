@@ -50,16 +50,7 @@ const internet = template({
   dueDayOfMonth: 20,
 });
 
-const withTemplates = (templates: TemplateResponse[]) => ({
-  templates,
-  summary: {
-    fixedCommitment: 32_000,
-    activeOutcomeCount: templates.length,
-    fixedIncome: 1_800_000,
-    unconfirmedEstimates: 28_000,
-    endingWithinTwelve: [],
-  },
-});
+const withTemplates = (templates: TemplateResponse[]) => ({ templates });
 
 const renderPage = () =>
   renderWithProviders(
@@ -97,7 +88,6 @@ describe('ProfilePage', () => {
     ).toEqual([
       'Dia do pagamento',
       'Contas',
-      'Compromissos por ciclo',
       'Salário',
       'Contas a pagar',
       'Formatação',
@@ -314,26 +304,25 @@ describe('ProfilePage', () => {
   });
 
   // UC-2.7 — the four figures that summarise what the user is committed to.
-  it('summarises what every cycle is already committed to', async () => {
+  /**
+   * The four commitment tiles were removed: they totalled the list directly
+   * beneath them, which the list already shows bill by bill, and the one
+   * figure they added — what ends within twelve cycles — read "nada se
+   * encerra" for anyone with no end dates set, which is everyone by default.
+   */
+  it('leaves the bills to speak for themselves, with no tiles above them', async () => {
     stubApi({
       '/api/settings/anchor': anchor,
       '/api/templates': withTemplates([salary, template(), electricity]),
     });
     renderPage();
 
-    const summary = await screen.findByRole('region', {
-      name: 'Compromissos por ciclo',
-    });
+    await screen.findByRole('region', { name: 'Contas a pagar' });
 
-    expect(within(summary).getByText('Compromisso fixo')).toBeInTheDocument();
-    expect(within(summary).getByText('Receita fixa')).toBeInTheDocument();
     expect(
-      within(summary).getByText('Estimativas não confirmadas'),
-    ).toBeInTheDocument();
-    expect(
-      within(summary).getByText('Encerrando em 12 ciclos'),
-    ).toBeInTheDocument();
-    expect(within(summary).getByText('R$ 18.000,00')).toBeInTheDocument();
+      screen.queryByRole('region', { name: 'Compromissos por ciclo' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Compromisso fixo')).not.toBeInTheDocument();
   });
 
   /**

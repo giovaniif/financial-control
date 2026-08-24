@@ -6,7 +6,6 @@ import { useSelectedCycle } from '@/features/navigate-cycle';
 import { Skeleton } from '@/shared/ui';
 
 import { BillList } from './bill-list.js';
-import { BillSummary } from './bill-summary.js';
 
 /**
  * UC-2 — the recurring money, in the two questions that are actually
@@ -30,8 +29,6 @@ export function BillsSection() {
 
   return (
     <>
-      <BillSummary summary={data.summary} />
-
       <BillList
         title="Salário"
         description="O que chega a cada ciclo. O dia em que cai é o dia do pagamento."
