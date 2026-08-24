@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { GeminiLanguageModel } from '../gemini/gemini-language-model.js';
 import { OllamaLanguageModel } from '../ollama/ollama-language-model.js';
 
 import { createLanguageModel } from './create-language-model.js';
@@ -73,5 +74,46 @@ describe('createLanguageModel against a local model', () => {
     expect(
       createLanguageModel({ OLLAMA_MODEL: 'qwen2.5:7b' }, MODELS.extraction),
     ).not.toBeInstanceOf(UnavailableLanguageModel);
+  });
+});
+
+/**
+ * FIN-133 — the third implementation, and the one the app runs on. It sits
+ * between the other two on purpose: a named local model is still the most
+ * deliberate choice, and a Gemini key beats an Anthropic key left in `.env`.
+ */
+describe('createLanguageModel against Gemini', () => {
+  it('builds the Gemini adapter when a key is configured', () => {
+    expect(
+      createLanguageModel({ GEMINI_API_KEY: 'AQ.test' }, MODELS.assistant),
+    ).toBeInstanceOf(GeminiLanguageModel);
+  });
+
+  it('prefers Gemini over a configured Anthropic key', () => {
+    expect(
+      createLanguageModel(
+        { ANTHROPIC_API_KEY: 'sk-ant-test', GEMINI_API_KEY: 'AQ.test' },
+        MODELS.extraction,
+      ),
+    ).toBeInstanceOf(GeminiLanguageModel);
+  });
+
+  it('still prefers a named local model over Gemini', () => {
+    expect(
+      createLanguageModel(
+        { GEMINI_API_KEY: 'AQ.test', OLLAMA_MODEL: 'qwen2.5:7b' },
+        MODELS.extraction,
+      ),
+    ).toBeInstanceOf(OllamaLanguageModel);
+  });
+
+  it.each([
+    ['unset', {}],
+    ['empty', { GEMINI_API_KEY: '' }],
+    ['whitespace', { GEMINI_API_KEY: '  ' }],
+  ])('does not build it when the key is %s', (_name, env) => {
+    expect(createLanguageModel(env, MODELS.extraction)).not.toBeInstanceOf(
+      GeminiLanguageModel,
+    );
   });
 });
