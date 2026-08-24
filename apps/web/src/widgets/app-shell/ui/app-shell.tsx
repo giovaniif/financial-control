@@ -37,6 +37,10 @@ export function AppShell({ title, subtitle, children }: Props) {
   const { isOpen } = useAssistantRail();
   const isWide = useMediaQuery(WIDE_ENOUGH_FOR_SHELL);
   const [isNavOpen, setIsNavOpen] = useState(false);
+  // The rail takes a third of the width. What is left has to seat the title
+  // and three controls on one line, and the subtitle is the only thing there
+  // that repeats what the screen already makes obvious.
+  const isTight = isWide && isOpen;
 
   const dismissNav = () => {
     setIsNavOpen(false);
@@ -49,7 +53,7 @@ export function AppShell({ title, subtitle, children }: Props) {
       <AssistantRail />
       {!isOpen && <ChatTab />}
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex flex-col gap-3 border-b border-zinc-200 bg-white/85 px-4 py-3 backdrop-blur lg:flex-row lg:items-end lg:justify-between lg:gap-6 lg:px-8 lg:py-4">
+        <header className="sticky top-0 z-20 flex flex-col gap-3 border-b border-zinc-200 bg-white/85 px-4 py-3 backdrop-blur lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:gap-6 lg:px-8 lg:py-4">
           <div className="flex min-w-0 items-center gap-3">
             {!isWide && (
               <button
@@ -78,13 +82,17 @@ export function AppShell({ title, subtitle, children }: Props) {
               <h1 className="truncate text-base font-semibold lg:text-lg">
                 {title}
               </h1>
-              <p className="truncate text-xs text-zinc-500">{subtitle}</p>
+              {!isTight && (
+                <p className="truncate text-xs text-zinc-500">{subtitle}</p>
+              )}
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {isWide && isOpen && <AccountsTotal layout="inline" />}
+          {/* The rail takes a third of the width, so what is left folds to
+              icons rather than wrapping onto a second row. */}
+          <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
+            {isTight && <AccountsTotal layout="compact" />}
             <CycleNav />
-            <EstimatesToggle />
+            <EstimatesToggle compact={isTight} />
           </div>
         </header>
         {/* The bottom padding clears the floating chat button, which sits over

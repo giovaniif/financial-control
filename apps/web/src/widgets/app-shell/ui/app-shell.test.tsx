@@ -306,6 +306,33 @@ describe('AppShell and the assistant rail', () => {
     expect(screen.getByRole('button', { name: 'Confirmar' })).toBeVisible();
   });
 
+  /**
+   * With the rail open the header has a third of its width taken, and three
+   * full-width controls beside a title wrapped onto a second row. They fold
+   * to icons instead — but an icon with no name is a worse header than a
+   * wrapped one, so each keeps the name it had.
+   */
+  it('keeps every header control named once they fold to icons', async () => {
+    stubApi({
+      '/api/cycles': window_,
+      '/api/accounts': {
+        accounts: [{ id: 'a', name: 'Inter', type: 'CHECKING', balance: 1 }],
+        total: 1,
+      },
+    });
+    renderShell();
+
+    await openRail();
+
+    expect(
+      screen.getByRole('button', { name: 'Com estimativas' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByTitle(/Nas contas agora/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Ciclo anterior' }),
+    ).toBeInTheDocument();
+  });
+
   // UC-1.2 — the figure the sidebar exists to keep permanently visible does
   // not become a tooltip when the nav folds to icons; it moves to the header.
   it('keeps the accounts total readable while the nav is collapsed', async () => {
@@ -324,7 +351,7 @@ describe('AppShell and the assistant rail', () => {
     await openRail();
 
     expect(screen.getByText('R$ 2.160,00')).toBeVisible();
-    expect(screen.getByText('Nas contas agora')).toBeVisible();
+    expect(screen.getByTitle(/Nas contas agora/)).toBeInTheDocument();
   });
 
   it('keeps a name on every nav item once the nav is icons only', async () => {
