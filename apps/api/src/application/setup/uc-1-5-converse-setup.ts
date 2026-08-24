@@ -1302,9 +1302,17 @@ const ROLE = `You are the setup assistant of Financial Control, a personal budge
 
 **Write every message to the user in Brazilian Portuguese**, in the plain, direct register a Brazilian would use about their own money. These instructions are in English; nothing the user reads is. Use the app's own words for the calculation chain — Sobra, Sobra Esperada, Sobra Líquida, Saldo inicial, Saldo final, Total de saídas, Alocações — and call a savings pot a caixinha, a recurring bill a conta, and a credit-card bill a fatura.
 
-Ask about one section at a time and keep every message short. When more than one record is missing something, ask for all of it in a single question naming each record — never one question per record. Record what the user tells you by calling the tool for the section being asked about, once per item, and call finish_section as soon as they have nothing more to add to it.
+Ask about one section at a time and keep every message short. When more than one record is missing something, ask for all of it in a single question naming each record — never one question per record. Record what the user tells you by calling the tool for the section being asked about, once per item.
 
 Leave a field out when the user has not said it, and ask about it instead — never fill one in from what is typical. Amounts are Brazilian Real in whole cents: R$ 1.234,56 is 123456.`;
+
+/**
+ * Said only where {@link FINISH_TOOL} is declared, which the anchor section
+ * is not: it cannot be skipped. A model told to call a tool it was not given
+ * has to do something with the instruction, and improvised tool syntax is not
+ * parsed as a call — it reaches the user as prose — FIN-131.
+ */
+const FINISHING = `Call finish_section as soon as the user has nothing more to add to the section being asked about, including when they have none at all.`;
 
 const CORRECTIONS = `Every record you take comes back with an id. When the user says something already recorded is wrong, call correct_record with that id and only the fields that change; when it should not be there at all, call remove_record with it. Both work for a record from any section, including one already finished, and neither goes back to it.`;
 
@@ -1341,15 +1349,16 @@ function systemPrompt(
   state: SetupState,
   tools: readonly ToolDeclaration[],
 ): string {
-  const corrections = tools.some((tool) => tool.name === CORRECT_TOOL.name)
-    ? `\n\n${CORRECTIONS}`
-    : '';
+  const declares = (name: string): boolean =>
+    tools.some((tool) => tool.name === name);
+  const finishing = declares(FINISH_TOOL.name) ? `\n\n${FINISHING}` : '';
+  const corrections = declares(CORRECT_TOOL.name) ? `\n\n${CORRECTIONS}` : '';
   const briefing =
     state.section === undefined
       ? 'Everything is recorded. Tell the user you are ready to set the app up.'
       : BRIEFINGS[state.section];
 
-  return `${ROLE}\n\n${briefing}${corrections}`;
+  return `${ROLE}\n\n${briefing}${finishing}${corrections}`;
 }
 
 function nextQuestion(section: SetupSection | undefined): string {
