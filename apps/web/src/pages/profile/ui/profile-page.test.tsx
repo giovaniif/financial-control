@@ -90,7 +90,6 @@ describe('ProfilePage', () => {
       'Contas',
       'Salário',
       'Contas a pagar',
-      'Formatação',
       'Backup',
     ]);
   });
@@ -394,15 +393,22 @@ describe('ProfilePage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('states the formatting conventions explicitly', async () => {
+  /**
+   * The formatting card is gone. It stated conventions the screen it sat on
+   * demonstrates on every row — the amounts above it are already `R$ 1.234,56`
+   * and already red when they are negative — so it taught by telling what the
+   * app was showing anyway.
+   */
+  it('demonstrates its formatting rather than tabulating it', async () => {
     stubApi({ '/api/settings/anchor': anchor });
     renderPage();
 
-    expect(await screen.findByText('R$ 1.234,56')).toBeInTheDocument();
-    expect(screen.getByText('dd/MM/yyyy')).toBeInTheDocument();
+    await screen.findByRole('region', { name: 'Backup' });
+
     expect(
-      screen.getByText('Agosto de 2026 (5 ago – 3 set)'),
-    ).toBeInTheDocument();
+      screen.queryByRole('region', { name: 'Formatação' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('dd/MM/yyyy')).not.toBeInTheDocument();
   });
 
   // UC-1.6 — nothing else takes snapshots, so this is the only way back.

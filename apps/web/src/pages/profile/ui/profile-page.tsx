@@ -3,7 +3,6 @@ import { AppShell } from '@/widgets/app-shell';
 import { AccountsSection } from './accounts-section.js';
 import { BackupSection } from './backup-section.js';
 import { BillsSection } from './bills-section.js';
-import { Formatting } from './formatting.js';
 import { PaydayAnchor } from './payday-anchor.js';
 import { RerunSetup } from './rerun-setup.js';
 
@@ -24,10 +23,7 @@ export function ProfilePage() {
           <AccountsSection />
         </div>
         <BillsSection />
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <Formatting />
-          <BackupSection />
-        </div>
+        <BackupSection />
         <RerunSetup />
       </div>
     </AppShell>

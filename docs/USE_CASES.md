@@ -114,9 +114,11 @@ be corrected manually at any time.
 **UC-1.3 — Configure credit cards** — *removed*
 Cards are not configured. A card's invoice is a recurring bill like any other — see UC-5.
 
-**UC-1.4 — Review formatting conventions**
-Read-only confirmation of how the app renders money, dates, outgoing amounts and cycle names. Not
-configurable in v1 — shown so the conventions are explicit.
+**UC-1.4 — Review formatting conventions** — *removed*
+A read-only table of how money, dates, negatives and cycle names render. Every screen demonstrates all four on
+every row it draws, so the table restated in words what the app was already showing in place. The conventions
+themselves are unchanged and are recorded in `.claude/code-style.md`, where the people who have to keep them
+will actually look.
 
 **UC-1.5 — Be set up by answering questions in plain language**
 The app ships empty, so an app that has never been configured opens on a conversation rather than on a
@@ -478,7 +480,7 @@ progress; the upcoming list with inline settle; bucket chips; alerts; and the as
 ### Profile
 Everything the user configures, in the order the first run asked for it: the payday anchor with its change
 preview and weekend rule, accounts, salary, the bills in due-day order with the unconfirmed ones tagged
-`~estimate`, the formatting reference, backup and restore, and the way back into the setup conversation.
+`~estimate`, backup and restore, and the way back into the setup conversation.
 *Primary action:* edit a bill. *Secondary:* re-enter the setup conversation. → UC-1, UC-2
 
 ### Investments & Savings — *the answer to Q2*
