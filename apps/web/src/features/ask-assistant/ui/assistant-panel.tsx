@@ -267,7 +267,10 @@ export function AssistantPanel() {
           Todos os números desta tela continuam funcionando sem ele.
         </p>
       ) : (
-        <form onSubmit={send} className="shrink-0 pt-2">
+        <form
+          onSubmit={send}
+          className="shrink-0 pt-2 pb-[env(safe-area-inset-bottom)]"
+        >
           <label htmlFor={questionId} className="sr-only">
             Pergunte sobre o seu dinheiro
           </label>
@@ -285,7 +288,7 @@ export function AssistantPanel() {
                 grow(event.target);
               }}
               onKeyDown={sendOnEnter}
-              className="max-h-40 min-h-6 flex-1 resize-none bg-transparent text-sm leading-6 text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
+              className="max-h-40 min-h-8 flex-1 resize-none bg-transparent py-1 text-sm leading-6 text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
             />
             <button
               type="submit"

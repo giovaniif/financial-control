@@ -52,16 +52,15 @@ export function AssistantRail() {
   }, [isSheet]);
 
   // Below 64rem a 380px column and a readable column of figures do not fit
-  // at once, so the chat rises as a sheet over the screen instead — reaching
-  // for the top of the viewport but not quite covering it, so what it is
-  // being asked about stays in sight behind it.
+  // at once, so the chat takes the screen instead. Not a sheet with the app
+  // showing above it: a conversation is where you are, not something laid
+  // over where you were, and a strip of unreachable header behind it only
+  // invited taps that went nowhere.
   const placement = isWide
     ? `sticky top-0 h-screen shrink-0 overflow-hidden border-r ${
         isOpen ? 'w-[380px]' : 'w-0'
       }`
-    : `fixed inset-x-0 top-16 bottom-0 z-40 rounded-t-2xl border-t shadow-2xl ${
-        isOpen ? 'translate-y-0' : 'translate-y-full'
-      }`;
+    : `fixed inset-0 z-50 ${isOpen ? 'translate-y-0' : 'translate-y-full'}`;
 
   return (
     <aside
@@ -86,12 +85,21 @@ export function AssistantRail() {
             Pergunte sobre qualquer número em qualquer tela
           </span>
         </div>
+        {/* Two different gestures, so two different icons: on a desktop this
+            folds a column back to its edge, and on a phone it leaves a screen
+            you are standing on. A chevron for the first reads as "collapse";
+            for the second the only thing that reads as "get me out" is a
+            cross, and it is worth a border to be found in a hurry. */}
         <button
           type="button"
           onClick={close}
           aria-expanded={isOpen}
           aria-controls={ASSISTANT_RAIL_ID}
-          className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+          className={`flex shrink-0 cursor-pointer items-center justify-center text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 ${
+            isWide
+              ? 'size-8 rounded-lg'
+              : 'size-10 rounded-full border border-zinc-200 bg-white text-zinc-700'
+          }`}
         >
           <svg
             viewBox="0 0 24 24"
@@ -101,9 +109,13 @@ export function AssistantRail() {
             strokeWidth={1.5}
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="size-5"
+            className={isWide ? 'size-5' : 'size-5.5'}
           >
-            <path d="M14.5 6 8.5 12l6 6" />
+            {isWide ? (
+              <path d="M14.5 6 8.5 12l6 6" />
+            ) : (
+              <path d="M6 6l12 12M18 6 6 18" />
+            )}
           </svg>
           <span className="sr-only">Fechar o assistente</span>
         </button>
