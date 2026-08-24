@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { AssistantPanel } from '@/features/ask-assistant';
 import { useMediaQuery } from '@/shared/lib';
 import { useAssistantRail, WIDE_ENOUGH_FOR_SHELL } from '@/shared/model';
@@ -26,6 +28,29 @@ export function AssistantRail() {
   const { isOpen, close } = useAssistantRail();
   const isWide = useMediaQuery(WIDE_ENOUGH_FOR_SHELL);
 
+  /**
+   * A sheet covers the screen it was opened from, so the screen behind must
+   * stop scrolling while it is up. `overscroll-contain` alone is not enough:
+   * it stops the transcript handing its scroll on at the ends, but a drag
+   * that starts anywhere else on the sheet still reaches the page.
+   *
+   * Only while it is actually a sheet — the desktop rail sits beside the
+   * figures, which must stay scrollable.
+   */
+  const isSheet = !isWide && isOpen;
+  useEffect(() => {
+    if (!isSheet) {
+      return;
+    }
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, [isSheet]);
+
   // Below 64rem a 380px column and a readable column of figures do not fit
   // at once, so the chat rises as a sheet over the screen instead — reaching
   // for the top of the viewport but not quite covering it, so what it is
@@ -49,7 +74,7 @@ export function AssistantRail() {
         transitionDuration: `${String(MOTION_MS)}ms`,
         transitionTimingFunction: EASE_SHEET,
       }}
-      className={`flex flex-col border-zinc-200 bg-zinc-50 motion-reduce:transition-none ${placement}`}
+      className={`flex flex-col overscroll-contain border-zinc-200 bg-zinc-50 motion-reduce:transition-none ${placement}`}
     >
       {/* The chrome keeps the rail's full width while the rail itself is
           collapsing, so the contents slide out of frame rather than reflowing

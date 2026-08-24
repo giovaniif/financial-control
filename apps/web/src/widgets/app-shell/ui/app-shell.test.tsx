@@ -419,6 +419,15 @@ describe('AppShell and the assistant rail', () => {
     expect(screen.getAllByText('Assistente')).toHaveLength(1);
   });
 
+  it('leaves the page scrollable beside the desktop rail', async () => {
+    stubApi({ '/api/cycles': window_ });
+    renderShell();
+
+    await openRail();
+
+    expect(document.body.style.overflow).toBe('');
+  });
+
   it('sits beside the content on a wide window', async () => {
     stubApi({ '/api/cycles': window_ });
     renderShell();
@@ -456,6 +465,27 @@ describe('AppShell on a phone', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Principal' }),
     ).toBeInTheDocument();
+  });
+
+  /**
+   * A sheet covers the screen it was opened from, so a drag inside it must
+   * not scroll that screen underneath — which is what the page did before,
+   * leaving the user's place in the figures lost behind the chat.
+   */
+  it('stops the page scrolling behind the chat sheet', async () => {
+    stubApi({ '/api/cycles': window_ });
+    renderShell();
+    await screen.findByText('screen body');
+
+    expect(document.body.style.overflow).toBe('');
+
+    await openRail();
+    expect(document.body.style.overflow).toBe('hidden');
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Fechar o assistente' }),
+    );
+    expect(document.body.style.overflow).toBe('');
   });
 
   it('keeps the nav behind a menu rather than beside the figures', async () => {
