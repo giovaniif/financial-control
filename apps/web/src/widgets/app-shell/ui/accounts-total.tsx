@@ -19,7 +19,9 @@ export function AccountsTotal({ layout = 'stacked' }: Props) {
   return (
     <div
       className={`flex rounded-lg border border-zinc-200 bg-white ${
-        isInline ? 'items-center gap-2 px-3 py-1.5' : 'flex-col gap-1 p-3'
+        isInline
+          ? 'shrink-0 items-center gap-2 px-3 py-1.5 whitespace-nowrap'
+          : 'flex-col gap-1 p-3'
       }`}
     >
       <span className="text-[10px] font-semibold tracking-widest text-zinc-400 uppercase">

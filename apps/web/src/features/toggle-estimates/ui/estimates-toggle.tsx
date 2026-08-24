@@ -14,7 +14,7 @@ export function EstimatesToggle() {
       type="button"
       onClick={toggle}
       aria-pressed={including}
-      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+      className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
         including
           ? 'border-amber-200 bg-amber-50 text-amber-800'
           : 'border-zinc-200 bg-white text-zinc-600'
