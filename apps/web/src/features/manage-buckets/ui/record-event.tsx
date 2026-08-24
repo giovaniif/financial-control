@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { parseBRL } from '@/shared/lib';
+import { maskBRL, parseBRL, selectAll, todayIso } from '@/shared/lib';
 import { Button, Dialog, Field } from '@/shared/ui';
 
 import { useRecordBucketEvent } from '../api/use-manage-buckets.js';
@@ -70,7 +70,9 @@ function Form({
   const record = useRecordBucketEvent(bucketId);
   const [label, setLabel] = useState<Label>('Ajuste neste ciclo');
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState('');
+  // An empty date passes the route's type check and then fails to parse,
+  // which reached the user as a button that did nothing.
+  const [date, setDate] = useState(todayIso);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string>();
 
@@ -127,9 +129,11 @@ function Form({
         label="Valor"
         value={amount}
         placeholder="1.234,56"
+        inputMode="decimal"
         onChange={(event) => {
-          setAmount(event.target.value);
+          setAmount(maskBRL(event.target.value));
         }}
+        onFocus={selectAll}
         {...(kind === 'OVERRIDE'
           ? { hint: `Em vez da regra, só para ${month}` }
           : {})}
@@ -160,6 +164,14 @@ function Form({
           hint="Obrigatório — um saldo que muda sem deixar rastro é o que isto substitui"
           {...(error === undefined ? {} : { error })}
         />
+      )}
+
+      {record.isError && (
+        <p role="alert" className="text-xs text-red-700">
+          {record.error instanceof Error
+            ? record.error.message
+            : 'Não foi possível registrar.'}
+        </p>
       )}
 
       <Button variant="primary" type="submit" disabled={record.isPending}>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatBRL, formatBRLCompact, parseBRL } from './money.js';
+import { formatBRL, formatBRLCompact, maskBRL, parseBRL } from './money.js';
 
 // Intl separates `R$` from the digits with a non-breaking space.
 const plain = (value: string) => value.replace(/\u00a0/g, ' ');
@@ -54,5 +54,27 @@ describe('parseBRL', () => {
   it('does not go through a float', () => {
     expect(parseBRL('0,07')).toBe(7);
     expect(parseBRL('1.000.000,01')).toBe(100_000_001);
+  });
+});
+
+describe('maskBRL', () => {
+  it.each([
+    ['fills from the right', '3', '0,03'],
+    ['carries into reais', '300', '3,00'],
+    ['groups thousands', '300000', '3.000,00'],
+    ['ignores separators the user typed', '3.000,00', '3.000,00'],
+    ['drops leading zeroes rather than keeping them', '000300', '3,00'],
+    ['reads an empty field as empty, not as zero', '', ''],
+    ['keeps a minus while it is still being typed', '-', '-'],
+    ['keeps the sign on a negative figure', '-2700', '-27,00'],
+  ])('%s', (_name, typed, shown) => {
+    expect(maskBRL(typed)).toBe(shown);
+  });
+
+  /** Whatever it leaves in the field, `parseBRL` has to accept. */
+  it('always leaves the field parseable', () => {
+    for (const typed of ['3', '300', '300000', '000300', '-2700']) {
+      expect(parseBRL(maskBRL(typed))).not.toBeNull();
+    }
   });
 });

@@ -47,3 +47,26 @@ export function parseBRL(input: string): Cents | null {
 
   return negative ? -magnitude : magnitude;
 }
+
+/**
+ * What a money field shows as it is typed: digits fill from the right, so
+ * `300000` reads back as `3.000,00`.
+ *
+ * The alternative is letting the user type the separators and forgiving them
+ * afterwards, which is how a field ends up holding `0,003000` — text that
+ * looks like a number and parses as nothing. Here every keystroke leaves the
+ * field holding something {@link parseBRL} accepts.
+ */
+export function maskBRL(input: string): string {
+  const isNegative = input.trimStart().startsWith('-');
+  const digits = input
+    .replace(/\D/g, '')
+    .replace(/^0+(?=\d)/, '')
+    .slice(0, 12);
+
+  if (digits === '') {
+    return isNegative ? '-' : '';
+  }
+
+  return `${isNegative ? '-' : ''}${formatBRL(Number(digits)).replace(/^R\$\s*/u, '')}`;
+}

@@ -1,7 +1,13 @@
 import type { Cents } from '@fin/contracts';
 import { useState } from 'react';
 
-import { formatBRL, parseBRL, selectAll } from '@/shared/lib';
+import {
+  formatBRL,
+  maskBRL,
+  parseBRL,
+  selectAll,
+  todayIso,
+} from '@/shared/lib';
 import { Button, Dialog, Field } from '@/shared/ui';
 
 import { useRecordBucketEvent } from '../api/use-manage-buckets.js';
@@ -90,7 +96,14 @@ function Form({
     }
 
     record.mutate(
-      { kind: 'CORRECTION', amount: Math.abs(cents), reason: reason.trim() },
+      {
+        kind: 'CORRECTION',
+        amount: Math.abs(cents),
+        // The event log is ordered by date, so a correction has to say when it
+        // was observed. The route requires it.
+        date: todayIso(),
+        reason: reason.trim(),
+      },
       { onSuccess: onDone },
     );
   };
@@ -103,8 +116,9 @@ function Form({
         label="Saldo observado"
         value={amount}
         placeholder="1.234,56"
+        inputMode="decimal"
         onChange={(event) => {
-          setAmount(event.target.value);
+          setAmount(maskBRL(event.target.value));
         }}
         onFocus={selectAll}
         hint="O que a caixinha tem de verdade, não a diferença"
@@ -120,6 +134,16 @@ function Form({
         hint="Obrigatório — um saldo que muda sem deixar rastro é o que isto substitui"
         {...(error !== undefined && isReasonMissing ? { error } : {})}
       />
+
+      {/* A refused correction is said out loud rather than leaving the
+          dialog looking like a button that does nothing. */}
+      {record.isError && (
+        <p role="alert" className="text-xs text-red-700">
+          {record.error instanceof Error
+            ? record.error.message
+            : 'Não foi possível corrigir o saldo.'}
+        </p>
+      )}
 
       <Button variant="primary" type="submit" disabled={record.isPending}>
         Corrigir

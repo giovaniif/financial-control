@@ -95,6 +95,68 @@ describe('CorrectBalance', () => {
     expect(bodyOf(fetchMock)).toMatchObject({ amount: 300_000 });
   });
 
+  /**
+   * The route requires a date for a correction, and the dialog never asked
+   * for one — so every "Corrigir" answered 400 and, with nothing rendering
+   * the failure, looked like a button that did nothing at all.
+   */
+  it('stamps the correction with the day it was made', async () => {
+    const fetchMock = stubPost();
+    render();
+
+    await open();
+    await userEvent.type(screen.getByLabelText('Motivo'), 'extrato');
+    await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    expect(bodyOf(fetchMock)['date']).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  /** A refused correction says so; it does not leave the dialog sitting there. */
+  it('says so when the correction is refused', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ error: 'Motivo é obrigatório.' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        ),
+      ),
+    );
+    render();
+
+    await open();
+    await userEvent.type(screen.getByLabelText('Motivo'), 'extrato');
+    await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Motivo é obrigatório.',
+    );
+  });
+
+  /**
+   * Digits fill from the right, as every Brazilian money field does: the user
+   * types 300000 and reads R$ 3.000,00 back, rather than typing separators
+   * the parser then has to forgive.
+   */
+  it('formats what is typed as money, and asks for a number pad', async () => {
+    stubPost();
+    render();
+
+    await open();
+    const field = screen.getByLabelText('Saldo observado');
+    expect(field).toHaveAttribute('inputMode', 'decimal');
+
+    await userEvent.clear(field);
+    await userEvent.type(field, '300000');
+
+    expect(field).toHaveValue('3.000,00');
+  });
+
   it('records the observed balance with its reason', async () => {
     const fetchMock = stubPost();
     render();

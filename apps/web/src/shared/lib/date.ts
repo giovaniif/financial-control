@@ -82,3 +82,18 @@ export function shiftMonth(month: string, by: number): string {
 
   return `${String(shifted.getUTCFullYear())}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}`;
 }
+
+/**
+ * Today, as `YYYY-MM-DD` in the machine's own timezone.
+ *
+ * Built from the local parts rather than `toISOString`, which is UTC: an
+ * evening in Brazil is already tomorrow in UTC, and a correction stamped with
+ * tomorrow's date would sort ahead of events that actually followed it.
+ */
+export function todayIso(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+
+  return `${String(now.getFullYear())}-${month}-${day}`;
+}
