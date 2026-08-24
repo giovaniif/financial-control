@@ -18,7 +18,7 @@ interface Props {
 export function Badge({ children, tone = 'neutral' }: Props) {
   return (
     <span
-      className={`rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${tones[tone]}`}
+      className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide whitespace-nowrap uppercase ${tones[tone]}`}
     >
       {children}
     </span>

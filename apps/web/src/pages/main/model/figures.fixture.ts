@@ -11,8 +11,6 @@ export const dashboard = (): DashboardResponse => ({
     incoming: 1_800_000,
     outgoing: 911_000,
     free: 355_600,
-    lowestPoint: 200_000,
-    lowestPointDate: '2026-09-28',
     closing: 355_600,
     closingWithoutEstimates: 505_600,
   },
@@ -56,5 +54,4 @@ export const dashboard = (): DashboardResponse => ({
       daysLate: 0,
     },
   ],
-  alerts: [],
 });

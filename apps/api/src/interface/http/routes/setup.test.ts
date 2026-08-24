@@ -18,7 +18,7 @@ import type {
   SetupState,
 } from '../../../application/setup/uc-1-5-converse-setup.js';
 import { ConverseSetup } from '../../../application/setup/uc-1-5-converse-setup.js';
-import { BackupRestore } from '../../../application/backup/uc-1-6-backup-restore.js';
+import { WriteSetupDocument } from '../../../application/setup/write-setup-document.js';
 import type { ScriptedTurn } from '../../../application/testing/fake-language-model.js';
 import { FakeLanguageModel } from '../../../application/testing/fake-language-model.js';
 import {
@@ -26,7 +26,6 @@ import {
   FakeSpendLedger,
   InMemoryAccountRepository,
   InMemoryBucketRepository,
-  InMemoryCardRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
@@ -54,7 +53,6 @@ function readSetupState(accounts: InMemoryAccountRepository): ReadSetupState {
     new InMemorySettingsRepository(),
     accounts,
     new InMemoryTemplateRepository(),
-    new InMemoryCardRepository(),
     new InMemoryBucketRepository(),
   );
 }
@@ -84,15 +82,13 @@ function wire(
     clock,
     budget.maxTokensPerDay ?? NO_CEILING,
   );
-  const backup = new BackupRestore(
+  const backup = new WriteSetupDocument(
     new InMemoryCycleRepository(),
     new InMemoryAccountRepository(),
     new InMemoryTemplateRepository(),
-    new InMemoryCardRepository(),
     new InMemoryBucketRepository(),
     new InMemorySettingsRepository(),
     noHolidays,
-    clock,
   );
 
   return {
@@ -178,7 +174,6 @@ function completedState(): SetupState {
     .withSalary(Money.fromCents(1_800_000))
     .skip('FIXED_BILLS')
     .skip('VARIABLE_BILLS')
-    .skip('CARDS')
     .skip('BUCKETS');
 
   return { draft, section: undefined };
@@ -194,7 +189,6 @@ describe('GET /setup', () => {
     expect(response.json<SetupStateResponse>()).toEqual({
       anchorConfigured: false,
       accounts: 0,
-      cards: 0,
       templates: 0,
       buckets: 0,
       isPristine: true,
@@ -368,7 +362,6 @@ describe('POST /setup/conversation/:id/apply', () => {
       shiftPolicy: 'PRECEDING',
       accounts: 1,
       templates: 1,
-      cards: 0,
       buckets: 0,
     });
   });
@@ -645,27 +638,6 @@ describe('DELETE /setup/conversation/:id/records/:recordId', () => {
 
     expect(response.statusCode).toBe(404);
   });
-
-  /** The card that is paid from it has to go or be corrected first. */
-  it('answers a removal the draft refuses with 400', async () => {
-    const { app, conversations } = wire(new FakeLanguageModel([]));
-    const draft = establishedState().draft.addCard({
-      name: 'Inter',
-      limit: Money.fromCents(1_000_000),
-      closingDay: 28,
-      dueDay: 10,
-      paymentAccountName: 'Checking',
-    });
-    await holding(conversations, { draft, section: 'CARDS' });
-
-    const response = await app.inject({
-      method: 'DELETE',
-      url: '/setup/conversation/conv-1/records/rec-1',
-    });
-
-    expect(response.statusCode).toBe(400);
-    expect(response.json<{ error: string }>().error).toContain('Inter');
-  });
 });
 
 describe('POST /setup/conversation — the spend ceiling', () => {
@@ -788,13 +760,6 @@ describe('what an established record carries across the wire', () => {
         amount: Money.fromCents(28_000),
         dueDayOfMonth: 15,
       })
-      .addCard({
-        name: 'Inter',
-        limit: Money.fromCents(1_000_000),
-        closingDay: 28,
-        dueDay: 10,
-        paymentAccountName: 'Checking',
-      })
       .addOngoingBucket({
         name: 'Investments',
         rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(20)),
@@ -843,20 +808,8 @@ describe('what an established record carries across the wire', () => {
       },
     ],
     [
-      'a card',
-      'rec-4',
-      'Inter — limite de R$ 10.000,00, fecha no dia 28, vence no dia 10, pago por Checking.',
-      {
-        name: 'Inter',
-        limit: 1_000_000,
-        closingDay: 28,
-        dueDay: 10,
-        paymentAccountName: 'Checking',
-      },
-    ],
-    [
       'an ongoing bucket',
-      'rec-5',
+      'rec-4',
       'Investments — 20 % da Sobra Esperada por ciclo, prioridade #1.',
       {
         mode: 'ONGOING',
@@ -867,7 +820,7 @@ describe('what an established record carries across the wire', () => {
     ],
     [
       'a goal bucket',
-      'rec-6',
+      'rec-5',
       'Apartment — R$ 1.778,00 por ciclo rumo a R$ 150.000,00 até 2031-03-05, prioridade #2.',
       {
         mode: 'GOAL',

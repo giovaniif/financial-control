@@ -8,7 +8,6 @@ import {
 import { Cycle } from '../../domain/budgeting/cycle.js';
 import { EntryKind, LedgerEntry } from '../../domain/budgeting/ledger-entry.js';
 import { Direction } from '../../domain/budgeting/recurring-template.js';
-import { Card } from '../../domain/cards/card.js';
 import { Allocation, Bucket } from '../../domain/goals/bucket.js';
 import { noHolidays } from '../../domain/ports/holiday-calendar.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
@@ -25,12 +24,10 @@ import {
   CycleNotFound,
   LedgerActions,
 } from '../budgeting/uc-3-ledger-actions.js';
-import { ManageCards } from '../cards/uc-5-manage-cards.js';
 import { ManageBuckets } from '../goals/uc-6-manage-buckets.js';
 import {
   FakeProposalStore,
   InMemoryBucketRepository,
-  InMemoryCardRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
@@ -77,16 +74,6 @@ const wire = () => {
     }),
   ]);
   const templates = new InMemoryTemplateRepository();
-  const cards = new InMemoryCardRepository([
-    Card.open({
-      id: 'inter',
-      name: 'Inter',
-      limit: reais(20_000),
-      closingDay: 28,
-      dueDay: 10,
-      paymentAccountId: 'checking',
-    }),
-  ]);
   const buckets = new InMemoryBucketRepository([
     Bucket.goal({
       id: 'reserve',
@@ -106,7 +93,6 @@ const wire = () => {
     new LedgerActions(cycles, settings, noHolidays, newId),
     new ManageTemplates(templates, cycles, settings, noHolidays, clock, newId),
     new ConfigurePaydayAnchor(settings, cycles, noHolidays, clock),
-    new ManageCards(cards, cycles, settings, noHolidays, newId),
     new ManageBuckets(buckets, cycles, settings, noHolidays, newId),
     clock,
   );
@@ -134,7 +120,6 @@ const wire = () => {
     shown,
     cycles,
     templates,
-    cards,
     buckets,
     settings,
     proposals,
@@ -232,27 +217,6 @@ describe('ApplyProposal — every kind routes into the use case that owns it', (
     );
     expect(added?.amount.planned.cents).toBe(-30_000);
     expect(added?.isEstimate).toBe(true);
-  });
-
-  it('registers a purchase split across instalments (UC-5.1, UC-5.2)', async () => {
-    const { apply, shown, cards } = wire();
-
-    await apply.confirm(
-      me,
-      await shown({
-        kind: 'REGISTER_PURCHASE',
-        cardId: 'inter',
-        description: 'Laptop',
-        purchasedOn: LocalDate.parse('2026-08-18'),
-        amount: reais(-6_000),
-        installments: 10,
-      }),
-    );
-
-    const card = await cards.findById('inter');
-    const items = (card?.invoices ?? []).flatMap((invoice) => invoice.items);
-    expect(items).toHaveLength(10);
-    expect(items[0]?.description).toBe('Laptop');
   });
 
   it('creates a recurring template (UC-2.1)', async () => {

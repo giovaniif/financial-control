@@ -33,13 +33,6 @@ const draft = SetupDraft.empty(
     amount: Money.fromCents(28_000),
     dueDayOfMonth: 15,
   })
-  .addCard({
-    name: 'Inter',
-    limit: Money.fromCents(1_000_000),
-    closingDay: 28,
-    dueDay: 10,
-    paymentAccountName: 'Checking',
-  })
   .addOngoingBucket({
     name: 'Investments',
     rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(20)),
@@ -104,18 +97,6 @@ describe('a record states the same thing in its fields as in its sentence', () =
     });
   });
 
-  it('a card — both days and the account that pays it', () => {
-    const established = establishedOf(held('Inter'));
-
-    expect(established.summary).toBe(
-      'Inter — limite de R$ 10.000,00, fecha no dia 28, vence no dia 10, pago por Checking.',
-    );
-    expect(established).toMatchObject({
-      section: 'CARDS',
-      record: { closingDay: 28, dueDay: 10, paymentAccountName: 'Checking' },
-    });
-  });
-
   it('an ongoing bucket — a share, and no target to reach', () => {
     const established = establishedOf(held('Investments'));
 
@@ -141,7 +122,7 @@ describe('a record states the same thing in its fields as in its sentence', () =
   });
 
   it('names the record a correction addresses by the id the draft issued', () => {
-    expect(establishedOf(held('Inter')).id).toBe(held('Inter').record.id);
+    expect(establishedOf(held('Checking')).id).toBe(held('Checking').record.id);
   });
 });
 

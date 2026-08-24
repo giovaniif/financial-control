@@ -151,7 +151,6 @@ describe('describeOrigin', () => {
   it.each([
     [Origin.manual(), 'entered by hand'],
     [Origin.fromTemplate('tpl-7'), 'generated from template tpl-7'],
-    [Origin.fromInvoice('inv-3'), 'the invoice inv-3'],
     [Origin.fromAllocation('reserve'), 'allocated to bucket reserve'],
   ])('describes %o', (origin, expected) => {
     expect(describeOrigin(origin)).toBe(expected);

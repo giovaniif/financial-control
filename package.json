@@ -7,12 +7,13 @@
     "node": ">=24.11.1 <25"
   },
   "scripts": {
-    "dev": "turbo run dev",
-    "check": "turbo run lint typecheck build format:check && turbo run test -- --coverage",
+    "dev": "pnpm run --silent tmpdir && TMPDIR=\"$PWD/.tmp\" turbo run dev",
+    "check": "pnpm run --silent tmpdir && TMPDIR=\"$PWD/.tmp\" turbo run lint typecheck build format:check && TMPDIR=\"$PWD/.tmp\" turbo run test -- --coverage",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "tmpdir": "mkdir -p .tmp",
+    "test": "pnpm run --silent tmpdir && TMPDIR=\"$PWD/.tmp\" turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:up": "docker compose up -d",

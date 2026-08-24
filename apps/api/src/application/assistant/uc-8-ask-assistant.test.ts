@@ -127,7 +127,7 @@ const wire = (
 
   const reads = {
     cycle: new ReadCycle(cycles, settings, noHolidays, templates),
-    dashboard: new BuildDashboard(cycles, buckets, settings, noHolidays, clock),
+    dashboard: new BuildDashboard(cycles, settings, noHolidays, clock),
     cycles: new ListCycles(
       cycles,
       settings,
@@ -297,7 +297,6 @@ describe('AskAssistant — the tool set', () => {
       'project_wealth',
       'propose_settle_entry',
       'propose_add_entry',
-      'propose_register_purchase',
       'propose_recurring_template',
       'propose_template_amount_change',
       'propose_payday_anchor_change',
@@ -331,9 +330,6 @@ describe('AskAssistant — the tool set', () => {
         'dueDate',
         'amountInCents',
         'isEstimate',
-        'cardId',
-        'purchasedOn',
-        'installments',
         'name',
         'direction',
         'dueDayOfMonth',
@@ -723,25 +719,6 @@ describe('AskAssistant — proposing a change it may not make', () => {
         dueDate: LocalDate.parse('2026-09-20'),
         amount: Money.fromCents(-30_000),
         isEstimate: false,
-      },
-    ],
-    [
-      'a purchase in instalments',
-      'propose_register_purchase',
-      {
-        cardId: 'inter',
-        description: 'Laptop',
-        purchasedOn: '2026-08-18',
-        amountInCents: -600_000,
-        installments: 10,
-      },
-      {
-        kind: 'REGISTER_PURCHASE',
-        cardId: 'inter',
-        description: 'Laptop',
-        purchasedOn: LocalDate.parse('2026-08-18'),
-        amount: Money.fromCents(-600_000),
-        installments: 10,
       },
     ],
     [

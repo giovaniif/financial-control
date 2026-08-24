@@ -52,15 +52,6 @@ export type ProposedChange =
       readonly amount: Money;
       readonly isEstimate: boolean;
     }
-  /** UC-5.1, UC-5.2 */
-  | {
-      readonly kind: 'REGISTER_PURCHASE';
-      readonly cardId: string;
-      readonly description: string;
-      readonly purchasedOn: LocalDate;
-      readonly amount: Money;
-      readonly installments: number;
-    }
   /** UC-2.1, UC-2.2 */
   | {
       readonly kind: 'CREATE_TEMPLATE';
@@ -137,12 +128,6 @@ export function summarise(change: ProposedChange): string {
       }.`;
     case 'ADD_ENTRY':
       return `Adicionar “${change.description}” ao ciclo ${change.month} — ${ENTRY_KINDS[change.entryKind]} de ${money(change.amount)} com vencimento em ${change.dueDate.toISO()}${estimate(change.isEstimate)}.`;
-    case 'REGISTER_PURCHASE':
-      return `Registrar “${change.description}” de ${money(change.amount)} no cartão ${change.cardId}, comprada em ${change.purchasedOn.toISO()}, em ${
-        change.installments === 1
-          ? 'uma parcela'
-          : `${String(change.installments)} parcelas`
-      }.`;
     case 'CREATE_TEMPLATE':
       return `Criar ${change.direction === Direction.In ? 'a entrada recorrente' : 'a saída recorrente'} “${change.name}” de ${money(change.amount)} no dia ${String(change.dueDayOfMonth)}, a partir do ciclo ${change.startMonth ?? 'atual'}${
         change.endMonth === undefined ? '' : ` até o ciclo ${change.endMonth}`
@@ -176,7 +161,6 @@ export function summarise(change: ProposedChange): string {
 const ENTRY_KINDS: Record<EntryKind, string> = {
   INCOME: 'uma entrada',
   FIXED: 'uma conta fixa',
-  INVOICE: 'uma fatura',
   VARIABLE: 'um lançamento variável',
   ALLOCATION: 'uma alocação',
 };

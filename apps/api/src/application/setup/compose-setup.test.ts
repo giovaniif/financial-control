@@ -7,13 +7,12 @@ import { noHolidays } from '../../domain/ports/holiday-calendar.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
 import { Percentage } from '../../domain/shared/percentage.js';
-import { BackupRestore } from '../backup/uc-1-6-backup-restore.js';
+import { WriteSetupDocument } from './write-setup-document.js';
 import {
   FakeSetupConversationStore,
   SequentialIdSource,
   InMemoryAccountRepository,
   InMemoryBucketRepository,
-  InMemoryCardRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
@@ -52,13 +51,6 @@ const complete = (): SetupDraft =>
       amount: Money.fromCents(-28_000),
       dueDayOfMonth: 15,
     })
-    .addCard({
-      name: 'Inter',
-      limit: Money.fromCents(1_000_000),
-      closingDay: 28,
-      dueDay: 10,
-      paymentAccountName: 'Checking',
-    })
     .addOngoingBucket({
       name: 'Investments',
       rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(20)),
@@ -88,7 +80,7 @@ describe('composeSetup', () => {
   it('carries the anchor and the accounts across', () => {
     const document = composeSetup(complete(), NOW);
 
-    expect(document.exportedAt).toBe(NOW);
+    expect(document.composedAt).toBe(NOW);
     expect(document.anchor).toEqual({
       anchorDay: 5,
       shiftPolicy: ShiftPolicy.Preceding,
@@ -146,23 +138,6 @@ describe('composeSetup', () => {
       dueDayOfMonth: 15,
       isEstimate: true,
     });
-  });
-
-  it('resolves the card to the account that pays it', () => {
-    const document = composeSetup(complete(), NOW);
-
-    expect(document.cards).toEqual([
-      {
-        id: 'card-1',
-        name: 'Inter',
-        limit: 1_000_000,
-        closingDay: 28,
-        dueDay: 10,
-        paymentAccountId: 'acc-1',
-        invoices: [],
-        plans: [],
-      },
-    ]);
   });
 
   /**
@@ -270,7 +245,6 @@ describe('composeSetup', () => {
       .skip(SetupSection.Salary)
       .skip(SetupSection.FixedBills)
       .skip(SetupSection.VariableBills)
-      .skip(SetupSection.Cards)
       .skip(SetupSection.Buckets);
 
     expect(composeSetup(draft, NOW).templates).toEqual([]);
@@ -281,27 +255,23 @@ describe('CompleteSetup', () => {
   const wire = () => {
     const accounts = new InMemoryAccountRepository();
     const templates = new InMemoryTemplateRepository();
-    const cards = new InMemoryCardRepository();
     const buckets = new InMemoryBucketRepository();
     const settings = new InMemorySettingsRepository();
     const conversations: SetupConversations = new FakeSetupConversationStore();
     const cycles = new InMemoryCycleRepository();
 
-    const restore = new BackupRestore(
+    const restore = new WriteSetupDocument(
       cycles,
       accounts,
       templates,
-      cards,
       buckets,
       settings,
       noHolidays,
-      FixedClock.at(NOW),
     );
 
     return {
       accounts,
       templates,
-      cards,
       buckets,
       settings,
       cycles,
@@ -324,7 +294,6 @@ describe('CompleteSetup', () => {
     expect(document.accounts).toHaveLength(1);
     expect(await wired.accounts.findAll()).toHaveLength(1);
     expect(await wired.templates.findAll()).toHaveLength(3);
-    expect(await wired.cards.findAll()).toHaveLength(1);
     expect(await wired.buckets.findAll()).toHaveLength(1);
     expect((await wired.settings.load()).dayOfMonth).toBe(5);
   });

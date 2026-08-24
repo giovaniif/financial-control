@@ -5,14 +5,13 @@ import { AssistantConversation } from '../../../application/assistant/assistant-
 import type { ProposedChange } from '../../../application/assistant/proposed-change.js';
 import { ApplyProposal } from '../../../application/assistant/uc-8-apply-proposal.js';
 import { AskAssistant } from '../../../application/assistant/uc-8-ask-assistant.js';
-import { BackupRestore } from '../../../application/backup/uc-1-6-backup-restore.js';
+import { WriteSetupDocument } from '../../../application/setup/write-setup-document.js';
 import { ConfigurePaydayAnchor } from '../../../application/budgeting/uc-1-1-configure-payday-anchor.js';
 import { ManageAccounts } from '../../../application/budgeting/uc-1-2-manage-accounts.js';
 import { ManageTemplates } from '../../../application/budgeting/uc-2-manage-templates.js';
 import { ReadCycle } from '../../../application/budgeting/uc-3-1-read-cycle.js';
 import { CloseCycle } from '../../../application/budgeting/uc-3-8-close-cycle.js';
 import { LedgerActions } from '../../../application/budgeting/uc-3-ledger-actions.js';
-import { ManageCards } from '../../../application/cards/uc-5-manage-cards.js';
 import { ManageBuckets } from '../../../application/goals/uc-6-manage-buckets.js';
 import { BuildDashboard } from '../../../application/projection/uc-4-build-dashboard.js';
 import { ReadSetupState } from '../../../application/projection/uc-1-5-read-setup-state.js';
@@ -34,7 +33,6 @@ import {
   FakeSpendLedger,
   InMemoryAccountRepository,
   InMemoryBucketRepository,
-  InMemoryCardRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
@@ -59,18 +57,15 @@ export function buildTestServer(
   const cycles = new InMemoryCycleRepository();
   const accounts = new InMemoryAccountRepository();
   const templates = new InMemoryTemplateRepository();
-  const cards = new InMemoryCardRepository();
   const buckets = new InMemoryBucketRepository();
 
-  const backup = new BackupRestore(
+  const writeSetup = new WriteSetupDocument(
     cycles,
     accounts,
     templates,
-    cards,
     buckets,
     settings,
     noHolidays,
-    clock,
   );
 
   const conversations: SetupConversations = new FakeSetupConversationStore();
@@ -83,7 +78,6 @@ export function buildTestServer(
     noHolidays,
     clock,
   );
-  const manageCards = new ManageCards(cards, cycles, settings, noHolidays);
   const manageBuckets = new ManageBuckets(
     buckets,
     cycles,
@@ -108,7 +102,6 @@ export function buildTestServer(
   );
   const buildDashboard = new BuildDashboard(
     cycles,
-    buckets,
     settings,
     noHolidays,
     clock,
@@ -144,18 +137,10 @@ export function buildTestServer(
     manageTemplates,
     ledgerActions,
     closeCycle: new CloseCycle(cycles, settings, accounts, noHolidays, clock),
-    manageCards,
     manageBuckets,
-    backupRestore: backup,
     buildDashboard,
     projectWealth,
-    readSetupState: new ReadSetupState(
-      settings,
-      accounts,
-      templates,
-      cards,
-      buckets,
-    ),
+    readSetupState: new ReadSetupState(settings, accounts, templates, buckets),
     // An empty script: a route test that means to hold a conversation passes
     // its own model, and one that does not gets a double that says so loudly
     // rather than a turn nobody wrote.
@@ -169,7 +154,7 @@ export function buildTestServer(
       setupLimits,
     ),
     correctSetupRecord: new CorrectSetupRecord(conversations),
-    completeSetup: new CompleteSetup(conversations, backup, clock),
+    completeSetup: new CompleteSetup(conversations, writeSetup, clock),
     converseAssistant: new AssistantConversation(
       new AskAssistant(
         new FakeLanguageModel([]),
@@ -195,7 +180,6 @@ export function buildTestServer(
       ledgerActions,
       manageTemplates,
       configureAnchor,
-      manageCards,
       manageBuckets,
       clock,
     ),

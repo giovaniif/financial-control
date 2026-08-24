@@ -19,14 +19,6 @@ export type ParsedRecord =
       isEstimate: boolean;
     }
   | {
-      kind: 'CARD';
-      name: string;
-      limit: Cents;
-      closingDay: number;
-      dueDay: number;
-      paymentAccountName: string;
-    }
-  | {
       kind: 'BUCKET';
       name: string;
       rule: AllocationRuleRequest;
@@ -64,8 +56,6 @@ export function parseRecord(
         // bill costs, and the draft normalises the sign on the way back.
         amount: Math.abs(record.fields.amount),
       };
-    case 'CARDS':
-      return { kind: 'CARD', ...record.fields };
     case 'BUCKETS':
       return bucketOf(record.fields);
     case 'ANCHOR':
@@ -148,15 +138,6 @@ export function formOf(parsed: ParsedRecord): EditorForm {
         dueDayOfMonth: String(parsed.dueDayOfMonth),
         isEstimate: parsed.isEstimate,
       };
-    case 'CARD':
-      return {
-        ...EMPTY,
-        name: parsed.name,
-        limit: formatBRL(parsed.limit),
-        closingDay: String(parsed.closingDay),
-        dueDay: String(parsed.dueDay),
-        paymentAccountName: parsed.paymentAccountName,
-      };
     case 'BUCKET':
       return {
         ...EMPTY,
@@ -237,19 +218,6 @@ export function correctionOf(
       if (due !== undefined) request.dueDayOfMonth = due;
       if (form.isEstimate !== parsed.isEstimate) {
         request.isEstimate = form.isEstimate;
-      }
-      break;
-    }
-    case 'CARD': {
-      const limit = money('limit', parsed.limit);
-      if (limit !== undefined) request.limit = limit;
-      const closing = day('closingDay', parsed.closingDay);
-      if (closing !== undefined) request.closingDay = closing;
-      const due = day('dueDay', parsed.dueDay);
-      if (due !== undefined) request.dueDay = due;
-      const account = form.paymentAccountName.trim();
-      if (account !== '' && account !== parsed.paymentAccountName) {
-        request.paymentAccountName = account;
       }
       break;
     }

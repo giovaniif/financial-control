@@ -54,7 +54,6 @@ const applied: SetupAppliedResponse = {
   shiftPolicy: 'PRECEDING',
   accounts: 2,
   templates: 4,
-  cards: 1,
   buckets: 3,
 };
 
@@ -168,7 +167,7 @@ describe('the shape of the conversation', () => {
    */
   it('counts no steps — the conversation is its own progress', async () => {
     stubApi({
-      '/api/setup/conversation': conversation(turn({ nextSection: 'CARDS' })),
+      '/api/setup/conversation': conversation(turn({ nextSection: 'BUCKETS' })),
     });
     renderPage();
 
@@ -679,30 +678,6 @@ describe('the fields an edit opens on', () => {
     expect(sentBy('PATCH')[0]?.body).toEqual({ type: 'SAVINGS' });
   });
 
-  it('changes the day a card closes without touching its due day', async () => {
-    editing({
-      section: 'CARDS',
-      id: 'rec-1',
-      summary:
-        'Inter — limit R$ 10.000,00, closing on day 28, due on day 10, paid from Checking.',
-      fields: {
-        name: 'Inter',
-        limit: 1_000_000,
-        closingDay: 28,
-        dueDay: 10,
-        paymentAccountName: 'Checking',
-      },
-    });
-
-    await say('inter closes on the 28th, due the 10th');
-    await openEditor('Inter');
-    await retype('Dia de fechamento', '25');
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-
-    expect(await screen.findByText('Changed.')).toBeInTheDocument();
-    expect(sentBy('PATCH')[0]?.body).toEqual({ closingDay: 25 });
-  });
-
   it('swaps a fixed contribution for a share of Expected Surplus', async () => {
     editing({
       section: 'BUCKETS',
@@ -863,7 +838,7 @@ describe('the chat frame', () => {
     stubApi({
       '/api/setup/conversation': conversation(
         turn({ nextSection: 'ACCOUNTS' }),
-        turn({ nextSection: 'CARDS' }),
+        turn({ nextSection: 'FIXED_BILLS' }),
       ),
     });
     renderPage();
@@ -887,7 +862,7 @@ describe('the chat frame', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Sua resposta')).toHaveAttribute(
         'placeholder',
-        'Inter, limite 5 mil, fecha dia 28 e vence dia 10',
+        'plano de saúde 320 no dia 8',
       );
     });
   });

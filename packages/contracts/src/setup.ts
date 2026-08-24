@@ -11,7 +11,6 @@ import type { ShiftPolicy } from './settings.js';
 export interface SetupStateResponse {
   anchorConfigured: boolean;
   accounts: number;
-  cards: number;
   templates: number;
   buckets: number;
   /** Nothing configured and nothing created — the app as it ships. */
@@ -31,7 +30,6 @@ export type SetupSection =
   | 'SALARY'
   | 'FIXED_BILLS'
   | 'VARIABLE_BILLS'
-  | 'CARDS'
   | 'BUCKETS';
 
 /**
@@ -58,14 +56,6 @@ export interface EstablishedBillFields {
   amount: Cents;
   dueDayOfMonth: number;
   isEstimate: boolean;
-}
-
-export interface EstablishedCardFields {
-  name: string;
-  limit: Cents;
-  closingDay: number;
-  dueDay: number;
-  paymentAccountName: string;
 }
 
 /**
@@ -108,7 +98,7 @@ interface EstablishedRecordBase {
  * day the wording changed, with the test that would have caught it on the
  * other side of the wire — FIN-124.
  *
- * The section is the tag, as it is on the draft itself, so a card's fields
+ * The section is the tag, as it is on the draft itself, so a bill's fields
  * cannot be read off a bucket record.
  */
 export type EstablishedRecordResponse =
@@ -124,10 +114,6 @@ export type EstablishedRecordResponse =
   | (EstablishedRecordBase & {
       section: 'FIXED_BILLS' | 'VARIABLE_BILLS';
       fields: EstablishedBillFields;
-    })
-  | (EstablishedRecordBase & {
-      section: 'CARDS';
-      fields: EstablishedCardFields;
     })
   | (EstablishedRecordBase & {
       section: 'BUCKETS';
@@ -155,7 +141,6 @@ export interface SetupAppliedResponse {
   shiftPolicy: ShiftPolicy;
   accounts: number;
   templates: number;
-  cards: number;
   buckets: number;
 }
 
@@ -210,11 +195,6 @@ export interface SetupRecordCorrectionRequest {
    * reach the day use their own last day, and the day stands everywhere else.
    */
   acceptCycleFallback?: boolean;
-  /** A card: the limit, the two days, and the account that pays it. */
-  limit?: Cents;
-  closingDay?: number;
-  dueDay?: number;
-  paymentAccountName?: string;
   /** A bucket: how much goes in each cycle, and a goal's target. */
   rule?: AllocationRuleRequest;
   target?: Cents;

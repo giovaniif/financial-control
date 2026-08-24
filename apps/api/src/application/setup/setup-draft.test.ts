@@ -43,14 +43,6 @@ const bill = (name = 'Health Plan', dueDayOfMonth = 8) => ({
   dueDayOfMonth,
 });
 
-const card = (name = 'Inter') => ({
-  name,
-  limit: Money.fromCents(1_000_000),
-  closingDay: 28,
-  dueDay: 10,
-  paymentAccountName: 'Checking',
-});
-
 const ongoing = (name = 'Investments', priority = 1) => ({
   name,
   rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(20)),
@@ -72,7 +64,6 @@ const settled = () =>
     .withSalary(Money.fromCents(1_800_000))
     .addFixedBill(bill())
     .addVariableBill(bill('Electricity', 15))
-    .addCard(card())
     .addOngoingBucket(ongoing());
 
 describe('SetupDraft sections', () => {
@@ -83,7 +74,6 @@ describe('SetupDraft sections', () => {
       'SALARY',
       'FIXED_BILLS',
       'VARIABLE_BILLS',
-      'CARDS',
       'BUCKETS',
     ]);
   });
@@ -103,10 +93,6 @@ describe('SetupDraft sections', () => {
     ],
     [SetupSection.FixedBills, () => withAnchor().addFixedBill(bill())],
     [SetupSection.VariableBills, () => withAnchor().addVariableBill(bill())],
-    [
-      SetupSection.Cards,
-      () => withAnchor().addAccount(account()).addCard(card()),
-    ],
     [SetupSection.Buckets, () => withAnchor().addOngoingBucket(ongoing())],
   ];
 
@@ -118,10 +104,10 @@ describe('SetupDraft sections', () => {
   );
 
   it('settles a section that is skipped rather than answered', () => {
-    const skipped = withAnchor().skip(SetupSection.Cards);
+    const skipped = withAnchor().skip(SetupSection.VariableBills);
 
-    expect(skipped.remainingSections).not.toContain(SetupSection.Cards);
-    expect(skipped.cards).toEqual([]);
+    expect(skipped.remainingSections).not.toContain(SetupSection.VariableBills);
+    expect(skipped.variableBills).toEqual([]);
   });
 
   it('refuses to skip the payday anchor, which every date depends on', () => {
@@ -142,7 +128,6 @@ describe('SetupDraft sections', () => {
       .withSalary(Money.fromCents(1_800_000))
       .skip(SetupSection.FixedBills)
       .skip(SetupSection.VariableBills)
-      .skip(SetupSection.Cards)
       .skip(SetupSection.Buckets);
 
     expect(skippedThrough.isComplete).toBe(true);
@@ -153,8 +138,7 @@ describe('SetupDraft sections', () => {
       .addAccount(account())
       .withSalary(Money.fromCents(1_800_000))
       .skip(SetupSection.FixedBills)
-      .skip(SetupSection.VariableBills)
-      .skip(SetupSection.Cards);
+      .skip(SetupSection.VariableBills);
 
     expect(withoutBuckets.isComplete).toBe(false);
     expect(withoutBuckets.nextSection).toBe(SetupSection.Buckets);
@@ -511,76 +495,6 @@ describe('SetupDraft due days a cycle cannot reach', () => {
   });
 });
 
-describe('SetupDraft cards', () => {
-  it('keeps the card and the account it is paid from', () => {
-    const draft = withAnchor().addAccount(account()).addCard(card());
-
-    expect(draft.cards[0]?.paymentAccountName).toBe('Checking');
-    expect(draft.cards[0]?.limit.cents).toBe(1_000_000);
-  });
-
-  /**
-   * An invoice due date is a real date, and cycles tile the calendar with no
-   * gap, so one always lands in a cycle. The gap that catches a bill's due day
-   * cannot catch a card's, and applying the rule here would refuse a card that
-   * works perfectly.
-   */
-  it('accepts a due day the same anchor would refuse for a bill', () => {
-    const draft = withAnchor(31)
-      .addAccount(account())
-      .addCard({ ...card(), dueDay: 30 });
-
-    expect(draft.cards).toHaveLength(1);
-  });
-
-  const refused: readonly Attempt[] = [
-    [
-      'a nameless card',
-      () =>
-        withAnchor()
-          .addAccount(account())
-          .addCard({ ...card(), name: '' }),
-    ],
-    [
-      'a negative limit',
-      () =>
-        withAnchor()
-          .addAccount(account())
-          .addCard({ ...card(), limit: Money.fromCents(-1) }),
-    ],
-    [
-      'a closing day of 0',
-      () =>
-        withAnchor()
-          .addAccount(account())
-          .addCard({ ...card(), closingDay: 0 }),
-    ],
-    [
-      'a due day of 32',
-      () =>
-        withAnchor()
-          .addAccount(account())
-          .addCard({ ...card(), dueDay: 32 }),
-    ],
-    [
-      'a card paid from an account the draft does not hold',
-      () => withAnchor().addCard(card()),
-    ],
-    [
-      'a second card by the same name',
-      () =>
-        withAnchor()
-          .addAccount(account())
-          .addCard(card())
-          .addCard(card('inter')),
-    ],
-  ];
-
-  it.each(refused)('rejects %s', (_name, build) => {
-    expect(build).toThrow(InvalidSetupRecord);
-  });
-});
-
 describe('SetupDraft buckets', () => {
   it('carries a goal with its target, and an ongoing bucket without one', () => {
     const draft = withAnchor()
@@ -687,8 +601,7 @@ describe('SetupDraft record identity', () => {
     ['an account', 'rec-1', SetupSection.Accounts],
     ['a fixed bill', 'rec-2', SetupSection.FixedBills],
     ['a variable bill', 'rec-3', SetupSection.VariableBills],
-    ['a card', 'rec-4', SetupSection.Cards],
-    ['a bucket', 'rec-5', SetupSection.Buckets],
+    ['a bucket', 'rec-4', SetupSection.Buckets],
   ];
 
   it.each(kinds)('finds %s by its id', (_name, recordId, section) => {
@@ -704,7 +617,6 @@ describe('SetupDraft record identity', () => {
       'rec-2',
       'rec-3',
       'rec-4',
-      'rec-5',
     ]);
   });
 
@@ -776,15 +688,6 @@ describe('SetupDraft corrections', () => {
     expect(corrected.fixedBills[1]?.amount.cents).toBe(-32_000);
   });
 
-  it('leaves a card alone when the account corrected is not the one paying it', () => {
-    const corrected = settled()
-      .addAccount(account('Nubank'))
-      .replaceAccount('rec-6', account('Nu'));
-
-    expect(corrected.cards[0]?.paymentAccountName).toBe('Checking');
-    expect(corrected.accounts[1]?.name).toBe('Nu');
-  });
-
   it('lets a record keep the name it already holds', () => {
     const corrected = settled().replaceVariableBill('rec-3', {
       ...bill('Electricity', 15),
@@ -812,39 +715,8 @@ describe('SetupDraft corrections', () => {
     expect(corrected.accounts[0]?.balance.cents).toBe(500_000);
   });
 
-  /**
-   * A card names the account that pays it, and the draft holds no ids for the
-   * conversation to use — so a corrected account name has to travel with it or
-   * the card would be left naming an account nothing holds.
-   */
-  it('carries a renamed account through to the card it pays', () => {
-    const corrected = settled().replaceAccount('rec-1', {
-      ...account('Nubank'),
-    });
-
-    expect(corrected.cards[0]?.paymentAccountName).toBe('Nubank');
-  });
-
-  it('takes a corrected card and the account that pays it', () => {
-    const corrected = settled()
-      .addAccount(account('Nubank'))
-      .replaceCard('rec-4', { ...card(), paymentAccountName: 'Nubank' });
-
-    expect(corrected.cards).toHaveLength(1);
-    expect(corrected.cards[0]?.paymentAccountName).toBe('Nubank');
-  });
-
-  it('refuses a card corrected onto an account nothing holds', () => {
-    expect(() =>
-      settled().replaceCard('rec-4', {
-        ...card(),
-        paymentAccountName: 'Nubank',
-      }),
-    ).toThrow(InvalidSetupRecord);
-  });
-
   it('takes a corrected rule and keeps the funding order it had', () => {
-    const corrected = settled().replaceOngoingBucket('rec-5', {
+    const corrected = settled().replaceOngoingBucket('rec-4', {
       ...ongoing(),
       rule: Allocation.fixed(Money.fromCents(177_800)),
     });
@@ -880,7 +752,6 @@ describe('SetupDraft corrections', () => {
       'a variable bill',
       () => settled().replaceVariableBill('rec-9', bill('Water', 12)),
     ],
-    ['a card', () => settled().replaceCard('rec-9', card('Nu'))],
     [
       'an ongoing bucket',
       () => settled().replaceOngoingBucket('rec-9', ongoing('Reserve', 2)),
@@ -907,13 +778,7 @@ describe('SetupDraft removals', () => {
     string,
     (draft: SetupDraft) => number,
   ][] = [
-    // The card is dropped first: an account paying one cannot be dropped.
-    [
-      'an account',
-      () => settled().remove('rec-4'),
-      'rec-1',
-      (draft) => draft.accounts.length,
-    ],
+    ['an account', settled, 'rec-1', (draft) => draft.accounts.length],
     ['a fixed bill', settled, 'rec-2', (draft) => draft.fixedBills.length],
     [
       'a variable bill',
@@ -921,8 +786,7 @@ describe('SetupDraft removals', () => {
       'rec-3',
       (draft) => draft.variableBills.length,
     ],
-    ['a card', settled, 'rec-4', (draft) => draft.cards.length],
-    ['a bucket', settled, 'rec-5', (draft) => draft.buckets.length],
+    ['a bucket', settled, 'rec-4', (draft) => draft.buckets.length],
   ];
 
   it.each(drops)(
@@ -943,16 +807,6 @@ describe('SetupDraft removals', () => {
 
     expect(before.fixedBills).toHaveLength(1);
     expect(after).not.toBe(before);
-  });
-
-  /**
-   * A card is paid from an account by name, so dropping the account under it
-   * would leave the card naming nothing — and composition would quietly drop
-   * the card rather than say so.
-   */
-  it('refuses to drop an account a card is paid from', () => {
-    expect(() => settled().remove('rec-1')).toThrow(InvalidSetupRecord);
-    expect(settled().accounts).toHaveLength(1);
   });
 
   /**

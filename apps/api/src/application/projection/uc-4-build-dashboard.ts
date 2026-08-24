@@ -1,13 +1,9 @@
 import { CycleRef } from '../../domain/budgeting/cycle-ref.js';
 import type { Cycle } from '../../domain/budgeting/cycle.js';
 import { Estimates } from '../../domain/budgeting/cycle.js';
-import type { LedgerEntry } from '../../domain/budgeting/ledger-entry.js';
-import type { Bucket } from '../../domain/goals/bucket.js';
-import { BucketStatus } from '../../domain/goals/bucket.js';
 import type { Clock } from '../../domain/ports/clock.js';
 import type { HolidayCalendar } from '../../domain/ports/holiday-calendar.js';
 import type {
-  BucketRepository,
   CycleRepository,
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
@@ -23,8 +19,6 @@ export interface HeadlineView {
   readonly incomingCents: number;
   readonly outgoingCents: number;
   readonly freeCents: number;
-  readonly lowestPointCents: number | undefined;
-  readonly lowestPointDate: string | undefined;
   readonly closingCents: number;
   /** The same closing balance with the unconfirmed placeholders left out. */
   readonly closingWithoutEstimatesCents: number;
@@ -80,14 +74,12 @@ export interface DashboardView {
   readonly kpis: readonly KpiView[];
   readonly progress: CycleProgressView;
   readonly upcoming: readonly UpcomingEntryView[];
-  readonly alerts: readonly AlertView[];
 }
 
 /**
- * The window the alerts scan. It opens one cycle *behind* the current one so
- * the "past cycle still unsettled" alert can fire at all — that is the top
- * alert in UC-4.7, and a window starting at today would never reach a cycle
- * old enough to raise it.
+ * The window opens one cycle *behind* the current one, so `current` is always
+ * the second entry: reading it from a fixed index spares every caller from
+ * working out whether today falls before or after this month's payday.
  */
 const LOOK_BACK = 1;
 const HORIZON = 4;
@@ -97,13 +89,12 @@ const UPCOMING_LIMIT = 8;
  * UC-4 — the screen that answers "how much will I pay next cycle, and how
  * much is left on the 5th".
  *
- * Read-only: every figure is derived from the cycles, buckets and settings
+ * Read-only: every figure is derived from the cycles and settings
  * that already exist, so the dashboard can never drift from the ledger.
  */
 export class BuildDashboard {
   constructor(
     private readonly cycles: CycleRepository,
-    private readonly buckets: BucketRepository,
     private readonly settings: SettingsRepository,
     private readonly holidays: HolidayCalendar,
     private readonly clock: Clock,
@@ -114,9 +105,9 @@ export class BuildDashboard {
    * the cycle after the current one: the Dashboard opens on the cycle you are
    * in but speaks about the next, because that is when the question is asked.
    *
-   * The worklist and the alerts stay anchored to today either way. They are
-   * things to act on, not a view of the chosen cycle, and looking back at a
-   * settled cycle must not hide what is overdue now.
+   * The worklist stays anchored to today either way. It is a thing to act
+   * on, not a view of the chosen cycle, and looking back at a settled cycle
+   * must not hide what is overdue now.
    *
    * `estimates` is the global toggle of UC-4.4, and it reaches every figure
    * here — the chain already computes both readings, so there is no second
@@ -152,7 +143,6 @@ export class BuildDashboard {
 
     const currentCycle = await this.cycles.findByMonth(currentRef);
     const chosen = await this.cycles.findByMonth(chosenRef);
-    const buckets = await this.buckets.findAll();
 
     return {
       today: today.toISO(),
@@ -168,7 +158,6 @@ export class BuildDashboard {
         today,
         estimates,
       ),
-      alerts: await this.alertsFrom(window, buckets, today, estimates),
     };
   }
 
@@ -217,79 +206,6 @@ export class BuildDashboard {
       )
       .slice(0, UPCOMING_LIMIT);
   }
-
-  private async alertsFrom(
-    window: readonly CycleRef[],
-    buckets: readonly Bucket[],
-    today: LocalDate,
-    estimates: Estimates,
-  ): Promise<AlertView[]> {
-    const alerts: AlertView[] = [];
-
-    for (const ref of window) {
-      const cycle = await this.cycles.findByMonth(ref);
-      if (cycle === undefined) {
-        continue;
-      }
-
-      // A past cycle with an unsettled entry cannot be closed.
-      if (ref.end.isBefore(today)) {
-        const unsettled = cycle.unsettledEntries;
-        if (unsettled.length > 0) {
-          alerts.push({
-            severity: AlertSeverity.Critical,
-            title: `O ciclo de ${ref.label} tem ${String(unsettled.length)} lançamento${unsettled.length === 1 ? '' : 's'} em aberto`,
-            body: `${describe(unsettled)} — o ciclo não fecha enquanto cada um não receber baixa ou for ignorado.`,
-          });
-        }
-      }
-
-      const negativeOn = cycle.firstNegativeDate(estimates);
-      if (negativeOn !== undefined) {
-        const culprit = cycle
-          .runningBalance(estimates)
-          .find((row) => row.balance.isNegative());
-        alerts.push({
-          severity: AlertSeverity.Critical,
-          title: `Saldo negativo projetado em ${negativeOn.toISO()}`,
-          body: `O ciclo de ${ref.label} chega a R$ ${culprit?.balance.toReais() ?? '—'} depois de ${culprit?.entry.description ?? 'esse lançamento'}.`,
-        });
-      }
-
-      // The one figure that does not follow the toggle: it is what says the
-      // two readings differ at all, and UC-4.7 asks for both numbers in it.
-      const withEstimates = cycle.closingBalance(Estimates.Included);
-      const confirmed = cycle.closingBalance(Estimates.Excluded);
-      if (!withEstimates.equals(confirmed)) {
-        alerts.push({
-          severity: AlertSeverity.Warning,
-          title: `O ciclo de ${ref.label} ainda depende de uma estimativa não confirmada`,
-          body: `Ele fecha em R$ ${withEstimates.toReais()} com a estimativa e em R$ ${confirmed.toReais()} sem ela.`,
-        });
-      }
-    }
-
-    for (const bucket of buckets) {
-      if (
-        bucket.status !== BucketStatus.Active ||
-        bucket.target === undefined
-      ) {
-        continue;
-      }
-      // Behind means the target date has passed with the goal unmet.
-      if (bucket.target.date.isBefore(today) && !bucket.isComplete) {
-        alerts.push({
-          severity: AlertSeverity.Warning,
-          title: `${bucket.name} está atrasada em relação à data-alvo`,
-          body: `Ela tem R$ ${bucket.balance.toReais()} de R$ ${bucket.target.amount.toReais()}, e a data-alvo ${bucket.target.date.toISO()} já passou.`,
-        });
-      }
-    }
-
-    return alerts.sort(
-      (a, b) => severityRank(a.severity) - severityRank(b.severity),
-    );
-  }
 }
 
 function headlineOf(
@@ -298,7 +214,6 @@ function headlineOf(
   estimates: Estimates,
 ): HeadlineView {
   const chain = cycle?.chain(estimates);
-  const low = cycle?.lowWaterMark(estimates);
 
   return {
     cycleMonth: ref.month,
@@ -307,8 +222,6 @@ function headlineOf(
     incomingCents: chain?.totalIncome.cents ?? 0,
     outgoingCents: chain?.totalOutcome.cents ?? 0,
     freeCents: chain?.netSurplus.cents ?? 0,
-    lowestPointCents: low?.balance.cents,
-    lowestPointDate: low?.date.toISO(),
     closingCents: chain?.closingBalance.cents ?? 0,
     closingWithoutEstimatesCents:
       cycle?.closingBalance(Estimates.Excluded).cents ?? 0,
@@ -317,7 +230,6 @@ function headlineOf(
 
 function kpisOf(cycle: Cycle | undefined, estimates: Estimates): KpiView[] {
   const chain = cycle?.chain(estimates);
-  const low = cycle?.lowWaterMark(estimates);
 
   return [
     {
@@ -334,14 +246,6 @@ function kpisOf(cycle: Cycle | undefined, estimates: Estimates): KpiView[] {
       label: 'Sobra Líquida',
       amountCents: chain?.netSurplus.cents ?? 0,
       note: 'dinheiro livre depois das alocações',
-    },
-    {
-      label: 'Ponto mais baixo do ciclo',
-      amountCents: low?.balance.cents ?? 0,
-      note:
-        low === undefined
-          ? 'nada agendado ainda'
-          : `em ${low.date.toISO()}, depois de ${low.entry.description}`,
     },
   ];
 }
@@ -375,16 +279,4 @@ function progressOf(
       ? 0
       : Math.round((spent.cents / planned.cents) * 100),
   };
-}
-
-function describe(entries: readonly LedgerEntry[]): string {
-  const names = entries.slice(0, 3).map((entry) => entry.description);
-
-  return entries.length > 3
-    ? `${names.join(', ')} e mais ${String(entries.length - 3)}`
-    : names.join(', ');
-}
-
-function severityRank(severity: AlertSeverity): number {
-  return { CRITICAL: 0, WARNING: 1, INFO: 2 }[severity];
 }

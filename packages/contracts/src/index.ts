@@ -23,7 +23,6 @@ export type {
   EntryKind,
   EstimateMode,
   LedgerEntryResponse,
-  LowWaterMarkResponse,
   CyclePosition,
   CycleSummaryResponse,
   CycleWindowResponse,
@@ -36,7 +35,6 @@ export type {
   EditScope,
   TemplateResponse,
   TemplateStatus,
-  TemplateSummaryResponse,
   TemplatesResponse,
   ValueScheduleStepResponse,
 } from './templates.js';
@@ -47,17 +45,6 @@ export type {
   ReopenPreviewResponse,
   SettleEntryRequest,
 } from './cycles.js';
-export type {
-  BillingPreviewResponse,
-  CardResponse,
-  InvoiceItemResponse,
-  InvoiceResponse,
-  InvoiceStatus,
-  OpenCardRequest,
-  PayInvoiceRequest,
-  PayOffEarlyRequest,
-  RegisterPurchaseRequest,
-} from './cards.js';
 export type {
   AllocationPreviewResponse,
   AllocationRuleRequest,
@@ -70,8 +57,6 @@ export type {
   FundingResponse,
 } from './buckets.js';
 export type {
-  AlertResponse,
-  AlertSeverity,
   BucketProjectionResponse,
   CycleProgressResponse,
   DashboardResponse,
@@ -86,7 +71,6 @@ export type {
   EstablishedAccountFields,
   EstablishedBillFields,
   EstablishedBucketFields,
-  EstablishedCardFields,
   EstablishedRecordResponse,
   SetupAppliedResponse,
   SetupDueDayRefusalResponse,
@@ -108,17 +92,3 @@ export type {
   ProposalConfirmationRequest,
   ProposalKind,
 } from './assistant.js';
-export { BACKUP_VERSION } from './backup.js';
-export type {
-  BackupAccount,
-  BackupBucket,
-  BackupBucketEvent,
-  BackupCard,
-  BackupCycle,
-  BackupDocument,
-  BackupEntry,
-  BackupEntryOrigin,
-  BackupInvoice,
-  BackupInvoiceItem,
-  BackupTemplate,
-} from './backup.js';

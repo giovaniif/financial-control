@@ -26,18 +26,8 @@ export interface TemplateResponse {
   nextOccurrenceMonth: string | null;
 }
 
-/** The four figures above the template list. */
-export interface TemplateSummaryResponse {
-  fixedCommitment: Cents;
-  activeOutcomeCount: number;
-  fixedIncome: Cents;
-  unconfirmedEstimates: Cents;
-  endingWithinTwelve: string[];
-}
-
 export interface TemplatesResponse {
   templates: TemplateResponse[];
-  summary: TemplateSummaryResponse;
 }
 
 export interface CreateTemplateRequest {

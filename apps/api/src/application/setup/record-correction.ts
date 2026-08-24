@@ -117,29 +117,6 @@ export function applyCorrection(
         id,
       );
     }
-    case 'CARDS': {
-      const { limit, closingDay, dueDay, paymentAccountName } = correction;
-      if (
-        name === undefined &&
-        limit === undefined &&
-        closingDay === undefined &&
-        dueDay === undefined &&
-        paymentAccountName === undefined
-      ) {
-        return undefined;
-      }
-
-      const card = {
-        name: name ?? held.record.name,
-        limit: limit ?? held.record.limit,
-        closingDay: closingDay ?? held.record.closingDay,
-        dueDay: dueDay ?? held.record.dueDay,
-        paymentAccountName:
-          paymentAccountName ?? held.record.paymentAccountName,
-      };
-
-      return corrected(draft.replaceCard(id, card), id);
-    }
     case 'BUCKETS': {
       const { rule, targetAmount, targetDate } = correction;
       const bucket = held.record;

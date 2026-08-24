@@ -1,8 +1,4 @@
-import type {
-  CardResponse,
-  InvoiceResponse,
-  TemplateResponse,
-} from '@fin/contracts';
+import type { TemplateResponse } from '@fin/contracts';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -13,15 +9,6 @@ import { renderWithProviders, stubApi } from '@/shared/testing';
 import { ProfilePage } from './profile-page.js';
 
 const anchor = { anchorDay: 5, shiftPolicy: 'PRECEDING' };
-
-const pristine = {
-  anchorConfigured: false,
-  accounts: 0,
-  cards: 0,
-  templates: 0,
-  buckets: 0,
-  isPristine: true,
-};
 
 const template = (
   overrides: Partial<TemplateResponse> = {},
@@ -63,43 +50,7 @@ const internet = template({
   dueDayOfMonth: 20,
 });
 
-const invoice = (
-  overrides: Partial<InvoiceResponse> = {},
-): InvoiceResponse => ({
-  id: 'i1',
-  periodStart: '2026-07-29',
-  periodEnd: '2026-08-28',
-  dueDate: '2026-09-10',
-  status: 'OPEN',
-  total: -120_000,
-  paidInCycle: '2026-10',
-  items: [],
-  ...overrides,
-});
-
-const card = (overrides: Partial<CardResponse> = {}): CardResponse => ({
-  id: 'inter',
-  name: 'Inter',
-  limit: 1_000_000,
-  closingDay: 28,
-  dueDay: 10,
-  paymentAccountId: 'a1',
-  committedToFuture: 240_000,
-  available: 760_000,
-  invoices: [],
-  ...overrides,
-});
-
-const withTemplates = (templates: TemplateResponse[]) => ({
-  templates,
-  summary: {
-    fixedCommitment: 32_000,
-    activeOutcomeCount: templates.length,
-    fixedIncome: 1_800_000,
-    unconfirmedEstimates: 28_000,
-    endingWithinTwelve: [],
-  },
-});
+const withTemplates = (templates: TemplateResponse[]) => ({ templates });
 
 const renderPage = () =>
   renderWithProviders(
@@ -123,7 +74,7 @@ afterEach(() => {
 describe('ProfilePage', () => {
   /**
    * The screen is the conversation made editable, so it asks in the same
-   * order: the anchor, then the accounts, then salary, bills and cards.
+   * order: the anchor, then the accounts, then salary and bills.
    */
   it('orders its sections the way the setup conversation asked them', async () => {
     stubApi({ '/api/settings/anchor': anchor });
@@ -134,17 +85,7 @@ describe('ProfilePage', () => {
       screen
         .getAllByRole('region')
         .map((section) => section.getAttribute('aria-label')),
-    ).toEqual([
-      'Dia do pagamento',
-      'Contas',
-      'Compromissos por ciclo',
-      'Salário',
-      'Contas a pagar',
-      'Cartões de crédito',
-      'Configuração',
-      'Formatação',
-      'Backup',
-    ]);
+    ).toEqual(['Dia do pagamento', 'Contas', 'Salário', 'Contas a pagar']);
   });
 
   it('states the payday anchor in plain language', async () => {
@@ -356,26 +297,25 @@ describe('ProfilePage', () => {
   });
 
   // UC-2.7 — the four figures that summarise what the user is committed to.
-  it('summarises what every cycle is already committed to', async () => {
+  /**
+   * The four commitment tiles were removed: they totalled the list directly
+   * beneath them, which the list already shows bill by bill, and the one
+   * figure they added — what ends within twelve cycles — read "nada se
+   * encerra" for anyone with no end dates set, which is everyone by default.
+   */
+  it('leaves the bills to speak for themselves, with no tiles above them', async () => {
     stubApi({
       '/api/settings/anchor': anchor,
       '/api/templates': withTemplates([salary, template(), electricity]),
     });
     renderPage();
 
-    const summary = await screen.findByRole('region', {
-      name: 'Compromissos por ciclo',
-    });
+    await screen.findByRole('region', { name: 'Contas a pagar' });
 
-    expect(within(summary).getByText('Compromisso fixo')).toBeInTheDocument();
-    expect(within(summary).getByText('Receita fixa')).toBeInTheDocument();
     expect(
-      within(summary).getByText('Estimativas não confirmadas'),
-    ).toBeInTheDocument();
-    expect(
-      within(summary).getByText('Encerrando em 12 ciclos'),
-    ).toBeInTheDocument();
-    expect(within(summary).getByText('R$ 18.000,00')).toBeInTheDocument();
+      screen.queryByRole('region', { name: 'Compromissos por ciclo' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Compromisso fixo')).not.toBeInTheDocument();
   });
 
   /**
@@ -428,175 +368,47 @@ describe('ProfilePage', () => {
     ).not.toBeChecked();
   });
 
-  // UC-5.8 — the figure the spreadsheet could not produce.
-  it('shows each card with its open invoice and what is committed to future ones', async () => {
-    stubApi({
-      '/api/settings/anchor': anchor,
-      '/api/cards': [card({ invoices: [invoice()] })],
-    });
-    renderPage();
-
-    const cards = await screen.findByRole('region', {
-      name: 'Cartões de crédito',
-    });
-
-    expect(within(cards).getByText('Inter')).toBeInTheDocument();
-    expect(within(cards).getByText('Limite')).toBeInTheDocument();
-    expect(within(cards).getByText('Fatura aberta')).toBeInTheDocument();
-    expect(within(cards).getByText('Comprometido')).toBeInTheDocument();
-    expect(within(cards).getByText('Disponível')).toBeInTheDocument();
-    expect(within(cards).getByText('R$ 2.400,00')).toBeInTheDocument();
-  });
-
   /**
-   * UC-1.3 — the closing/due day pair is what decides which cycle a purchase
-   * is paid from, and it is the app's one counter-intuitive rule.
+   * The checklist that used to carry this is gone: it restated, as six rows
+   * of counts, what the sections above it already show — and none of it was
+   * outstanding work the screen could not simply display. Re-running the
+   * conversation is the one thing it offered that nothing else does, so it
+   * stays, on its own.
    */
-  it("spells out which cycle a card's purchases will be paid in", async () => {
-    stubApi({
-      '/api/settings/anchor': anchor,
-      '/api/cards': [card({ invoices: [invoice()] })],
-    });
-    renderPage();
-
-    expect(
-      await screen.findByText(
-        'As compras de 29 jul a 28 ago entram na fatura com vencimento em 10 set — ciclo Outubro de 2026.',
-      ),
-    ).toBeInTheDocument();
-  });
-
-  // Nothing has been bought yet, so there is no invoice to name dates from.
-  it('states the day pair in plain language before a card has an invoice', async () => {
-    stubApi({
-      '/api/settings/anchor': anchor,
-      '/api/cards': [card()],
-    });
-    renderPage();
-
-    expect(
-      await screen.findByText(
-        /As compras feitas até o dia 28 entram na fatura com vencimento no dia 10 do mês seguinte/,
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it('offers to configure a card once there is an account to pay it from', async () => {
-    stubApi({
-      '/api/settings/anchor': anchor,
-      '/api/accounts': {
-        accounts: [
-          { id: 'a1', name: 'Inter', type: 'CHECKING', balance: 166_000 },
-        ],
-        total: 166_000,
-      },
-    });
-    renderPage();
-
-    expect(
-      await screen.findByRole('button', { name: 'Adicionar cartão' }),
-    ).toBeInTheDocument();
-  });
-
-  // An invoice is settled from an account, so there is nothing to configure
-  // until one exists.
-  it('asks for an account before a card can be added', async () => {
+  it('offers to run the setup again, without a checklist around it', async () => {
     stubApi({ '/api/settings/anchor': anchor });
     renderPage();
 
     expect(
-      await screen.findByText(/Adicione uma conta primeiro/),
-    ).toBeInTheDocument();
-  });
-
-  // UC-1.5 — the checklist is the conversation's own sections, still outstanding.
-  it('shows the setup checklist in the order the conversation asks', async () => {
-    stubApi({ '/api/settings/anchor': anchor });
-    renderPage();
-
-    const setup = await screen.findByRole('region', { name: 'Configuração' });
-
-    expect(
-      within(setup)
-        .getAllByRole('listitem')
-        .map((item) => item.textContent),
-    ).toEqual([
-      '1O ciclo de pagamentoainda não definido',
-      '2Contas0 contas',
-      '3Salário0 registrados',
-      '4Contas fixas0 registrados',
-      '5Contas variáveis0 registrados',
-      '6Cartões de crédito0 cartões',
-      '7Caixinhas0 caixinhas',
-    ]);
-  });
-
-  /**
-   * The anchor reads back a default whether or not anyone chose it, so the
-   * checklist used to claim step one was done on a completely empty app.
-   */
-  it('leaves the anchor step outstanding until it has been configured', async () => {
-    stubApi({ '/api/settings/anchor': anchor });
-    renderPage();
-
-    expect(await screen.findByText('ainda não definido')).toBeInTheDocument();
-  });
-
-  it('marks the anchor step done once it has been configured', async () => {
-    stubApi({
-      '/api/settings/anchor': anchor,
-      '/api/setup': { ...pristine, anchorConfigured: true },
-    });
-    renderPage();
-
-    expect(await screen.findByText('configurado')).toBeInTheDocument();
-  });
-
-  // The buckets are the one step this screen does not itself carry.
-  it('links the buckets step to where the buckets live', async () => {
-    stubApi({ '/api/settings/anchor': anchor });
-    renderPage();
-
-    expect(
-      await screen.findByRole('link', { name: 'Caixinhas' }),
-    ).toHaveAttribute('href', '/savings');
-  });
-
-  it('offers to run the setup again whatever the setup state', async () => {
-    stubApi({ '/api/settings/anchor': anchor });
-    renderPage();
-
-    expect(
-      await screen.findByRole('link', {
-        name: 'Executar a configuração novamente',
-      }),
+      await screen.findByRole('link', { name: 'Refazer a configuração' }),
     ).toHaveAttribute('href', '/onboarding');
+    expect(
+      screen.queryByRole('region', { name: 'Configuração' }),
+    ).not.toBeInTheDocument();
   });
 
-  it('states the formatting conventions explicitly', async () => {
+  /**
+   * Two cards left this screen for the same reason: neither did anything the
+   * screen could not do without it. Formatting stated conventions every row
+   * above it demonstrates; backup offered an export and an import of a
+   * document nobody outside the app reads.
+   */
+  it('carries no formatting table and no backup card', async () => {
     stubApi({ '/api/settings/anchor': anchor });
     renderPage();
 
-    expect(await screen.findByText('R$ 1.234,56')).toBeInTheDocument();
-    expect(screen.getByText('dd/MM/yyyy')).toBeInTheDocument();
+    await screen.findByRole('region', { name: 'Contas a pagar' });
+
     expect(
-      screen.getByText('Agosto de 2026 (5 ago – 3 set)'),
-    ).toBeInTheDocument();
+      screen.queryByRole('region', { name: 'Formatação' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'Backup' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Exportar' }),
+    ).not.toBeInTheDocument();
   });
 
   // UC-1.6 — nothing else takes snapshots, so this is the only way back.
-  it('offers the export and the import, and says why they matter', async () => {
-    stubApi({ '/api/settings/anchor': anchor });
-    renderPage();
-
-    expect(
-      await screen.findByRole('button', { name: 'Exportar' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Importar' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/único jeito de voltar atrás de um erro/),
-    ).toBeInTheDocument();
-  });
 });

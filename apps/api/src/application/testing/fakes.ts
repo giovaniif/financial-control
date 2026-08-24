@@ -3,7 +3,6 @@ import type { CycleRef } from '../../domain/budgeting/cycle-ref.js';
 import { PaydayAnchor, ShiftPolicy } from '../../domain/budgeting/cycle-ref.js';
 import type { Cycle } from '../../domain/budgeting/cycle.js';
 import type { RecurringTemplate } from '../../domain/budgeting/recurring-template.js';
-import type { Card } from '../../domain/cards/card.js';
 import type { Bucket } from '../../domain/goals/bucket.js';
 import type {
   AssistantConversationStore,
@@ -27,7 +26,6 @@ import type {
   AccountRepository,
   CycleRepository,
   BucketRepository,
-  CardRepository,
   RecurringTemplateRepository,
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
@@ -149,39 +147,6 @@ export class InMemoryTemplateRepository implements RecurringTemplateRepository {
 
   save(template: RecurringTemplate): Promise<void> {
     this.rows.set(template.id, template);
-    return Promise.resolve();
-  }
-
-  delete(id: string): Promise<void> {
-    this.rows.delete(id);
-    return Promise.resolve();
-  }
-
-  deleteAll(): Promise<void> {
-    this.rows.clear();
-    return Promise.resolve();
-  }
-}
-
-export class InMemoryCardRepository implements CardRepository {
-  private readonly rows = new Map<string, Card>();
-
-  constructor(seed: readonly Card[] = []) {
-    for (const card of seed) {
-      this.rows.set(card.id, card);
-    }
-  }
-
-  findAll(): Promise<Card[]> {
-    return Promise.resolve([...this.rows.values()]);
-  }
-
-  findById(id: string): Promise<Card | undefined> {
-    return Promise.resolve(this.rows.get(id));
-  }
-
-  save(card: Card): Promise<void> {
-    this.rows.set(card.id, card);
     return Promise.resolve();
   }
 

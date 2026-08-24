@@ -1,5 +1,3 @@
-import type { EstimateMode } from '@fin/contracts';
-
 /**
  * Every query key in the app comes from here. Inline arrays scattered through
  * slices are how two places end up disagreeing about what identifies the same
@@ -14,18 +12,15 @@ export const queryKeys = {
    * placeholder instead would stop `['dashboard']` matching `['dashboard',
    * '2026-09']`, and every settle would leave the figures stale.
    */
-  dashboard: (month?: string, estimates?: EstimateMode) =>
+  dashboard: (month?: string) =>
     month === undefined
       ? (['dashboard'] as const)
-      : (['dashboard', month, estimates ?? null] as const),
-  wealth: (month?: string, yields?: string) =>
-    ['wealth', month ?? null, yields ?? null] as const,
+      : (['dashboard', month] as const),
+  wealth: (month?: string) => ['wealth', month ?? null] as const,
 
   cycles: () => ['cycles'] as const,
-  cycleWindow: (estimates: EstimateMode) =>
-    ['cycles', 'window', estimates] as const,
-  cycle: (month: string, estimates: EstimateMode) =>
-    ['cycles', month, estimates] as const,
+  cycleWindow: () => ['cycles', 'window'] as const,
+  cycle: (month: string) => ['cycles', month] as const,
   allocationPreview: (month: string) =>
     ['cycles', month, 'allocation-preview'] as const,
   reopenPreview: (month: string) =>

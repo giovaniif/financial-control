@@ -1,7 +1,6 @@
 import type {
   AccountType,
   AllocationRuleRequest,
-  BackupDocument,
   EstablishedBucketFields,
   EstablishedRecordResponse,
   SetupAppliedResponse,
@@ -11,6 +10,7 @@ import type {
   SetupTurnRequest,
   SetupTurnResponse,
 } from '@fin/contracts';
+import type { SetupDocument } from '../../../application/setup/setup-document.js';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 
 import type { ReadSetupState } from '../../../application/projection/uc-1-5-read-setup-state.js';
@@ -220,10 +220,6 @@ const FIELDS = {
   dueDayOfMonth: 'dueDayOfMonth',
   isEstimate: 'isEstimate',
   acceptCycleFallback: 'acceptCycleFallback',
-  limit: 'limit',
-  closingDay: 'closingDay',
-  dueDay: 'dueDay',
-  paymentAccountName: 'paymentAccountName',
   rule: 'rule',
   target: 'targetAmount',
   targetDate: 'targetDate',
@@ -357,18 +353,6 @@ function toEstablished(record: EstablishedRecord): EstablishedRecordResponse {
           isEstimate: record.record.isEstimate,
         },
       };
-    case 'CARDS':
-      return {
-        ...shown,
-        section: record.section,
-        fields: {
-          name: record.record.name,
-          limit: record.record.limit.cents,
-          closingDay: record.record.closingDay,
-          dueDay: record.record.dueDay,
-          paymentAccountName: record.record.paymentAccountName,
-        },
-      };
     case 'BUCKETS':
       return {
         ...shown,
@@ -423,13 +407,12 @@ function toTurn(turn: SetupTurn): SetupTurnResponse {
  * the conversation became real data, and every one of these has a screen of
  * its own to read it back from.
  */
-function toApplied(document: BackupDocument): SetupAppliedResponse {
+function toApplied(document: SetupDocument): SetupAppliedResponse {
   return {
     anchorDay: document.anchor.anchorDay,
     shiftPolicy: document.anchor.shiftPolicy,
     accounts: document.accounts.length,
     templates: document.templates.length,
-    cards: document.cards.length,
     buckets: document.buckets.length,
   };
 }

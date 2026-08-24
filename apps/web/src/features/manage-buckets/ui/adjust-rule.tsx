@@ -5,7 +5,9 @@ import {
   formatBRL,
   formatMonthLabel,
   formatPercent,
+  maskBRL,
   parseBRL,
+  selectAll,
 } from '@/shared/lib';
 import { Button, Dialog, Field } from '@/shared/ui';
 
@@ -113,9 +115,11 @@ function Form({ bucket, month }: Props) {
             label="Percentual"
             type="number"
             value={percent}
+            inputMode="decimal"
             onChange={(event) => {
               setPercent(event.target.value);
             }}
+            onFocus={selectAll}
             {...(error === undefined ? {} : { error })}
           />
         ) : (
@@ -123,9 +127,11 @@ function Form({ bucket, month }: Props) {
             label="Valor por ciclo"
             value={amount}
             placeholder="1.778,00"
+            inputMode="decimal"
             onChange={(event) => {
-              setAmount(event.target.value);
+              setAmount(maskBRL(event.target.value));
             }}
+            onFocus={selectAll}
             {...(error === undefined ? {} : { error })}
           />
         )}

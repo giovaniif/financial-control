@@ -2,11 +2,8 @@ import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 
 import { AssistantRailContext } from './assistant-rail-context.js';
-import {
-  loadRailOpen,
-  saveRailOpen,
-  WIDE_ENOUGH_FOR_RAIL,
-} from './assistant-rail-storage.js';
+import { loadRailOpen, saveRailOpen } from './assistant-rail-storage.js';
+import { WIDE_ENOUGH_FOR_SHELL } from './breakpoints.js';
 
 /**
  * UC-8 — the assistant follows the user across the three screens, so whether
@@ -21,7 +18,7 @@ export function AssistantRailProvider({ children }: { children: ReactNode }) {
   // reopening it on load would open the app onto the chat instead of the
   // numbers. The preference is kept; it is only not honoured here.
   const [isOpen, setIsOpen] = useState(
-    () => loadRailOpen() && window.matchMedia(WIDE_ENOUGH_FOR_RAIL).matches,
+    () => loadRailOpen() && window.matchMedia(WIDE_ENOUGH_FOR_SHELL).matches,
   );
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
 

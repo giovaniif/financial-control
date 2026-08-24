@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router';
 
+import { EASE_SHEET, MOTION_MS } from '../model/motion.js';
 import { AccountsTotal } from './accounts-total.js';
 
 /** Three screens, per `docs/USE_CASES.md` §5 — few enough to need no grouping. */
@@ -27,12 +28,22 @@ const items = [
 interface Props {
   /** Folded to a 56px icon strip so the chat rail has somewhere to open. */
   isCollapsed: boolean;
+  /**
+   * Called once a screen is picked. The drawer passes a dismiss here; beside
+   * the content there is nothing to dismiss, so it does not.
+   */
+  onNavigate?: (() => void) | undefined;
 }
 
-export function Sidebar({ isCollapsed }: Props) {
+export function Sidebar({ isCollapsed, onNavigate }: Props) {
   return (
     <aside
-      className={`sticky top-0 flex h-screen shrink-0 flex-col gap-6 border-r border-zinc-200 bg-white py-5 ${
+      style={{
+        transitionProperty: 'width',
+        transitionDuration: `${String(MOTION_MS)}ms`,
+        transitionTimingFunction: EASE_SHEET,
+      }}
+      className={`sticky top-0 flex h-screen shrink-0 flex-col gap-6 overflow-hidden border-r border-zinc-200 bg-white py-5 motion-reduce:transition-none ${
         isCollapsed ? 'w-14 items-center' : 'w-60'
       }`}
     >
@@ -53,9 +64,10 @@ export function Sidebar({ isCollapsed }: Props) {
             key={item.to}
             to={item.to}
             end={item.to === '/'}
+            onClick={onNavigate}
             className={({ isActive }) =>
               `mx-2 flex items-center gap-2 rounded-lg text-sm transition-colors ${
-                isCollapsed ? 'size-10 justify-center' : 'px-3 py-1.5'
+                isCollapsed ? 'size-10 justify-center' : 'px-3 py-2.5'
               } ${
                 isActive
                   ? 'bg-zinc-100 font-semibold text-zinc-900'
@@ -71,9 +83,12 @@ export function Sidebar({ isCollapsed }: Props) {
         ))}
       </nav>
 
-      {/* Permanently visible: while the nav is folded the header carries it. */}
+      {/* Permanently visible: while the nav is folded the header carries it.
+          The bottom padding is the desktop chat button's room, which sits in
+          this corner; on a phone that button is bottom-right and the drawer
+          simply keeps the same footing. */}
       {!isCollapsed && (
-        <div className="mt-auto px-5">
+        <div className="mt-auto px-5 pb-14">
           <AccountsTotal />
         </div>
       )}

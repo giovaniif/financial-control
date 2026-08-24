@@ -62,30 +62,6 @@ describe('summarise — the sentence the user confirms', () => {
       'Adicionar “Contractor” ao ciclo 2026-10 — uma conta fixa de R$ -1.500,00 com vencimento em 2026-09-20, uma estimativa.',
     ],
     [
-      'a purchase split across instalments',
-      {
-        kind: 'REGISTER_PURCHASE',
-        cardId: 'inter',
-        description: 'Laptop',
-        purchasedOn: LocalDate.parse('2026-08-18'),
-        amount: reais(6_000),
-        installments: 10,
-      },
-      'Registrar “Laptop” de R$ 6.000,00 no cartão inter, comprada em 2026-08-18, em 10 parcelas.',
-    ],
-    [
-      'a purchase in one payment',
-      {
-        kind: 'REGISTER_PURCHASE',
-        cardId: 'inter',
-        description: 'Books',
-        purchasedOn: LocalDate.parse('2026-08-18'),
-        amount: reais(120),
-        installments: 1,
-      },
-      'Registrar “Books” de R$ 120,00 no cartão inter, comprada em 2026-08-18, em uma parcela.',
-    ],
-    [
       'a recurring outcome',
       {
         kind: 'CREATE_TEMPLATE',

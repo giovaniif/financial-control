@@ -354,90 +354,6 @@ describe('ManageTemplates lifecycle', () => {
   });
 });
 
-describe('ManageTemplates.list — the summary', () => {
-  const populated = () =>
-    managing({
-      templates: [
-        template({
-          id: 'tpl-salary',
-          name: 'Salary',
-          direction: Direction.In,
-          dueDayOfMonth: 5,
-          amount: reais(18_000),
-        }),
-        template({
-          id: 'tpl-health',
-          name: 'Health Plan',
-          amount: reais(-320),
-        }),
-        template({
-          id: 'tpl-power',
-          name: 'Electricity',
-          dueDayOfMonth: 15,
-          amount: reais(-280),
-        }),
-        template({
-          id: 'tpl-pj',
-          name: 'Contractor Costs',
-          dueDayOfMonth: 25,
-          amount: reais(-1_500),
-          isEstimate: true,
-        }),
-      ],
-    }).useCase;
-
-  it('totals the fixed commitment as a positive figure', async () => {
-    const { summary } = await populated().list();
-
-    expect(summary.fixedCommitmentCents).toBe(210_000);
-    expect(summary.activeOutcomeCount).toBe(3);
-  });
-
-  it('totals the fixed income', async () => {
-    expect((await populated().list()).summary.fixedIncomeCents).toBe(1_800_000);
-  });
-
-  it('totals what the user is only guessing at', async () => {
-    expect((await populated().list()).summary.unconfirmedEstimatesCents).toBe(
-      150_000,
-    );
-  });
-
-  it('names what falls off within the twelve cycles', async () => {
-    const { useCase } = managing({
-      templates: [
-        template({ id: 'a', name: 'Ending soon', endMonth: '2027-01' }),
-        template({ id: 'b', name: 'Ending later', endMonth: '2030-02' }),
-      ],
-    });
-
-    expect((await useCase.list()).summary.endingWithinTwelve).toEqual([
-      'Ending soon',
-    ]);
-  });
-
-  it('leaves a paused template out of the commitment', async () => {
-    const { useCase } = managing({ templates: [template().pause()] });
-
-    const { summary } = await useCase.list();
-
-    expect(summary.fixedCommitmentCents).toBe(0);
-    expect(summary.activeOutcomeCount).toBe(0);
-  });
-
-  it('summarises an empty list to zeroes', async () => {
-    const { summary } = await managing().useCase.list();
-
-    expect(summary).toEqual({
-      fixedCommitmentCents: 0,
-      activeOutcomeCount: 0,
-      fixedIncomeCents: 0,
-      unconfirmedEstimatesCents: 0,
-      endingWithinTwelve: [],
-    });
-  });
-});
-
 describe('ManageTemplates identity', () => {
   // Production supplies no id generator; the default has to produce one.
   it('generates an id when none is supplied', async () => {
@@ -459,26 +375,5 @@ describe('ManageTemplates identity', () => {
     expect(created.id).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     );
-  });
-});
-
-describe('ManageTemplates summary edge cases', () => {
-  it('counts nothing for a template that has not started yet', async () => {
-    const { useCase } = managing({
-      templates: [template({ startMonth: '2030-02' })],
-    });
-
-    const { summary, templates } = await useCase.list();
-
-    expect(summary.fixedCommitmentCents).toBe(0);
-    expect(templates[0]?.nextOccurrenceMonth).toBeUndefined();
-  });
-
-  it('counts nothing for a template that already ended', async () => {
-    const { useCase } = managing({
-      templates: [template({ startMonth: '2026-02', endMonth: '2026-07' })],
-    });
-
-    expect((await useCase.list()).summary.fixedCommitmentCents).toBe(0);
   });
 });

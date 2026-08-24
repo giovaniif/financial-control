@@ -28,33 +28,46 @@ export function UpcomingList({
           {entries.map((entry) => (
             <li
               key={entry.id}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm"
+              className="flex flex-col gap-2 px-4 py-3 text-sm sm:flex-row sm:items-center sm:gap-3 sm:py-2.5"
             >
-              <span
-                className={`w-16 shrink-0 font-mono text-xs ${
-                  entry.isOverdue
-                    ? 'font-semibold text-red-700'
-                    : 'text-zinc-500'
-                }`}
-              >
-                {formatDayMonth(entry.dueDate)}
-              </span>
-              <span className="min-w-0 flex-1 truncate">
-                {entry.description}
-              </span>
-              {entry.isEstimate && <Badge tone="warning">~estimativa</Badge>}
-              {entry.isOverdue && (
-                <Badge tone="critical">
-                  {entry.daysLate} dia{entry.daysLate === 1 ? '' : 's'} de
-                  atraso
-                </Badge>
-              )}
-              <Amount cents={entry.amount} signed className="w-28 text-right" />
-              <SettleEntry
-                month={entry.cycleMonth}
-                entryId={entry.id}
-                planned={entry.amount}
-              />
+              {/* What it is and what it costs — the two things the row exists
+                  to say, kept on one line at every width. */}
+              <div className="flex min-w-0 items-center gap-3 sm:flex-1">
+                <span
+                  className={`w-14 shrink-0 font-mono text-xs sm:w-16 ${
+                    entry.isOverdue
+                      ? 'font-semibold text-red-700'
+                      : 'text-zinc-500'
+                  }`}
+                >
+                  {formatDayMonth(entry.dueDate)}
+                </span>
+                <span className="min-w-0 flex-1 truncate">
+                  {entry.description}
+                </span>
+                <Amount
+                  cents={entry.amount}
+                  signed
+                  className="shrink-0 text-right sm:w-28"
+                />
+              </div>
+
+              {/* Tags and the settle action drop to a second line on a phone
+                  rather than squeezing the description out of the first. */}
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                {entry.isEstimate && <Badge tone="warning">~estimativa</Badge>}
+                {entry.isOverdue && (
+                  <Badge tone="critical">
+                    {entry.daysLate} dia{entry.daysLate === 1 ? '' : 's'} de
+                    atraso
+                  </Badge>
+                )}
+                <SettleEntry
+                  month={entry.cycleMonth}
+                  entryId={entry.id}
+                  planned={entry.amount}
+                />
+              </div>
             </li>
           ))}
         </ul>

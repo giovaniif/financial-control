@@ -158,11 +158,7 @@ export class CycleRef {
     return CycleRef.forMonth(label, this.anchor, this.holidays);
   }
 
-  /**
-   * **An entry belongs to the cycle whose range contains its due date.** For a
-   * credit-card invoice the due date decides — never the dates of the
-   * purchases on it. See UC-5.4.
-   */
+  /** **An entry belongs to the cycle whose range contains its due date.** */
   contains(date: LocalDate): boolean {
     return this.range.contains(date);
   }

@@ -210,7 +210,7 @@ export class Cycle {
 
     // Outgoing money is negative in the domain, so Total Outcome is reported
     // as the positive figure the UI shows and subtracted rather than added.
-    const fixedOutflow = sumOf(EntryKind.Fixed, EntryKind.Invoice);
+    const fixedOutflow = sumOf(EntryKind.Fixed);
     const variableOutflow = Money.sum(
       counted
         .filter((entry) => entry.kind === EntryKind.Variable)
@@ -257,28 +257,6 @@ export class Cycle {
       balance = balance.plus(entry.realised);
       return { entry, balance };
     });
-  }
-
-  /** The lowest the balance gets, and the entry that took it there. */
-  lowWaterMark(
-    estimates: Estimates = Estimates.Included,
-  ): LowWaterMark | undefined {
-    return this.runningBalance(estimates).reduce<LowWaterMark | undefined>(
-      (lowest, row) =>
-        lowest === undefined || row.balance.isLessThan(lowest.balance)
-          ? { balance: row.balance, date: row.entry.dueDate, entry: row.entry }
-          : lowest,
-      undefined,
-    );
-  }
-
-  /** The first date the balance crosses zero, if it ever does. */
-  firstNegativeDate(
-    estimates: Estimates = Estimates.Included,
-  ): LocalDate | undefined {
-    return this.runningBalance(estimates).find((row) =>
-      row.balance.isNegative(),
-    )?.entry.dueDate;
   }
 
   private countedEntries(estimates: Estimates): readonly LedgerEntry[] {
@@ -335,8 +313,7 @@ const KIND_ORDER: Record<EntryKind, number> = {
   [EntryKind.Income]: 0,
   [EntryKind.Variable]: 1,
   [EntryKind.Fixed]: 2,
-  [EntryKind.Invoice]: 3,
-  [EntryKind.Allocation]: 4,
+  [EntryKind.Allocation]: 3,
 };
 
 function byDueDateThenKind(a: LedgerEntry, b: LedgerEntry): number {

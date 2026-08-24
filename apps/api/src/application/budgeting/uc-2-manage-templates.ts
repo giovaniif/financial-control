@@ -1,11 +1,11 @@
 import { CycleRef } from '../../domain/budgeting/cycle-ref.js';
 import type { PaydayAnchor } from '../../domain/budgeting/cycle-ref.js';
 import type { LedgerEntry } from '../../domain/budgeting/ledger-entry.js';
-import type { Direction } from '../../domain/budgeting/recurring-template.js';
-import {
-  RecurringTemplate,
+import type {
+  Direction,
   TemplateStatus,
 } from '../../domain/budgeting/recurring-template.js';
+import { RecurringTemplate } from '../../domain/budgeting/recurring-template.js';
 import type { Clock } from '../../domain/ports/clock.js';
 import type { HolidayCalendar } from '../../domain/ports/holiday-calendar.js';
 import type {
@@ -49,18 +49,8 @@ export interface TemplateView {
   readonly nextOccurrenceMonth: string | undefined;
 }
 
-/** The four figures above the template list (UC-2.7). */
-export interface TemplateSummary {
-  readonly fixedCommitmentCents: number;
-  readonly activeOutcomeCount: number;
-  readonly fixedIncomeCents: number;
-  readonly unconfirmedEstimatesCents: number;
-  readonly endingWithinTwelve: readonly string[];
-}
-
 export interface TemplatesView {
   readonly templates: readonly TemplateView[];
-  readonly summary: TemplateSummary;
 }
 
 const WINDOW = 12;
@@ -83,7 +73,6 @@ export class ManageTemplates {
 
     return {
       templates: templates.map((template) => this.toView(template, window)),
-      summary: summarise(templates, window),
     };
   }
 
@@ -241,37 +230,4 @@ function generatedBy(entry: LedgerEntry, templateId: string): boolean {
     entry.origin.kind === 'OVERRIDE' ? entry.origin.original : entry.origin;
 
   return origin.kind === 'FROM_TEMPLATE' && origin.templateId === templateId;
-}
-
-function summarise(
-  templates: readonly RecurringTemplate[],
-  window: readonly CycleRef[],
-): TemplateSummary {
-  const [current] = window;
-  const active = templates.filter(
-    (template) => template.status === TemplateStatus.Active,
-  );
-  const inCurrent = (template: RecurringTemplate) =>
-    current !== undefined && template.appliesTo(current)
-      ? template.amountFor(current)
-      : Money.zero();
-
-  const outcomes = active.filter((template) => template.direction === 'OUT');
-  const incomes = active.filter((template) => template.direction === 'IN');
-
-  return {
-    fixedCommitmentCents: Money.sum(outcomes.map(inCurrent)).abs().cents,
-    activeOutcomeCount: outcomes.length,
-    fixedIncomeCents: Money.sum(incomes.map(inCurrent)).cents,
-    unconfirmedEstimatesCents: Money.sum(
-      active.filter((template) => template.isEstimate).map(inCurrent),
-    ).abs().cents,
-    endingWithinTwelve: active
-      .filter(
-        (template) =>
-          template.endMonth !== undefined &&
-          window.some((ref) => ref.month === template.endMonth),
-      )
-      .map((template) => template.name),
-  };
 }

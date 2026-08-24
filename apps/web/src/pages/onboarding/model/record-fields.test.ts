@@ -53,31 +53,6 @@ describe('the fields behind a record', () => {
     },
   );
 
-  it('reads a card, both its days and the account that pays it', () => {
-    expect(
-      parseRecord({
-        section: 'CARDS',
-        id: 'rec-1',
-        summary:
-          'Inter — limit R$ 10.000,00, closing on day 28, due on day 10, paid from Checking.',
-        fields: {
-          name: 'Inter',
-          limit: 1_000_000,
-          closingDay: 28,
-          dueDay: 10,
-          paymentAccountName: 'Checking',
-        },
-      }),
-    ).toEqual({
-      kind: 'CARD',
-      name: 'Inter',
-      limit: 1_000_000,
-      closingDay: 28,
-      dueDay: 10,
-      paymentAccountName: 'Checking',
-    });
-  });
-
   it('reads an ongoing bucket as a share, with no target to reach', () => {
     expect(
       parseRecord({

@@ -48,8 +48,6 @@ export function registerProjectionRoutes(
             incoming: view.headline.incomingCents,
             outgoing: view.headline.outgoingCents,
             free: view.headline.freeCents,
-            lowestPoint: view.headline.lowestPointCents ?? null,
-            lowestPointDate: view.headline.lowestPointDate ?? null,
             closing: view.headline.closingCents,
             closingWithoutEstimates: view.headline.closingWithoutEstimatesCents,
           },
@@ -76,7 +74,6 @@ export function registerProjectionRoutes(
             isOverdue: entry.isOverdue,
             daysLate: entry.daysLate,
           })),
-          alerts: view.alerts.map((alert) => ({ ...alert })),
         };
         return body;
       } catch (error) {

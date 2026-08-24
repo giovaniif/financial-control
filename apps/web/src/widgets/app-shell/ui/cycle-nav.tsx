@@ -29,7 +29,7 @@ export function CycleNav() {
   }
 
   return (
-    <div className="flex items-center overflow-hidden rounded-lg border border-zinc-200 bg-white">
+    <div className="flex w-full items-center overflow-hidden rounded-lg border border-zinc-200 bg-white lg:w-auto lg:shrink-0">
       <button
         type="button"
         onClick={goPrevious}
@@ -39,16 +39,21 @@ export function CycleNav() {
       >
         ←
       </button>
-      <div className="flex items-center gap-2 px-3 py-1.5">
+      {/* Stacked on a phone and in a row once there is width for one: the
+          label and its bounds are one reading, and breaking either mid-word
+          to keep them side by side helps nobody. */}
+      <div className="flex flex-1 flex-col justify-center gap-0 py-1 pr-3 pl-3 whitespace-nowrap lg:flex-none lg:flex-row lg:items-center lg:gap-2 lg:py-1.5">
         <span className="text-sm font-medium">{selected.label}</span>
         {/* The bounds are always stated: a cycle is not a month. */}
         <span className="font-mono text-xs text-zinc-500">
           {formatRange(selected.start, selected.end)}
         </span>
+      </div>
+      <span className="pr-3">
         <Badge tone={tones[selected.position]}>
           {positionLabels[selected.position]}
         </Badge>
-      </div>
+      </span>
       <button
         type="button"
         onClick={goNext}

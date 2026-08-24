@@ -1,9 +1,7 @@
 import type { EstimateMode } from './cycles.js';
 import type { Cents } from './money.js';
 
-export type AlertSeverity = 'CRITICAL' | 'WARNING' | 'INFO';
-
-/** The one-sentence answer, and the three numbers that qualify it. */
+/** The one-sentence answer, and the two numbers that qualify it. */
 export interface HeadlineResponse {
   cycleMonth: string;
   cycleLabel: string;
@@ -11,8 +9,6 @@ export interface HeadlineResponse {
   incoming: Cents;
   outgoing: Cents;
   free: Cents;
-  lowestPoint: Cents | null;
-  lowestPointDate: string | null;
   closing: Cents;
   /** The same closing balance without the unconfirmed placeholders. */
   closingWithoutEstimates: Cents;
@@ -44,12 +40,6 @@ export interface UpcomingEntryResponse {
   daysLate: number;
 }
 
-export interface AlertResponse {
-  severity: AlertSeverity;
-  title: string;
-  body: string;
-}
-
 export interface DashboardResponse {
   today: string;
   currentCycleMonth: string;
@@ -59,7 +49,6 @@ export interface DashboardResponse {
   kpis: KpiResponse[];
   progress: CycleProgressResponse;
   upcoming: UpcomingEntryResponse[];
-  alerts: AlertResponse[];
 }
 
 export interface HorizonResponse {

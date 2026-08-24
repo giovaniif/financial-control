@@ -165,36 +165,6 @@ export const PROPOSAL_TOOLS: readonly ProposalToolSpec[] = [
   },
   {
     tool: {
-      name: 'propose_register_purchase',
-      description:
-        "Propose a credit-card purchase, optionally split across instalments. Which invoice it lands on follows from the card's closing day, and which cycle pays it follows from that invoice's due date.",
-      inputSchema: schema(
-        {
-          cardId: { type: 'string', description: "the card's id" },
-          description: { type: 'string', description: 'what was bought' },
-          purchasedOn: DATE_FIELD('the day it was bought'),
-          amountInCents: CENTS_FIELD('the total price, not the instalment'),
-          installments: {
-            type: 'integer',
-            minimum: 1,
-            description:
-              'how many instalments it is split across. Defaults to 1',
-          },
-        },
-        ['cardId', 'description', 'purchasedOn', 'amountInCents'],
-      ),
-    },
-    compose: (args) => ({
-      kind: 'REGISTER_PURCHASE',
-      cardId: requireText(args, 'cardId'),
-      description: requireText(args, 'description'),
-      purchasedOn: requireDate(args, 'purchasedOn'),
-      amount: requireCents(args, 'amountInCents'),
-      installments: readInteger(args, 'installments') ?? 1,
-    }),
-  },
-  {
-    tool: {
       name: 'propose_recurring_template',
       description:
         'Propose a recurring income or outcome, which generates one entry per cycle from its start onward.',

@@ -118,7 +118,7 @@ describe('routes', () => {
       renderAt(path);
 
       await userEvent.click(
-        await screen.findByRole('button', { name: 'Abrir o assistente' }),
+        await screen.findByRole('button', { name: 'Assistente' }),
       );
 
       expect(

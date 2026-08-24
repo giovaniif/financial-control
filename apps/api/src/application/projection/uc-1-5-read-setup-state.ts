@@ -1,7 +1,6 @@
 import type {
   AccountRepository,
   BucketRepository,
-  CardRepository,
   RecurringTemplateRepository,
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
@@ -9,7 +8,6 @@ import type {
 export interface SetupState {
   anchorConfigured: boolean;
   accounts: number;
-  cards: number;
   templates: number;
   buckets: number;
   /** Nothing configured and nothing created — the app as it ships. */
@@ -26,23 +24,19 @@ export class ReadSetupState {
     private readonly settings: SettingsRepository,
     private readonly accounts: AccountRepository,
     private readonly templates: RecurringTemplateRepository,
-    private readonly cards: CardRepository,
     private readonly buckets: BucketRepository,
   ) {}
 
   async execute(): Promise<SetupState> {
-    const [anchorConfigured, accounts, templates, cards, buckets] =
-      await Promise.all([
-        this.settings.isConfigured(),
-        this.accounts.findAll(),
-        this.templates.findAll(),
-        this.cards.findAll(),
-        this.buckets.findAll(),
-      ]);
+    const [anchorConfigured, accounts, templates, buckets] = await Promise.all([
+      this.settings.isConfigured(),
+      this.accounts.findAll(),
+      this.templates.findAll(),
+      this.buckets.findAll(),
+    ]);
 
     const counts = {
       accounts: accounts.length,
-      cards: cards.length,
       templates: templates.length,
       buckets: buckets.length,
     };

@@ -31,8 +31,6 @@ function toSimpleOrigin(
   switch (kind) {
     case 'FROM_TEMPLATE':
       return { kind: 'FROM_TEMPLATE', templateId: ref ?? '' };
-    case 'FROM_INVOICE':
-      return { kind: 'FROM_INVOICE', invoiceId: ref ?? '' };
     case 'FROM_ALLOCATION':
       return { kind: 'FROM_ALLOCATION', bucketId: ref ?? '' };
     default:
@@ -76,8 +74,6 @@ function refOf(origin: EntryOrigin): {
   switch (origin.kind) {
     case 'FROM_TEMPLATE':
       return { kind: 'FROM_TEMPLATE', ref: origin.templateId };
-    case 'FROM_INVOICE':
-      return { kind: 'FROM_INVOICE', ref: origin.invoiceId };
     case 'FROM_ALLOCATION':
       return { kind: 'FROM_ALLOCATION', ref: origin.bucketId };
     default:

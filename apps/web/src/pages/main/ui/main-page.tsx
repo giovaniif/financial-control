@@ -1,5 +1,4 @@
 import type {
-  AlertResponse,
   CyclePosition,
   CycleProgressResponse,
   CycleResponse,
@@ -9,15 +8,11 @@ import { useEffect } from 'react';
 import { useCycle } from '@/entities/cycle';
 import { useDashboard } from '@/entities/dashboard';
 import { useSelectedCycle } from '@/features/navigate-cycle';
-import { useSetupState } from '@/shared/api';
-import { useAssistantRail } from '@/shared/model';
 import { EmptyState, Skeleton } from '@/shared/ui';
-import { AlertList } from '@/widgets/alert-list';
 import { AppShell } from '@/widgets/app-shell';
 import { UpcomingList } from '@/widgets/upcoming-list';
 
 import type { MainFigures } from '../model/figures.js';
-import { questionFor } from '../model/alert-question.js';
 import { figuresFor } from '../model/figures.js';
 import { BucketChips } from './bucket-chips.js';
 import { ChainSection } from './chain-section.js';
@@ -53,13 +48,6 @@ export function MainPage() {
 
   const { data, isPending, isError } = useDashboard(month);
   const { data: cycle } = useCycle(month);
-  const setup = useSetupState();
-
-  const { ask } = useAssistantRail();
-
-  const askAbout = (alert: AlertResponse) => {
-    ask(questionFor(alert));
-  };
 
   return (
     <AppShell
@@ -77,13 +65,9 @@ export function MainPage() {
         <Screen
           figures={figuresFor(data)}
           progress={data.progress}
-          alerts={data.alerts}
           cycle={cycle}
           today={data.today}
           position={selected?.position}
-          onAsk={
-            setup.data?.assistantAvailable === false ? undefined : askAbout
-          }
         />
       )}
     </AppShell>
@@ -94,19 +78,15 @@ export function MainPage() {
 function Screen({
   figures,
   progress,
-  alerts,
   cycle,
   today,
   position,
-  onAsk,
 }: {
   figures: MainFigures;
   progress: CycleProgressResponse;
-  alerts: AlertResponse[];
   cycle: CycleResponse | undefined;
   today: string;
   position: CyclePosition | undefined;
-  onAsk: ((alert: AlertResponse) => void) | undefined;
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-4">
@@ -122,7 +102,6 @@ function Screen({
         <BucketChips />
       </div>
       <UpcomingList entries={figures.upcoming} />
-      <AlertList alerts={alerts} onAsk={onAsk} />
     </div>
   );
 }
