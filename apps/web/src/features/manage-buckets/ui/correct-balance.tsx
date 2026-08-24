@@ -1,7 +1,7 @@
 import type { Cents } from '@fin/contracts';
 import { useState } from 'react';
 
-import { formatBRL, parseBRL } from '@/shared/lib';
+import { formatBRL, parseBRL, selectAll } from '@/shared/lib';
 import { Button, Dialog, Field } from '@/shared/ui';
 
 import { useRecordBucketEvent } from '../api/use-manage-buckets.js';
@@ -68,8 +68,11 @@ function Form({
 }) {
   const record = useRecordBucketEvent(bucketId);
   // Opens on what the app currently believes, so the user edits a figure
-  // rather than recalling one.
-  const [amount, setAmount] = useState(() => withoutSymbol(balance));
+  // rather than recalling one — unless it believes nothing, in which case
+  // `0,00` is not a figure to edit but four characters to delete first.
+  const [amount, setAmount] = useState(() =>
+    balance === 0 ? '' : withoutSymbol(balance),
+  );
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string>();
 
@@ -103,6 +106,7 @@ function Form({
         onChange={(event) => {
           setAmount(event.target.value);
         }}
+        onFocus={selectAll}
         hint="O que a caixinha tem de verdade, não a diferença"
         {...(error !== undefined && !isReasonMissing ? { error } : {})}
       />

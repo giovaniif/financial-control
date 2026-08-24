@@ -1,7 +1,7 @@
 import type { EditScope, TemplateResponse } from '@fin/contracts';
 import { useId, useState } from 'react';
 
-import { formatBRL, parseBRL } from '@/shared/lib';
+import { formatBRL, parseBRL, selectAll } from '@/shared/lib';
 import { Button, Dialog, Field } from '@/shared/ui';
 
 import {
@@ -208,6 +208,7 @@ function AmountForm({
         onChange={(event) => {
           setAmount(event.target.value);
         }}
+        onFocus={selectAll}
         hint={`A partir de ${currentMonth}`}
       />
 

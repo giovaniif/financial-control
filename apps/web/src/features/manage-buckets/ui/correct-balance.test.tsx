@@ -59,6 +59,42 @@ describe('CorrectBalance', () => {
     expect(screen.getByLabelText('Saldo observado')).toHaveValue('2.160,00');
   });
 
+  /**
+   * A caixinha holding nothing has no figure worth editing, and `0,00` sitting
+   * in the field is not a starting point — it is four characters to delete
+   * before the first useful keystroke.
+   */
+  it('opens empty when there is nothing in the bucket yet', async () => {
+    stubPost();
+    renderWithProviders(
+      <CorrectBalance bucketId="b1" bucketName="Reserve" balance={0} />,
+    );
+
+    await open();
+
+    expect(screen.getByLabelText('Saldo observado')).toHaveValue('');
+  });
+
+  /**
+   * Typing replaces the figure rather than running on from it: the field is
+   * pre-filled to be corrected, and appending to it produces `2.160,003.000,00`
+   * — which reads as a typo the user made, not one the form did.
+   */
+  it('replaces the figure it opened with rather than appending', async () => {
+    const fetchMock = stubPost();
+    render();
+
+    await open();
+    await userEvent.type(screen.getByLabelText('Saldo observado'), '3.000,00');
+    await userEvent.type(screen.getByLabelText('Motivo'), 'extrato');
+    await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    expect(bodyOf(fetchMock)).toMatchObject({ amount: 300_000 });
+  });
+
   it('records the observed balance with its reason', async () => {
     const fetchMock = stubPost();
     render();

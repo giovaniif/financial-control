@@ -8,4 +8,5 @@ export {
   shiftMonth,
 } from './date.js';
 export { formatPercent } from './percent.js';
+export { selectAll } from './select-all.js';
 export { useMediaQuery } from './use-media-query.js';

@@ -6,6 +6,7 @@ import {
   formatMonthLabel,
   formatPercent,
   parseBRL,
+  selectAll,
 } from '@/shared/lib';
 import { Button, Dialog, Field } from '@/shared/ui';
 
@@ -116,6 +117,7 @@ function Form({ bucket, month }: Props) {
             onChange={(event) => {
               setPercent(event.target.value);
             }}
+            onFocus={selectAll}
             {...(error === undefined ? {} : { error })}
           />
         ) : (
@@ -126,6 +128,7 @@ function Form({ bucket, month }: Props) {
             onChange={(event) => {
               setAmount(event.target.value);
             }}
+            onFocus={selectAll}
             {...(error === undefined ? {} : { error })}
           />
         )}
