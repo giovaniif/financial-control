@@ -10,3 +10,25 @@
   --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
+
+/**
+ * iOS Safari zooms the whole page whenever a focused control's text is under
+ * 16px, and never zooms back out — so every edit left the app slightly larger
+ * than it was. 16px on touch devices is the documented threshold.
+ *
+ * Written outside `@layer` on purpose: unlayered rules beat layered ones, so
+ * this holds against the `text-sm` utilities the controls carry, and it holds
+ * for controls nobody has written yet. `pointer: coarse` rather than a width,
+ * because it is the touch device that zooms — an iPad in landscape is wide and
+ * still does it.
+ *
+ * The alternative, `maximum-scale=1` on the viewport, stops the zoom by
+ * stopping pinch-zoom altogether. That fails WCAG 1.4.4 and is not on.
+ */
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
