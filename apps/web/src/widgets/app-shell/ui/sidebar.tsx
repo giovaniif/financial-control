@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router';
 
+import { EASE_SHEET, MOTION_MS } from '../model/motion.js';
 import { AccountsTotal } from './accounts-total.js';
 
 /** Three screens, per `docs/USE_CASES.md` §5 — few enough to need no grouping. */
@@ -37,7 +38,12 @@ interface Props {
 export function Sidebar({ isCollapsed, onNavigate }: Props) {
   return (
     <aside
-      className={`sticky top-0 flex h-screen shrink-0 flex-col gap-6 border-r border-zinc-200 bg-white py-5 ${
+      style={{
+        transitionProperty: 'width',
+        transitionDuration: `${String(MOTION_MS)}ms`,
+        transitionTimingFunction: EASE_SHEET,
+      }}
+      className={`sticky top-0 flex h-screen shrink-0 flex-col gap-6 overflow-hidden border-r border-zinc-200 bg-white py-5 motion-reduce:transition-none ${
         isCollapsed ? 'w-14 items-center' : 'w-60'
       }`}
     >

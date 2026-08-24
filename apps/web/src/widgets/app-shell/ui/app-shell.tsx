@@ -45,7 +45,7 @@ export function AppShell({ title, subtitle, children }: Props) {
   return (
     <div className="flex min-h-screen bg-zinc-50 text-zinc-900">
       {isWide && <Sidebar isCollapsed={isOpen} />}
-      {!isWide && isNavOpen && <NavDrawer onDismiss={dismissNav} />}
+      {!isWide && <NavDrawer isOpen={isNavOpen} onDismiss={dismissNav} />}
       <AssistantRail />
       {!isOpen && <ChatTab />}
       <main className="flex min-w-0 flex-1 flex-col">

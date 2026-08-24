@@ -21,8 +21,7 @@ function stubPost() {
 
 function bodyOf(fetchMock: ReturnType<typeof stubPost>) {
   const call = fetchMock.mock.calls[0] as unknown as
-    | [string, RequestInit]
-    | undefined;
+    [string, RequestInit] | undefined;
 
   return JSON.parse((call?.[1].body ?? '{}') as string) as Record<
     string,

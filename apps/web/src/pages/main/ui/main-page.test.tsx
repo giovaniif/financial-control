@@ -569,9 +569,7 @@ describe('MainPage and the assistant', () => {
     expect(tiles().getByText('Total Outcome')).toBeInTheDocument();
 
     // Switched off is a state, not a breakage: the rail opens and says so.
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Assistente' }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: 'Assistente' }));
 
     expect(screen.getByText(/O assistente está desligado/)).toBeVisible();
     expect(

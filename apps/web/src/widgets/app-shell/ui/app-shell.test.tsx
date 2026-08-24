@@ -262,9 +262,10 @@ describe('AppShell and the assistant rail', () => {
     expect(
       screen.queryByRole('log', { name: 'Conversa com o assistente' }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Assistente' }),
-    ).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'Assistente' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
   });
 
   /**
@@ -409,9 +410,9 @@ describe('AppShell on a phone', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Abrir o menu' }));
 
-    expect(
-      screen.getAllByRole('link').map((link) => link.textContent),
-    ).toEqual(['Principal', 'Perfil', 'Investimentos e Reservas']);
+    expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(
+      ['Principal', 'Perfil', 'Investimentos e Reservas'],
+    );
   });
 
   // The drawer covers the screen it navigates to, so it has to get out of the
@@ -435,7 +436,9 @@ describe('AppShell on a phone', () => {
     await screen.findByText('screen body');
 
     await userEvent.click(screen.getByRole('button', { name: 'Abrir o menu' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Fechar o menu' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Fechar o menu' }),
+    );
 
     expect(
       screen.queryByRole('link', { name: 'Perfil' }),
