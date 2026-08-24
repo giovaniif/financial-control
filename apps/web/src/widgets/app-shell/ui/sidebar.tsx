@@ -84,8 +84,9 @@ export function Sidebar({ isCollapsed, onNavigate }: Props) {
       </nav>
 
       {/* Permanently visible: while the nav is folded the header carries it.
-          The bottom padding is the floating chat button's room — the nav is
-          only ever expanded while that button is on screen. */}
+          The bottom padding is the desktop chat button's room, which sits in
+          this corner; on a phone that button is bottom-right and the drawer
+          simply keeps the same footing. */}
       {!isCollapsed && (
         <div className="mt-auto px-5 pb-14">
           <AccountsTotal />

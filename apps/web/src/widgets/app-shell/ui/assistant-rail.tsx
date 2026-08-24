@@ -75,10 +75,12 @@ export function AssistantRail() {
       }}
       className={`flex flex-col overscroll-contain border-zinc-200 bg-zinc-50 motion-reduce:transition-none ${placement}`}
     >
-      {/* The chrome keeps the rail's full width while the rail itself is
-          collapsing, so the contents slide out of frame rather than reflowing
-          into a column too narrow to hold them. */}
-      <div className="flex w-[380px] max-w-full shrink-0 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-4 py-3">
+      {/* On a desktop the chrome holds the rail's full width while the rail
+          collapses, so the contents slide out of frame rather than reflowing
+          into a column too narrow to hold them. On a phone there is nothing to
+          slide out of — the chat is the screen — and a fixed 380px inside a
+          390px viewport is just a strip of dead space down one side. */}
+      <div className="flex w-full shrink-0 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-4 py-3 lg:w-[380px]">
         <div className="flex flex-col gap-0.5">
           <span className="text-sm font-semibold">Claude</span>
           <span className="text-xs text-zinc-500">
@@ -124,7 +126,7 @@ export function AssistantRail() {
       {/* The rail is a fixed width and the transcript scrolls inside it, so
           an answer arriving token by token grows the transcript and never the
           layout around it. */}
-      <div className="flex w-[380px] max-w-full min-h-0 flex-1 flex-col p-3">
+      <div className="flex w-full min-h-0 flex-1 flex-col p-3 lg:w-[380px]">
         <AssistantPanel />
       </div>
     </aside>
