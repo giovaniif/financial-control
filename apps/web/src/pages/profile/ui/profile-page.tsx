@@ -1,7 +1,6 @@
 import { AppShell } from '@/widgets/app-shell';
 
 import { AccountsSection } from './accounts-section.js';
-import { BackupSection } from './backup-section.js';
 import { BillsSection } from './bills-section.js';
 import { PaydayAnchor } from './payday-anchor.js';
 import { RerunSetup } from './rerun-setup.js';
@@ -23,7 +22,6 @@ export function ProfilePage() {
           <AccountsSection />
         </div>
         <BillsSection />
-        <BackupSection />
         <RerunSetup />
       </div>
     </AppShell>

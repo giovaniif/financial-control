@@ -95,14 +95,3 @@ export type {
   ProposalConfirmationRequest,
   ProposalKind,
 } from './assistant.js';
-export { BACKUP_VERSION } from './backup.js';
-export type {
-  BackupAccount,
-  BackupBucket,
-  BackupBucketEvent,
-  BackupCycle,
-  BackupDocument,
-  BackupEntry,
-  BackupEntryOrigin,
-  BackupTemplate,
-} from './backup.js';

@@ -18,7 +18,7 @@ import type {
   SetupState,
 } from '../../../application/setup/uc-1-5-converse-setup.js';
 import { ConverseSetup } from '../../../application/setup/uc-1-5-converse-setup.js';
-import { BackupRestore } from '../../../application/backup/uc-1-6-backup-restore.js';
+import { WriteSetupDocument } from '../../../application/setup/write-setup-document.js';
 import type { ScriptedTurn } from '../../../application/testing/fake-language-model.js';
 import { FakeLanguageModel } from '../../../application/testing/fake-language-model.js';
 import {
@@ -82,14 +82,13 @@ function wire(
     clock,
     budget.maxTokensPerDay ?? NO_CEILING,
   );
-  const backup = new BackupRestore(
+  const backup = new WriteSetupDocument(
     new InMemoryCycleRepository(),
     new InMemoryAccountRepository(),
     new InMemoryTemplateRepository(),
     new InMemoryBucketRepository(),
     new InMemorySettingsRepository(),
     noHolidays,
-    clock,
   );
 
   return {

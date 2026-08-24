@@ -147,10 +147,15 @@ Profile can re-enter the conversation at any time. It carries no checklist of th
 section on that screen already, showing what it holds, and a second list counting those same rows told the
 user nothing the rows did not.
 
-**UC-1.6 — Back up and restore**
-A full data export and re-import, on Profile. The user is the only operator and the only backup, and nothing
-else takes snapshots — so this is the sole recovery mechanism. First run does not offer it: someone arriving
-for the first time has one decision to get through, and a second way in only competes with it.
+**UC-1.6 — Back up and restore** — *removed*
+The export and re-import are gone from the app. The document they moved was only ever read by this app, so
+"backup" meant a file that could be handed back to the same program that wrote it — which a database dump does
+better and without a screen.
+
+**This leaves the app with no recovery mechanism of its own.** Nothing here takes snapshots, so a mistake is
+undone from a `pg_dump` or not at all — see `.claude/deployment.md`. That is a deliberate trade, not an
+oversight: the machinery that wrote a whole dataset back into the repositories survives as the write path for
+the setup conversation (UC-1.5), and is no longer offered as a feature.
 
 ---
 
@@ -480,7 +485,7 @@ progress; the upcoming list with inline settle; bucket chips; alerts; and the as
 ### Profile
 Everything the user configures, in the order the first run asked for it: the payday anchor with its change
 preview and weekend rule, accounts, salary, the bills in due-day order with the unconfirmed ones tagged
-`~estimate`, backup and restore, and the way back into the setup conversation.
+`~estimate`, and the way back into the setup conversation.
 *Primary action:* edit a bill. *Secondary:* re-enter the setup conversation. → UC-1, UC-2
 
 ### Investments & Savings — *the answer to Q2*

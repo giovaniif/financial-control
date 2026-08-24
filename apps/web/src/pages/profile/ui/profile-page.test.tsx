@@ -85,13 +85,7 @@ describe('ProfilePage', () => {
       screen
         .getAllByRole('region')
         .map((section) => section.getAttribute('aria-label')),
-    ).toEqual([
-      'Dia do pagamento',
-      'Contas',
-      'Salário',
-      'Contas a pagar',
-      'Backup',
-    ]);
+    ).toEqual(['Dia do pagamento', 'Contas', 'Salário', 'Contas a pagar']);
   });
 
   it('states the payday anchor in plain language', async () => {
@@ -394,36 +388,27 @@ describe('ProfilePage', () => {
   });
 
   /**
-   * The formatting card is gone. It stated conventions the screen it sat on
-   * demonstrates on every row — the amounts above it are already `R$ 1.234,56`
-   * and already red when they are negative — so it taught by telling what the
-   * app was showing anyway.
+   * Two cards left this screen for the same reason: neither did anything the
+   * screen could not do without it. Formatting stated conventions every row
+   * above it demonstrates; backup offered an export and an import of a
+   * document nobody outside the app reads.
    */
-  it('demonstrates its formatting rather than tabulating it', async () => {
+  it('carries no formatting table and no backup card', async () => {
     stubApi({ '/api/settings/anchor': anchor });
     renderPage();
 
-    await screen.findByRole('region', { name: 'Backup' });
+    await screen.findByRole('region', { name: 'Contas a pagar' });
 
     expect(
       screen.queryByRole('region', { name: 'Formatação' }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText('dd/MM/yyyy')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'Backup' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Exportar' }),
+    ).not.toBeInTheDocument();
   });
 
   // UC-1.6 — nothing else takes snapshots, so this is the only way back.
-  it('offers the export and the import, and says why they matter', async () => {
-    stubApi({ '/api/settings/anchor': anchor });
-    renderPage();
-
-    expect(
-      await screen.findByRole('button', { name: 'Exportar' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Importar' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/único jeito de voltar atrás de um erro/),
-    ).toBeInTheDocument();
-  });
 });

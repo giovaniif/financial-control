@@ -321,7 +321,8 @@ src/
     goals/            uc-6-5-override-contribution.ts, uc-6-7-correct-balance.ts, …
     projection/       uc-4-build-dashboard.ts, uc-4-7-build-alerts.ts,
                       uc-7-project-wealth.ts
-    setup/            uc-1-5-converse-setup.ts, setup-draft.ts, compose-backup.ts
+    setup/            uc-1-5-converse-setup.ts, setup-draft.ts, compose-setup.ts,
+                      setup-document.ts, write-setup-document.ts
     assistant/        uc-8-ask-assistant.ts, uc-8-apply-proposal.ts
 
   infrastructure/
@@ -347,7 +348,7 @@ src/
   widgets/     chain-strip/ upcoming-list/ alert-list/ bucket-event-log/ wealth-bars/
   features/    ask-assistant/ settle-entry/ toggle-estimates/ navigate-cycle/
                configure-anchor/ manage-accounts/ manage-templates/
-               manage-buckets/ create-bucket/ backup-restore/
+               manage-buckets/ create-bucket/
   entities/    cycle/ ledger-entry/ bucket/ template/ account/
   shared/      ui/ api/ lib/ config/
 ```

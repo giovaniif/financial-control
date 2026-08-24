@@ -5,7 +5,7 @@ import { AssistantConversation } from './application/assistant/assistant-convers
 import type { ProposedChange } from './application/assistant/proposed-change.js';
 import { ApplyProposal } from './application/assistant/uc-8-apply-proposal.js';
 import { AskAssistant } from './application/assistant/uc-8-ask-assistant.js';
-import { BackupRestore } from './application/backup/uc-1-6-backup-restore.js';
+import { WriteSetupDocument } from './application/setup/write-setup-document.js';
 import { ConfigurePaydayAnchor } from './application/budgeting/uc-1-1-configure-payday-anchor.js';
 import { ManageAccounts } from './application/budgeting/uc-1-2-manage-accounts.js';
 import { ManageTemplates } from './application/budgeting/uc-2-manage-templates.js';
@@ -82,14 +82,13 @@ export function createApp(): FastifyInstance {
   const templates = new PrismaTemplateRepository(prisma);
   const buckets = new PrismaBucketRepository(prisma);
 
-  const backup = new BackupRestore(
+  const writeSetup = new WriteSetupDocument(
     cycles,
     accounts,
     templates,
     buckets,
     settings,
     holidays,
-    clock,
   );
 
   // Named rather than inlined: the assistant reads through the very
@@ -138,7 +137,6 @@ export function createApp(): FastifyInstance {
     ledgerActions,
     closeCycle: new CloseCycle(cycles, settings, accounts, holidays, clock),
     manageBuckets,
-    backupRestore: backup,
     buildDashboard,
     projectWealth,
     readSetupState: new ReadSetupState(settings, accounts, templates, buckets),
@@ -152,7 +150,7 @@ export function createApp(): FastifyInstance {
       SETUP_LIMITS,
     ),
     correctSetupRecord: new CorrectSetupRecord(conversations),
-    completeSetup: new CompleteSetup(conversations, backup, clock),
+    completeSetup: new CompleteSetup(conversations, writeSetup, clock),
     converseAssistant: new AssistantConversation(
       new AskAssistant(
         assistantModel,

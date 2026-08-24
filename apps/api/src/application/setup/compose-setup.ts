@@ -1,15 +1,13 @@
-import type {
-  BackupBucket,
-  BackupCycle,
-  BackupDocument,
-  BackupEntry,
-  BackupTemplate,
-} from '@fin/contracts';
-import { BACKUP_VERSION } from '@fin/contracts';
-
 import type { Clock } from '../../domain/ports/clock.js';
 import { DomainError } from '../../domain/shared/domain-error.js';
-import type { BackupRestore } from '../backup/uc-1-6-backup-restore.js';
+import type {
+  SetupBucket,
+  SetupCycle,
+  SetupDocument,
+  SetupEntry,
+  SetupTemplate,
+} from './setup-document.js';
+import type { WriteSetupDocument } from './write-setup-document.js';
 
 import type { DraftBill, DraftBucket, SetupDraft } from './setup-draft.js';
 import type { SetupConversations } from './uc-1-5-converse-setup.js';
@@ -35,8 +33,8 @@ const SALARY = 'Salário';
  */
 export function composeSetup(
   draft: SetupDraft,
-  exportedAt: string,
-): BackupDocument {
+  composedAt: string,
+): SetupDocument {
   const anchor = draft.anchor;
   if (!draft.isComplete || anchor === undefined) {
     throw new SetupNotComplete(
@@ -54,8 +52,7 @@ export function composeSetup(
   const generated = composeTemplates(draft);
 
   return {
-    version: BACKUP_VERSION,
-    exportedAt,
+    composedAt,
     anchor: { anchorDay: anchor.dayOfMonth, shiftPolicy: anchor.shiftPolicy },
     accounts,
     cycles: composeCycles(generated),
@@ -66,7 +63,7 @@ export function composeSetup(
 
 /** A template, and the bill it came from where one did — never the salary. */
 interface ComposedTemplate {
-  readonly template: BackupTemplate;
+  readonly template: SetupTemplate;
   readonly bill: DraftBill | undefined;
 }
 
@@ -84,8 +81,8 @@ interface ComposedTemplate {
  * and no amount was overridden here — only the one date the cycle cannot
  * reach.
  */
-function composeCycles(generated: readonly ComposedTemplate[]): BackupCycle[] {
-  const byMonth = new Map<string, BackupEntry[]>();
+function composeCycles(generated: readonly ComposedTemplate[]): SetupCycle[] {
+  const byMonth = new Map<string, SetupEntry[]>();
 
   for (const { template, bill } of generated) {
     for (const override of bill?.dueDateOverrides ?? []) {
@@ -166,7 +163,7 @@ function template(input: {
   dueDayOfMonth: number;
   isEstimate: boolean;
   startMonth: string;
-}): BackupTemplate {
+}): SetupTemplate {
   return {
     id: `tpl-${String(input.index + 1)}`,
     name: input.name,
@@ -186,7 +183,7 @@ function template(input: {
  * one, and a balance nobody stated would be a correction with nothing behind
  * it — the exact bug UC-6.7's event log exists to prevent.
  */
-function composeBucket(bucket: DraftBucket, index: number): BackupBucket {
+function composeBucket(bucket: DraftBucket, index: number): SetupBucket {
   return {
     id: `bkt-${String(index + 1)}`,
     name: bucket.name,
@@ -218,11 +215,11 @@ function composeBucket(bucket: DraftBucket, index: number): BackupBucket {
 export class CompleteSetup {
   constructor(
     private readonly conversations: SetupConversations,
-    private readonly backup: BackupRestore,
+    private readonly write: WriteSetupDocument,
     private readonly clock: Clock,
   ) {}
 
-  async execute(conversationId: string): Promise<BackupDocument> {
+  async execute(conversationId: string): Promise<SetupDocument> {
     const stored = await this.conversations.load(conversationId);
     if (stored === undefined) {
       throw new SetupConversationNotFound(
@@ -234,7 +231,7 @@ export class CompleteSetup {
       stored.state.draft,
       this.clock.now().toISOString(),
     );
-    await this.backup.restore(document);
+    await this.write.write(document);
 
     return document;
   }

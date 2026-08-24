@@ -7,7 +7,7 @@ import { noHolidays } from '../../domain/ports/holiday-calendar.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
 import { Percentage } from '../../domain/shared/percentage.js';
-import { BackupRestore } from '../backup/uc-1-6-backup-restore.js';
+import { WriteSetupDocument } from './write-setup-document.js';
 import {
   FakeSetupConversationStore,
   SequentialIdSource,
@@ -80,7 +80,7 @@ describe('composeSetup', () => {
   it('carries the anchor and the accounts across', () => {
     const document = composeSetup(complete(), NOW);
 
-    expect(document.exportedAt).toBe(NOW);
+    expect(document.composedAt).toBe(NOW);
     expect(document.anchor).toEqual({
       anchorDay: 5,
       shiftPolicy: ShiftPolicy.Preceding,
@@ -260,14 +260,13 @@ describe('CompleteSetup', () => {
     const conversations: SetupConversations = new FakeSetupConversationStore();
     const cycles = new InMemoryCycleRepository();
 
-    const restore = new BackupRestore(
+    const restore = new WriteSetupDocument(
       cycles,
       accounts,
       templates,
       buckets,
       settings,
       noHolidays,
-      FixedClock.at(NOW),
     );
 
     return {

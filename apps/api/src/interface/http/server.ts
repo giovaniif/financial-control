@@ -2,7 +2,6 @@ import Fastify, { type FastifyInstance } from 'fastify';
 
 import type { AssistantConversation } from '../../application/assistant/assistant-conversation.js';
 import type { ApplyProposal } from '../../application/assistant/uc-8-apply-proposal.js';
-import type { BackupRestore } from '../../application/backup/uc-1-6-backup-restore.js';
 import type { ConfigurePaydayAnchor } from '../../application/budgeting/uc-1-1-configure-payday-anchor.js';
 import type { ManageAccounts } from '../../application/budgeting/uc-1-2-manage-accounts.js';
 import type { ManageTemplates } from '../../application/budgeting/uc-2-manage-templates.js';
@@ -22,7 +21,6 @@ import type { SpendRateLimits } from './rate-limit.js';
 import { buildSpendGuard } from './rate-limit.js';
 import { registerAccountRoutes } from './routes/accounts.js';
 import { registerAssistantRoutes } from './routes/assistant.js';
-import { registerBackupRoutes } from './routes/backup.js';
 import { registerBucketRoutes } from './routes/buckets.js';
 import { registerCycleRoutes } from './routes/cycles.js';
 import { registerHealthRoute } from './routes/health.js';
@@ -44,7 +42,6 @@ interface Dependencies {
   manageBuckets: ManageBuckets;
   buildDashboard: BuildDashboard;
   projectWealth: ProjectWealth;
-  backupRestore: BackupRestore;
   readSetupState: ReadSetupState;
   converseSetup: ConverseSetup;
   correctSetupRecord: CorrectSetupRecord;
@@ -67,7 +64,6 @@ export function buildServer({
   manageBuckets,
   buildDashboard,
   projectWealth,
-  backupRestore,
   readSetupState,
   converseSetup,
   correctSetupRecord,
@@ -90,7 +86,6 @@ export function buildServer({
     projectWealth,
     manageBuckets,
   });
-  registerBackupRoutes(app, { backupRestore });
 
   // The two routes that reach a model are registered together, behind the one
   // budget they share. Everything above costs a database query and is not

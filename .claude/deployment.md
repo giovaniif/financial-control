@@ -43,8 +43,15 @@ bottom of a stack. Rolling one back is forward-only: a bad migration is fixed by
 a new migration.
 
 **Back up before anything destructive.** There is no managed database taking
-snapshots, so `pnpm db:reset` is exactly as final as it sounds. The app's own
-export (UC-1.6) is the backup.
+snapshots, and the app no longer exports its own data (UC-1.6 is removed), so
+`pnpm db:reset` is exactly as final as it sounds. The backup is a dump:
+
+```bash
+docker exec fin-postgres pg_dump -U fin fin > backup.sql
+```
+
+Take one before a reset, before a destructive migration, and before anything
+else that cannot be undone. Nothing else will.
 
 ## Reaching it from another machine
 
