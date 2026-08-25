@@ -10,7 +10,6 @@ import {
 const KINDS: ProposalKind[] = [
   'SETTLE_ENTRY',
   'ADD_ENTRY',
-  'REGISTER_PURCHASE',
   'CREATE_TEMPLATE',
   'CHANGE_TEMPLATE_AMOUNT',
   'CHANGE_PAYDAY_ANCHOR',
@@ -48,18 +47,17 @@ describe('proposal copy', () => {
   });
 
   /**
-   * UC-5.4 — a purchase names no cycle because its invoice decides, and a
-   * purchase made a day after closing is a whole cycle later.
+   * A kind that lands in no single cycle keeps its note even when the
+   * sentence happens to carry a month key — the note is what is true about
+   * the change, and a month in the prose is not the cycle it lands in.
    */
-  it('says what decides the cycle when a purchase names none', () => {
+  it('keeps the note for a kind that names no cycle, month or not', () => {
     expect(
       describeCycle(
-        'REGISTER_PURCHASE',
-        'Register “Laptop” of R$ 6.000,00 on card c1, bought on 2026-08-29, in 10 instalments.',
+        'CHANGE_ALLOCATION_RULE',
+        'Mudar a caixinha 2026-09 para receber 20% por ciclo.',
       ),
-    ).toBe(
-      'A fatura em que isso é cobrado decide o ciclo em que cai, não a data da compra.',
-    );
+    ).toBe('Muda o que cada ciclo aloca a partir de agora.');
   });
 
   it('falls back to what a template does when it names no start cycle', () => {

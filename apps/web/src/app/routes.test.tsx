@@ -11,7 +11,6 @@ import { routes } from './routes.js';
 const configured = {
   anchorConfigured: true,
   accounts: 1,
-  cards: 1,
   templates: 1,
   buckets: 1,
   isPristine: false,

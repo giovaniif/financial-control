@@ -17,7 +17,6 @@ describe('App', () => {
       '/api/setup': {
         anchorConfigured: true,
         accounts: 1,
-        cards: 0,
         templates: 0,
         buckets: 0,
         isPristine: false,

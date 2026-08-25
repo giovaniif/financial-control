@@ -23,7 +23,6 @@ export interface AssistantReadResponse {
 export type ProposalKind =
   | 'SETTLE_ENTRY'
   | 'ADD_ENTRY'
-  | 'REGISTER_PURCHASE'
   | 'CREATE_TEMPLATE'
   | 'CHANGE_TEMPLATE_AMOUNT'
   | 'CHANGE_PAYDAY_ANCHOR'

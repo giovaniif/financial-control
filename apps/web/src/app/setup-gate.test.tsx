@@ -10,7 +10,6 @@ import { routes } from './routes.js';
 const configured = {
   anchorConfigured: true,
   accounts: 2,
-  cards: 1,
   templates: 4,
   buckets: 3,
   isPristine: false,

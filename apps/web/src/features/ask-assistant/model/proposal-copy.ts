@@ -33,15 +33,6 @@ export function describeProposal(kind: ProposalKind): ProposalCopy {
         cycleLead: 'Cai no ciclo',
         cycleNote: null,
       };
-    case 'REGISTER_PURCHASE':
-      return {
-        label: 'Registrar uma compra',
-        cycleLead: null,
-        // UC-5.4 — the due date decides, so a purchase one day after closing
-        // is paid a whole cycle later.
-        cycleNote:
-          'A fatura em que isso é cobrado decide o ciclo em que cai, não a data da compra.',
-      };
     case 'CREATE_TEMPLATE':
       return {
         label: 'Criar um lançamento recorrente',

@@ -10,7 +10,6 @@ import { OnboardingPage } from './onboarding-page.js';
 const withoutAssistant = {
   anchorConfigured: false,
   accounts: 0,
-  cards: 0,
   templates: 0,
   buckets: 0,
   isPristine: true,

@@ -81,7 +81,6 @@ export function useApplySetup() {
           queryKeys.setup(),
           queryKeys.accounts(),
           queryKeys.templates(),
-          queryKeys.cards(),
           queryKeys.buckets(),
           queryKeys.cycles(),
           queryKeys.dashboard(),
