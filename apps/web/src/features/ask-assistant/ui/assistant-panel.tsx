@@ -13,6 +13,7 @@ import { useAssistantRail } from '@/shared/model';
 import { Badge } from '@/shared/ui';
 
 import { useAskAssistant } from '../api/use-ask-assistant.js';
+import { explainAskFailure } from '../model/ask-failure.js';
 import {
   loadConversation,
   saveConversation,
@@ -257,7 +258,7 @@ export function AssistantPanel() {
 
       {failure !== null && failure.status !== SWITCHED_OFF && (
         <p role="alert" className="px-1 pb-2 text-sm text-red-700">
-          O assistente não conseguiu responder: {failure.message}
+          {explainAskFailure(failure)}
         </p>
       )}
 
