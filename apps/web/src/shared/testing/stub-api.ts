@@ -29,14 +29,12 @@ export function stubApi(routes: Record<string, StubRoute>): void {
   const defaults: Record<string, StubRoute> = {
     '/api/accounts': { accounts: [], total: 0 },
     '/api/buckets': [],
-    '/api/cards': [],
     '/api/cycles': { estimates: 'included', cycles: [] },
     '/api/settings/anchor/resolve': { cycles: [] },
     '/api/wealth': { horizons: [], buckets: [], retirement: null },
     '/api/setup': {
       anchorConfigured: false,
       accounts: 0,
-      cards: 0,
       templates: 0,
       buckets: 0,
       isPristine: true,

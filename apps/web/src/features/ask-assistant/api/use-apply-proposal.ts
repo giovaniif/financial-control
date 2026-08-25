@@ -34,7 +34,6 @@ export function useApplyProposal() {
           queryKeys.cycles(),
           queryKeys.buckets(),
           queryKeys.templates(),
-          queryKeys.cards(),
           queryKeys.accounts(),
           queryKeys.anchor(),
         ].map((queryKey) => client.invalidateQueries({ queryKey })),

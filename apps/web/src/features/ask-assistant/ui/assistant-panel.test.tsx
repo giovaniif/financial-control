@@ -292,7 +292,6 @@ describe('AssistantPanel', () => {
       '/api/setup': {
         anchorConfigured: true,
         accounts: 1,
-        cards: 0,
         templates: 1,
         buckets: 0,
         isPristine: false,
