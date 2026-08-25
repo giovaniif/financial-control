@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { describe, expect, it } from 'vitest';
 
 import type { SpendRateLimits } from './rate-limit.js';
+import { describeWait } from './rate-limit.js';
 import { buildTestServer } from './testing/test-server.js';
 
 const A_MINUTE = 60_000;
@@ -60,8 +61,8 @@ describe('the routes that spend money', () => {
     expect(codes.slice(0, 2)).not.toContain(429);
     expect(stopped.statusCode).toBe(429);
     expect(stopped.headers['retry-after']).toBe('60');
-    expect(stopped.json<{ error: string }>().error).toContain(
-      'Requisições demais',
+    expect(stopped.json<{ error: string }>().error).toBe(
+      'Requisições demais ao assistente. Tente de novo em 1 minuto.',
     );
   });
 
@@ -89,6 +90,9 @@ describe('the routes that spend money', () => {
 
     expect(stopped.statusCode).toBe(429);
     expect(stopped.headers['retry-after']).toBe('86400');
+    expect(stopped.json<{ error: string }>().error).toBe(
+      'Requisições demais ao assistente. Tente de novo em 1 dia.',
+    );
   });
 
   /** One budget, because it is one cost: both routes bill the same account. */
@@ -100,6 +104,32 @@ describe('the routes that spend money', () => {
     const stopped = await askSetup(app);
 
     expect(stopped.statusCode).toBe(429);
+  });
+});
+
+/**
+ * `@fastify/rate-limit` humanises its own `after` through `@lukeed/ms`, which
+ * speaks only English. The seconds it hands over alongside it are the same
+ * number the `retry-after` header carries, so reading those instead keeps the
+ * body in the language the screens are written in — CLAUDE.md rule 6.
+ */
+describe('the wait, said in Portuguese', () => {
+  it.each([
+    [1, '1 segundo'],
+    [45, '45 segundos'],
+    [60, '1 minuto'],
+    [90, '2 minutos'],
+    [3_600, '1 hora'],
+    [5_400, '2 horas'],
+    [86_400, '1 dia'],
+    [172_800, '2 dias'],
+  ])('reads %i seconds as "%s"', (seconds, expected) => {
+    expect(describeWait(seconds)).toBe(expected);
+  });
+
+  /** A window all but elapsed still asks for a wait, never for none. */
+  it('never counts down to nothing', () => {
+    expect(describeWait(0)).toBe('1 segundo');
   });
 });
 

@@ -360,6 +360,32 @@ describe('AssistantPanel', () => {
     expect(log).toHaveTextContent('Because the Inter');
   });
 
+  /**
+   * The spend guard refuses before the model is reached, so nothing was asked
+   * and nothing was spent. The panel says that, rather than dressing it as an
+   * assistant that could not answer — FIN-139.
+   */
+  it('reads a rate limit as a wait, not as a failure to answer', async () => {
+    const stream = sseStub();
+    stubStream(stream, {
+      '/api/assistant/messages': new Response(
+        JSON.stringify({
+          error: 'Requisições demais ao assistente. Tente de novo em 1 minuto.',
+        }),
+        { status: 429, headers: { 'Content-Type': 'application/json' } },
+      ),
+    });
+    renderWithProviders(<AssistantPanel />);
+
+    await ask('Why is September lower than August?');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(
+      'Requisições demais ao assistente. Tente de novo em 1 minuto.',
+    );
+    expect(alert).not.toHaveTextContent('não conseguiu responder');
+  });
+
   /** A refusal and a read limit are answers about the answer, not failures. */
   it('reads a refusal and a read limit as answers, not errors', async () => {
     const stream = sseStub();
