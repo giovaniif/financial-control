@@ -59,6 +59,7 @@ export function MainPage() {
         <Screen
           figures={figuresFor(data)}
           cycle={cycle}
+          month={month}
           today={data.today}
           position={selected?.position}
         />
@@ -71,11 +72,13 @@ export function MainPage() {
 function Screen({
   figures,
   cycle,
+  month,
   today,
   position,
 }: {
   figures: MainFigures;
   cycle: CycleResponse | undefined;
+  month: string | undefined;
   today: string;
   position: CyclePosition | undefined;
 }) {
@@ -88,7 +91,7 @@ function Screen({
         action={<CloseSection cycle={cycle} today={today} />}
       />
       <ChainSection cycle={cycle} />
-      <BucketChips />
+      <BucketChips month={month} />
       <UpcomingList entries={figures.upcoming} />
     </div>
   );
