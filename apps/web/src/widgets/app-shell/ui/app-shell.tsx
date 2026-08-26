@@ -15,6 +15,15 @@ interface Props {
   title: string;
   subtitle: string;
   children: ReactNode;
+  /**
+   * Whether the screen fits the window and manages its own scrolling.
+   *
+   * Off by default, and deliberately: a screen that scrolls is the normal
+   * case, and pinning one that does not fit hides its bottom with no way to
+   * reach it. Only Main asks for this, because only Main is built to give the
+   * leftover height to a list that scrolls itself.
+   */
+  fitsWindow?: boolean;
 }
 
 /**
@@ -32,7 +41,12 @@ interface Props {
  * than a squeezed one: the nav is a drawer, the chat is a sheet, and the
  * header's controls wrap onto a row of their own.
  */
-export function AppShell({ title, subtitle, children }: Props) {
+export function AppShell({
+  title,
+  subtitle,
+  children,
+  fitsWindow = false,
+}: Props) {
   const { isOpen } = useAssistantRail();
   const isWide = useMediaQuery(WIDE_ENOUGH_FOR_SHELL);
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -47,7 +61,11 @@ export function AppShell({ title, subtitle, children }: Props) {
   };
 
   return (
-    <div className="flex min-h-screen bg-zinc-50 text-zinc-900 lg:h-screen lg:min-h-0 lg:overflow-hidden">
+    <div
+      className={`flex min-h-screen bg-zinc-50 text-zinc-900 ${
+        fitsWindow ? 'lg:h-screen lg:min-h-0 lg:overflow-hidden' : ''
+      }`}
+    >
       {isWide && <Sidebar isCollapsed={isOpen} />}
       {!isWide && <NavDrawer isOpen={isNavOpen} onDismiss={dismissNav} />}
       <AssistantRail />
@@ -98,7 +116,11 @@ export function AppShell({ title, subtitle, children }: Props) {
             figures and a usable worklist at once. From `lg` up the window is
             the frame and the screen fits inside it — only the list that grows
             with the data scrolls. */}
-        <div className="flex flex-col px-4 py-5 pb-24 sm:px-6 lg:min-h-0 lg:flex-1 lg:px-8 lg:py-6 lg:pb-6">
+        <div
+          className={`flex flex-col px-4 py-5 pb-24 sm:px-6 lg:px-8 lg:py-6 lg:pb-6 ${
+            fitsWindow ? 'lg:min-h-0 lg:flex-1' : ''
+          }`}
+        >
           {children}
         </div>
       </main>
