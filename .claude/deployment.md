@@ -116,7 +116,7 @@ Vite in development and by nginx in the container.
 
 | | Port |
 |---|---|
-| Deployed | **8090** |
+| Deployed | **7333** |
 | `pnpm dev` | 5173 |
 
 **Nothing here is authenticated.** Anything that can reach either port can read
