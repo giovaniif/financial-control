@@ -29,6 +29,8 @@ import type {
   RecurringTemplateRepository,
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
+import { Money } from '../../domain/shared/money.js';
+import type { OpeningBalanceSource } from '../budgeting/uc-3-3-list-cycles.js';
 
 /**
  * In-memory doubles of the repository ports.
@@ -301,3 +303,12 @@ export class FakeSpendLedger implements SpendLedger {
 function keyOf(principal: Principal, day: LocalDate): string {
   return `${principal.id}@${day.toISO()}`;
 }
+
+/**
+ * A cycle that opens on nothing, for tests that are not about the chain.
+ * The real answer is a fold over the whole rolling window (UC-1.2), which is
+ * `ListCycles`' job — see {@link OpeningBalanceSource}.
+ */
+export const noOpeningBalances: OpeningBalanceSource = {
+  openingBalanceOf: () => Promise.resolve(Money.zero()),
+};

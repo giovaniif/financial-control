@@ -11,6 +11,7 @@ import {
   InMemoryBucketRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
+  noOpeningBalances,
 } from '../../../application/testing/fakes.js';
 import { FixedClock } from '../../../application/testing/fixed-clock.js';
 import {
@@ -84,6 +85,7 @@ const serverWith = (options: { cycles?: Cycle[]; buckets?: Bucket[] } = {}) => {
       noHolidays,
       clock,
       new InMemoryBucketRepository(),
+      noOpeningBalances,
     ),
     projectWealth: new ProjectWealth(buckets),
     manageBuckets: new ManageBuckets(buckets, cycles, settings, noHolidays),

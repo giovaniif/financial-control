@@ -91,13 +91,6 @@ export function buildTestServer(
     noHolidays,
     clock,
   );
-  const readCycle = new ReadCycle(
-    cycles,
-    settings,
-    noHolidays,
-    templates,
-    new InMemoryBucketRepository(),
-  );
   const listCycles = new ListCycles(
     cycles,
     settings,
@@ -107,12 +100,21 @@ export function buildTestServer(
     templates,
     new InMemoryBucketRepository(),
   );
+  const readCycle = new ReadCycle(
+    cycles,
+    settings,
+    noHolidays,
+    templates,
+    new InMemoryBucketRepository(),
+    listCycles,
+  );
   const buildDashboard = new BuildDashboard(
     cycles,
     settings,
     noHolidays,
     clock,
     new InMemoryBucketRepository(),
+    listCycles,
   );
   const projectWealth = new ProjectWealth(buckets);
 

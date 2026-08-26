@@ -30,6 +30,7 @@ import {
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
   SequentialIdSource,
+  noOpeningBalances,
 } from '../testing/fakes.js';
 import { FixedClock } from '../testing/fixed-clock.js';
 
@@ -97,6 +98,7 @@ const wire = (
         noHolidays,
         templates,
         new InMemoryBucketRepository(),
+        noOpeningBalances,
       ),
       dashboard: new BuildDashboard(
         cycles,
@@ -104,6 +106,7 @@ const wire = (
         noHolidays,
         clock,
         new InMemoryBucketRepository(),
+        noOpeningBalances,
       ),
       cycles: new ListCycles(
         cycles,
