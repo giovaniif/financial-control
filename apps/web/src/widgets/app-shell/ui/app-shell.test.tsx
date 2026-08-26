@@ -568,3 +568,20 @@ describe('AppShell on a wide screen', () => {
     expect(screen.getByRole('link', { name: 'Perfil' })).toBeInTheDocument();
   });
 });
+
+/**
+ * Pinning the shell to the window is Main's arrangement, not the shell's. A
+ * screen that scrolls is the normal case, and pinning one that does not fit
+ * hides its bottom with no way to reach it — which is exactly what happened
+ * to Profile when this was applied to every screen.
+ */
+describe('AppShell and the window', () => {
+  it('lets a screen scroll unless it says it fits', async () => {
+    stubApi({ '/api/cycles': window_ });
+    renderShell();
+
+    await screen.findByText('screen body');
+
+    expect(document.querySelector('.lg\\:overflow-hidden')).toBeNull();
+  });
+});

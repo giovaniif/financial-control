@@ -47,6 +47,8 @@ export function MainPage() {
     <AppShell
       title="Principal"
       subtitle="Quanto você vai pagar no próximo ciclo, e o que sobra até o próximo pagamento"
+      // Main gives its leftover height to the worklist, which scrolls itself.
+      fitsWindow
     >
       {isPending ? (
         <Skeleton className="h-48 w-full" />
