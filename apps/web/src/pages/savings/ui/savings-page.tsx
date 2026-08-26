@@ -2,13 +2,6 @@ import { useState } from 'react';
 
 import { toBucketView, useBuckets } from '@/entities/bucket';
 import { CreateBucketButton } from '@/features/create-bucket';
-import {
-  AdjustRule,
-  ArchiveBucket,
-  CorrectBalance,
-  SetGoal,
-  RecordEvent,
-} from '@/features/manage-buckets';
 import { useSelectedCycle } from '@/features/navigate-cycle';
 import { EmptyState, Skeleton } from '@/shared/ui';
 import { AppShell } from '@/widgets/app-shell';
@@ -52,25 +45,8 @@ export function SavingsPage() {
             buckets={buckets}
             selectedId={selected?.id}
             onSelect={setSelectedId}
+            month={selectedMonth ?? ''}
           />
-
-          {selected !== undefined && (
-            <div className="flex justify-end gap-2">
-              <AdjustRule bucket={selected} month={selectedMonth ?? ''} />
-              <SetGoal bucket={selected} />
-              <CorrectBalance
-                bucketId={selected.id}
-                bucketName={selected.name}
-                balance={selected.balance}
-              />
-              <RecordEvent
-                bucketId={selected.id}
-                bucketName={selected.name}
-                month={selectedMonth ?? ''}
-              />
-              <ArchiveBucket bucket={selected} />
-            </div>
-          )}
 
           {selectedMonth !== undefined && (
             <AllocationSection month={selectedMonth} />
