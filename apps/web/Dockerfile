@@ -15,7 +15,18 @@ COPY packages/tsconfig/package.json packages/tsconfig/
 COPY packages/eslint-config/package.json packages/eslint-config/
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
-RUN pnpm install --frozen-lockfile
+# Only inside the image. On this machine the link is the same but the cache is
+# warm, so none of this should slow a local `pnpm install` down.
+#
+# The defaults give up while this link is merely slow rather than broken, and
+# 16 parallel connections on a link this poor make each other time out.
+RUN printf '%s\n' \
+  'fetch-retries=5' \
+  'fetch-retry-mintimeout=20000' \
+  'fetch-retry-maxtimeout=180000' \
+  'fetch-timeout=600000' \
+  'network-concurrency=4' > .npmrc
+RUN pnpm install --frozen-lockfile --filter @fin/web...
 
 FROM deps AS build
 COPY packages/ packages/
