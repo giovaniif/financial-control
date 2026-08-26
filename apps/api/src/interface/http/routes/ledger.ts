@@ -177,21 +177,6 @@ export function registerLedgerRoutes(
     },
   );
 
-  app.delete<{ Params: { month: string; entryId: string } }>(
-    '/cycles/:month/entries/:entryId',
-    async (request, reply) => {
-      try {
-        await ledgerActions.removeEntry(
-          request.params.month,
-          request.params.entryId,
-        );
-        return await reply.status(204).send();
-      } catch (error) {
-        return handle(error, reply);
-      }
-    },
-  );
-
   app.post<{ Params: { month: string } }>(
     '/cycles/:month/close',
     async (request, reply) => {

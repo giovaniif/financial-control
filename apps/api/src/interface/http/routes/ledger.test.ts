@@ -264,18 +264,6 @@ describe('overriding over the API', () => {
 
     expect(response.statusCode).toBe(400);
   });
-
-  it('deletes an entry', async () => {
-    const { app, repository } = serverWith(populated());
-
-    const response = await app.inject({
-      method: 'DELETE',
-      url: '/cycles/2026-09/entries/e-health',
-    });
-
-    expect(response.statusCode).toBe(204);
-    expect((await repository.findByMonth(august))?.entries).toHaveLength(0);
-  });
 });
 
 describe('closing and reopening over the API', () => {
