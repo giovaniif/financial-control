@@ -69,3 +69,12 @@ export interface AllocationPreviewResponse {
   shortfall: Cents;
   isOvercommitted: boolean;
 }
+
+/**
+ * UC-6.1 — what a bucket is aiming at, or `null` to stop aiming. The mode
+ * follows the target: a bucket with one is a goal, and one without is an
+ * ongoing commitment, so the two are never sent apart.
+ */
+export interface SetBucketTargetRequest {
+  target: { amount: Cents; date: string } | null;
+}

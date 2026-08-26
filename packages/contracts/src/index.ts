@@ -55,6 +55,7 @@ export type {
   CreateGoalRequest,
   CreateOngoingRequest,
   FundingResponse,
+  SetBucketTargetRequest,
 } from './buckets.js';
 export type {
   BucketProjectionResponse,

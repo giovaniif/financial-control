@@ -158,6 +158,10 @@ export function registerBucketRoutes(
       const priority = record['priority'];
       const expectedYieldPercent = record['expectedYieldPercent'];
       const status = record['status'];
+      // `null` is the instruction to stop aiming, so its presence is what
+      // matters — an absent key means the caller said nothing about it.
+      const hasTarget = 'target' in record;
+      const target = readTarget(record['target']);
 
       try {
         let view: BucketView | undefined;
@@ -179,11 +183,20 @@ export function registerBucketRoutes(
         if (status === 'ARCHIVED') {
           view = await manageBuckets.archive(request.params.id);
         }
+        if (hasTarget) {
+          if (record['target'] !== null && target === undefined) {
+            return await badRequest(
+              reply,
+              'target precisa de amount em centavos e date como YYYY-MM-DD.',
+            );
+          }
+          view = await manageBuckets.setTarget(request.params.id, target);
+        }
 
         if (view === undefined) {
           return await badRequest(
             reply,
-            'É preciso informar rule, priority, expectedYieldPercent ou status.',
+            'É preciso informar rule, priority, expectedYieldPercent, status ou target.',
           );
         }
         return toResponse(view);
@@ -334,3 +347,17 @@ function handle(error: unknown, reply: FastifyReply) {
 }
 
 export type { AllocationRuleRequest };
+
+/** A target, or nothing when the caller sent `null` or something unreadable. */
+function readTarget(
+  value: unknown,
+): { targetCents: number; targetDate: string } | undefined {
+  const record =
+    typeof value === 'object' && value !== null ? asRecord(value) : {};
+  const amount = record['amount'];
+  const date = record['date'];
+
+  return typeof amount === 'number' && typeof date === 'string'
+    ? { targetCents: amount, targetDate: date }
+    : undefined;
+}
