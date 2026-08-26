@@ -280,18 +280,29 @@ The headline, in plain language:
 Beside it, the two numbers that qualify it: the **closing balance**, and **the closing balance without the
 unconfirmed estimates**. Everything else on the screen is evidence for that sentence.
 
-**UC-4.2 — See the headline figures**
-Total Outcome, Expected Surplus and Net Surplus — the calculation chain's three stages, each with a note
-explaining what it is made of.
+**UC-4.2 — See the headline figures** — *removed*
+Total Outcome, Expected Surplus and Net Surplus sat as three tiles above the chain strip — which carries all
+seven stages, those three included, with the same values one row down. Three of seven figures printed twice.
 
-*The lowest point in the cycle was removed*, here and everywhere. It answered "could this bounce mid-cycle",
-which is a real question — but it answered it with a number and a date rather than with the dated list that
-would show why, and it was read as a fourth headline figure competing with the three that make up the chain.
-The dated running balance is still there, on request (UC-8.4).
+The strip is the better of the two and is what remains: it states the chain **in order**, which is the whole
+point of `surplus → expectedSurplus → netSurplus` (§3), and lifting three stages out of that sequence to head
+the screen broke the one thing the sequence is for. **No figure was lost** — every one is on the strip
+(UC-3.1).
 
-**UC-4.3 — See where the current cycle stands**
-How far through the cycle today is, and how much has actually been spent against what was planned. Two
-progress readings side by side; the gap between them is the signal.
+*The lowest point in the cycle went earlier*, and for a related reason: it answered "could this bounce
+mid-cycle" with a number and a date rather than the dated list that would show why, and read as a fourth
+figure competing with the three. The dated running balance is still there, on request (UC-8.4).
+
+**UC-4.3 — See where the current cycle stands** — *removed*
+Two progress bars: how far through the cycle today is, and how much has been spent against what was planned.
+
+The spend reading restated Total de Saídas, which the strip already carries — and once a cycle is fully
+settled the card read *"R$ 13.316,92 de R$ 13.316,92 previstos"*, the same figure three times on one screen.
+What it alone knew was the day of the cycle, and a date does not earn a card; the header states the cycle's
+bounds on every screen.
+
+The gap between time and spend was a real signal, and losing it is what this costs. It is asked for rather
+than shown (UC-8.1), from the same figures.
 
 **UC-4.4 — Toggle estimates globally** — *removed*
 A header control switched every figure between **Confirmed only** and **Including estimates**. It asked the
@@ -487,8 +498,11 @@ Three screens, plus the first run. Every use case above maps to exactly one.
 
 ### Main — *the answer to Q1*
 Opens on the current cycle, speaks about the next. Headline sentence; the qualifying pair (closing, closing
-without estimates); three KPI tiles; the calculation-chain strip; cycle progress against spend progress; the
-upcoming list with inline settle; bucket chips; and the assistant alongside them.
+without estimates) and how the cycle came out against its plan; the calculation-chain strip; bucket chips; the
+upcoming list with inline settle; and the assistant alongside them.
+
+Read top to bottom it is: **the answer in words → the chain in order → what goes into the buckets → what to
+settle next.** Every figure appears once.
 *Primary action:* settle the next due entry. *Secondary:* ask. → UC-3.1, UC-3.5, UC-4, UC-8
 
 ### Profile

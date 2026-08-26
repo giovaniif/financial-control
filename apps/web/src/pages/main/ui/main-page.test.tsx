@@ -219,10 +219,6 @@ const renderPage = (entry = '/') =>
     />,
   );
 
-/** The chain strip names the same figures, so the tiles are read on their own. */
-const tiles = () =>
-  within(screen.getByRole('region', { name: 'Figuras principais' }));
-
 const upcoming = (overrides = {}) => ({
   id: 'e1',
   cycleMonth: '2026-09',
@@ -333,28 +329,23 @@ describe('MainPage', () => {
     expect(screen.queryByText('Melhor que o previsto')).not.toBeInTheDocument();
   });
 
-  it('shows the four KPIs, each with the note saying what it is made of', async () => {
+  /**
+   * The tiles restated three of the chain's seven stages one row above it,
+   * and the progress card restated Total de Saídas twice more.
+   */
+  it('states each figure once, in the chain rather than beside it', async () => {
     renderPage();
 
-    await screen.findByText('Lowest point in cycle');
+    await screen.findByText(/fica livre depois das alocações/);
 
     expect(
-      tiles().getAllByText(
-        /^(Total Outcome|Expected Surplus|Net Surplus|Lowest point in cycle)$/,
-      ),
-    ).toHaveLength(4);
+      screen.queryByRole('region', { name: 'Figuras principais' }),
+    ).not.toBeInTheDocument();
     expect(
-      tiles().getByText('free cash after allocations'),
-    ).toBeInTheDocument();
-  });
-
-  it('reports cycle progress against spend', async () => {
-    renderPage();
-
-    expect(await screen.findByText('Dia 6 de 30')).toBeInTheDocument();
-    expect(
-      screen.getByText('Gasto em relação ao previsto'),
-    ).toBeInTheDocument();
+      screen.queryByText('Gasto em relação ao previsto'),
+    ).not.toBeInTheDocument();
+    // The figures themselves did not go anywhere.
+    expect(screen.getByText('Sobra Líquida')).toBeInTheDocument();
   });
 
   it('says when there is nothing due', async () => {
@@ -461,7 +452,7 @@ describe('MainPage', () => {
   it('shows no bucket chips before there are any buckets', async () => {
     renderPage();
 
-    await screen.findByText('Lowest point in cycle');
+    await screen.findByText(/fica livre depois das alocações/);
 
     expect(screen.queryByText('Caixinhas')).not.toBeInTheDocument();
   });
@@ -513,7 +504,7 @@ describe('MainPage and the assistant', () => {
     expect(
       await screen.findByText(/fica livre depois das alocações/),
     ).toHaveTextContent('R$ 9.110,00');
-    expect(tiles().getByText('Total Outcome')).toBeInTheDocument();
+    expect(screen.getByText('Total de saídas')).toBeInTheDocument();
 
     // Switched off is a state, not a breakage: the rail opens and says so.
     await userEvent.click(screen.getByRole('button', { name: 'Assistente' }));
@@ -618,7 +609,7 @@ describe('MainPage and closing a cycle', () => {
   it('does not offer to close a cycle still running', async () => {
     renderPage();
 
-    await screen.findByText('Lowest point in cycle');
+    await screen.findByText(/fica livre depois das alocações/);
 
     expect(
       screen.queryByRole('button', { name: 'Fechar o ciclo' }),
