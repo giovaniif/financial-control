@@ -318,6 +318,26 @@ describe('BuildDashboard upcoming list', () => {
     expect(upcoming[0]?.daysLate).toBe(4);
   });
 
+  /**
+   * UC-4.5 — with the Ledger screen gone this list is the only place an entry
+   * is settled by hand, so an entry it drops cannot be settled at all. It is
+   * bounded by the cycles it covers, never by a row count.
+   */
+  it('keeps every unsettled entry, however many the cycles hold', async () => {
+    const many = Cycle.open({
+      id: '2026-10',
+      ref: ref('2026-10'),
+      openingBalance: Money.zero(),
+      entries: Array.from({ length: 20 }, (_unused, index) =>
+        entry(`Bill ${String(index)}`, EntryKind.Fixed, '2026-09-10', -100),
+      ),
+    });
+
+    const { upcoming } = await building({ cycles: [many] }).build();
+
+    expect(upcoming).toHaveLength(20);
+  });
+
   it('leaves settled entries out', async () => {
     const settled = october().skipEntry('Rent');
 
