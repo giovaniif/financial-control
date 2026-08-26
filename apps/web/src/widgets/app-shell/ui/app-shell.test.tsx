@@ -154,10 +154,12 @@ describe('AppShell', () => {
 
     const links = await screen.findAllByRole('link');
 
+    // The two screens that answer a question sit together; the one that
+    // configures the app comes after them.
     expect(links.map((link) => link.textContent)).toEqual([
       'Principal',
-      'Perfil',
       'Investimentos e Reservas',
+      'Perfil',
     ]);
   });
 
@@ -376,7 +378,7 @@ describe('AppShell and the assistant rail', () => {
     await openRail();
 
     expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(
-      ['Principal', 'Perfil', 'Investimentos e Reservas'],
+      ['Principal', 'Investimentos e Reservas', 'Perfil'],
     );
   });
 
@@ -500,7 +502,7 @@ describe('AppShell on a phone', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Abrir o menu' }));
 
     expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(
-      ['Principal', 'Perfil', 'Investimentos e Reservas'],
+      ['Principal', 'Investimentos e Reservas', 'Perfil'],
     );
   });
 

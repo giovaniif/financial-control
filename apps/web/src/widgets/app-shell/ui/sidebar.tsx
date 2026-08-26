@@ -3,12 +3,23 @@ import { NavLink } from 'react-router';
 import { EASE_SHEET, MOTION_MS } from '../model/motion.js';
 import { AccountsTotal } from './accounts-total.js';
 
-/** Three screens, per `docs/USE_CASES.md` §5 — few enough to need no grouping. */
+/**
+ * Three screens, per `docs/USE_CASES.md` §5 — few enough to need no grouping.
+ *
+ * The two that answer a question sit together (§1: Main answers Q1,
+ * Investments & Savings answers Q2); Perfil configures the app and follows
+ * them.
+ */
 const items = [
   {
     to: '/',
     label: 'Principal',
     paths: ['M4 10.5 12 4l8 6.5', 'M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9'],
+  },
+  {
+    to: '/savings',
+    label: 'Investimentos e Reservas',
+    paths: ['M3.5 17.5 10 11l4 4 6.5-7.5', 'M15 7.5h5.5V13'],
   },
   {
     to: '/profile',
@@ -17,11 +28,6 @@ const items = [
       'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
       'M4.5 20.5a7.5 7.5 0 0 1 15 0',
     ],
-  },
-  {
-    to: '/savings',
-    label: 'Investimentos e Reservas',
-    paths: ['M3.5 17.5 10 11l4 4 6.5-7.5', 'M15 7.5h5.5V13'],
   },
 ];
 
