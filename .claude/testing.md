@@ -123,7 +123,7 @@ and readable; a stack of `vi.mock` calls is neither.
 ### `apps/api/src/infrastructure` — thin, DB-backed
 
 Prisma repository tests need a live PostgreSQL, so they are skipped unless `DATABASE_URL`
-is set and `pnpm db:up` is running. Keep them to SQL that logic depends on — filters,
+is set and the database is up — it is a Coolify resource and normally always is. Keep them to SQL that logic depends on — filters,
 ordering, joins — not re-testing Prisma itself.
 
 ### `apps/api/src/interface` — the wiring

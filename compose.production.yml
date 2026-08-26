@@ -1,47 +1,23 @@
-# How the app actually runs: three containers on this machine, supervised by
-# the Coolify instance that is already here. Not a hosted environment — see
+# How the app actually runs: two containers on this machine, supervised by the
+# Coolify instance that is already here. Not a hosted environment — see
 # .claude/deployment.md.
 #
-# This is the only definition of the database. It publishes 5434 exactly as
-# the development compose file used to, so `pnpm dev` reaches the same data
-# through the same connection string — one machine, one user, one dataset.
+# The database is NOT here. It is a Coolify *managed* Postgres, which is what
+# makes it eligible for Coolify's scheduled backups — a compose service is
+# not. The API reaches it by its internal hostname on the `coolify` network,
+# and `pnpm dev` still reaches it on 5434.
 
 services:
-  postgres:
-    image: postgres:17
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-fin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fin}
-      POSTGRES_DB: ${POSTGRES_DB:-fin}
-    ports:
-      # 5434, not 5432: this machine already runs other projects' databases on
-      # 5432 and 5433. `pnpm dev` connects here.
-      - '${POSTGRES_PORT:-5434}:5432'
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-      # Creates fin_test beside fin on first boot. The tests truncate every
-      # table, so they must never point at the development database.
-      - ./scripts/create-test-database.sql:/docker-entrypoint-initdb.d/10-create-test-database.sql:ro
-    healthcheck:
-      test:
-        [
-          'CMD-SHELL',
-          'pg_isready -U ${POSTGRES_USER:-fin} -d ${POSTGRES_DB:-fin}',
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     environment:
-      # Reached over the Docker network, so it is the container's own 5432 and
-      # not the 5434 published to the host for `pnpm dev`.
-      DATABASE_URL: ${DATABASE_URL:-postgresql://fin:fin@postgres:5432/fin?schema=public}
+      # No default: the host is the managed database's Coolify uuid, which is
+      # generated rather than chosen, so there is nothing sensible to fall
+      # back to. Set on the resource in Coolify.
+      DATABASE_URL: ${DATABASE_URL}
       PORT: 3333
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
@@ -49,9 +25,13 @@ services:
     # No published port. Nothing reaches the API except the web container,
     # which is what deployment.md already says about the dev setup: only the
     # web port needs to be open.
-    depends_on:
-      postgres:
-        condition: service_healthy
+    #
+    # The managed database lives on Coolify's own network, so the API joins it
+    # as an external one. Declared external, never defined: this file must not
+    # be able to create or remove the network the data sits on.
+    networks:
+      - default
+      - coolify
     healthcheck:
       test:
         [
@@ -85,7 +65,10 @@ services:
       timeout: 5s
       retries: 5
 
-volumes:
-  # The data. Named rather than bound, so `docker compose down` cannot take it
-  # and only an explicit `down -v` ever will.
-  postgres-data:
+networks:
+  default:
+  coolify:
+    # Coolify's own network, where the managed database runs. External so that
+    # bringing this stack down can never take it, or the database, with it.
+    name: coolify
+    external: true
