@@ -32,9 +32,12 @@ This file is about *how we work here*.
    → @.claude/code-style.md
 7. **Do not write comments** unless they explain something genuinely un-inferable from the
    code. → @.claude/code-style.md
-8. **Everything runs locally.** No Render, no Vercel, no Supabase, no deployment of
-   any kind — one machine, one user. A stack merges atomically; when merging only part
-   of one, cut at a layer that leaves `main` coherent. → @.claude/deployment.md
+8. **Everything runs locally.** No Render, no Vercel, no Supabase — one machine, one
+   user, nothing uploaded anywhere. The app runs as containers supervised by the
+   Coolify **on this box**, which is a process supervisor rather than a platform, and
+   is unauthenticated and therefore tailnet-only with no domain in front of it. A stack
+   merges atomically; when merging only part of one, cut at a layer that leaves `main`
+   coherent. → @.claude/deployment.md
 
 ## Package manager
 
