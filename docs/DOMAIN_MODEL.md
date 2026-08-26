@@ -13,7 +13,7 @@ describes how the system is structured so it stays true to it.
 |---|---|---|
 | **Budgeting** *(core)* | Cycles, ledger entries, recurring templates, the calculation chain | UC-2, UC-3 |
 | **Allocation & Goals** | Buckets, allocation rules, contributions, yields, corrections | UC-6 |
-| **Projection** *(read models)* | Dashboard, alerts, wealth projection | UC-4, UC-7 |
+| **Projection** *(read models)* | Dashboard, wealth projection | UC-4, UC-7 |
 | **Assistant** *(read models + intent)* | Answering from the app's own figures; proposing changes for the user to confirm | UC-1.5, UC-8 |
 
 Contexts communicate through application services and domain events, never by reaching into each other's
@@ -103,8 +103,11 @@ LedgerEntry                          // entity within Cycle
 the UI warns first.
 
 **Running balance.** The ledger's per-row balance (UC-3.2) is a fold over entries sorted by `dueDate`, computed
-twice — once including estimates and once without — to serve the global toggle (UC-4.4). It is derived on
-read, never stored.
+twice — once including estimates and once without. It is derived on read, never stored.
+
+Both readings outlived the global toggle that first asked for them (UC-4.4, removed). Main answers *including
+estimates* and states the closing balance both ways beside the headline, and the assistant can be asked for
+either — so a guess still cannot pass for a known bill (UC-2.6, UC-8.2).
 
 ### `RecurringTemplate` — aggregate root · Budgeting
 
@@ -200,7 +203,7 @@ Implemented on `Cycle` as pure derivations with no persisted duplicates:
 
 ```
 totalIncome     = Σ entries where kind = INCOME
-totalOutcome    = Σ entries where kind ∈ { FIXED, INVOICE } and outgoing variables
+totalOutcome    = Σ entries where kind = FIXED and outgoing variables
 variables       = Σ entries where kind = VARIABLE            (signed)
 
 surplus         = totalIncome − totalOutcome
@@ -210,8 +213,9 @@ netSurplus      = expectedSurplus − allocations
 closingBalance  = openingBalance + netSurplus
 ```
 
-Every total is computable two ways — **confirmed only** and **including estimates** — so UC-4.4's global
-toggle needs no second code path.
+Every total is computable two ways — **confirmed only** and **including estimates** — from one code path.
+The API serves either, which is what lets Main state the closing balance both ways and lets the assistant be
+asked for one or the other.
 
 **Allocation resolution**, per cycle:
 
@@ -316,25 +320,31 @@ src/
     shared/           money.ts, percentage.ts, planned-actual.ts, date-range.ts
     ports/            clock.ts, holiday-calendar.ts, language-model.ts, repositories.ts
 
-  application/        one interactor per use case, named for its id
-    budgeting/        uc-3-5-settle-entry.ts, uc-3-8-close-cycle.ts, …
-    goals/            uc-6-5-override-contribution.ts, uc-6-7-correct-balance.ts, …
-    projection/       uc-4-build-dashboard.ts, uc-4-7-build-alerts.ts,
-                      uc-7-project-wealth.ts
+  application/        interactors named for the use case ids they serve
+    budgeting/        uc-3-ledger-actions.ts, uc-3-8-close-cycle.ts, …
+    goals/            uc-6-manage-buckets.ts
+    projection/       uc-4-build-dashboard.ts, uc-7-project-wealth.ts
     setup/            uc-1-5-converse-setup.ts, setup-draft.ts, compose-setup.ts,
                       setup-document.ts, write-setup-document.ts
     assistant/        uc-8-ask-assistant.ts, uc-8-apply-proposal.ts
 
   infrastructure/
     prisma/           schema.prisma, migrations/, repositories/, mappers/
-    clock/  holidays/  anthropic/
+    clock/  holidays/  anthropic/  gemini/  ollama/
 
   interface/
     http/             controllers/, routes/, dto/
 ```
 
 Naming interactors after use-case ids keeps the traceability that makes these two documents worth having:
-every id in `USE_CASES.md` has exactly one file, and an orphan in either direction is a visible bug.
+every live id in `USE_CASES.md` is served by exactly one file, and an orphan in either direction is a visible
+bug.
+
+**One file may serve several ids, and only when they share an aggregate.** `uc-3-ledger-actions.ts` carries
+UC-3.4, UC-3.5, UC-3.7 and UC-3.9 because each is a mutation of one `Cycle` behind one consistency boundary,
+and splitting them would be four files repeating the same load-mutate-save. The grouping is the aggregate's,
+never a convenience: two ids on different aggregates stay in different files, which is why closing a cycle
+and reading one each have their own.
 
 ### Frontend
 
