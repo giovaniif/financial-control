@@ -51,20 +51,35 @@ a schema the code does not expect.
 
 ## The database
 
-```bash
-pnpm db:up      # start PostgreSQL
-pnpm db:down    # stop it, keeping the data
-pnpm db:reset   # delete the volume and start clean
-```
+**A Coolify managed Postgres, not a service in the compose file.** That is the
+whole reason it sits outside a stack it would otherwise belong in: Coolify's
+scheduled backups only cover a standalone database resource, and an unbacked-up
+database is the one risk this project could not argue away — UC-1.6 removed the
+app's own export because *"a database dump does better"*, which is only true if
+something actually takes one.
+
+It is started, stopped and backed up from Coolify, so there are no `pnpm db:*`
+scripts any more. It restarts on boot like everything else.
 
 Port **5434**, not 5432: this machine already runs other projects' databases on
-5432 and 5433. The credentials in `compose.production.yml` are committed on purpose
-— they guard a container on `localhost` holding data that only exists on this
-machine, and pretending otherwise would just make the setup harder to run.
+5432 and 5433. `pnpm dev` reaches it there, unchanged. The credentials are
+`fin`/`fin` on purpose — they guard a container on a tailnet-only machine whose
+app is itself unauthenticated, so a strong password there would protect nothing
+that is not already open, and would only make the setup harder to run.
+
+The API reaches it by the resource's **internal hostname on the `coolify`
+network**, which is its generated uuid. That is why `DATABASE_URL` has no
+default in `compose.production.yml`: there is nothing sensible to fall back to,
+and a wrong default that quietly connects somewhere is worse than a missing one.
 
 `DATABASE_URL` is the only connection string. There is no pooler in front of the
 database, so migrations and the application share it and Prisma needs no
 separate `directUrl`.
+
+`fin_test` lives beside `fin` and the tests truncate every table in it. It was
+created by hand when the database was split out — a managed resource has no
+init-script hook, so a rebuilt one needs `create database fin_test owner fin`
+before `pnpm check` will pass.
 
 ## Migrations
 
@@ -77,19 +92,20 @@ Migrations are committed, never edited after merge, and are their own PR at the
 bottom of a stack. Rolling one back is forward-only: a bad migration is fixed by
 a new migration.
 
-**Back up before anything destructive.** There is no managed database taking
-snapshots, and the app no longer exports its own data (UC-1.6 is removed), so
-`pnpm db:reset` is exactly as final as it sounds — and it now takes the
-deployed database with it, because there is only one. The backup is a dump:
+**Coolify takes a scheduled backup, and it is the only thing that does.** It
+runs against the managed resource and is configured on it — the app still has
+no export of its own (UC-1.6 is removed), so that schedule and the manual dump
+below are the entire recovery story.
+
+Take a dump by hand as well before anything destructive — a destructive
+migration, a restore, anything that cannot be undone. The schedule protects you
+from yesterday; it does not protect you from the next five minutes:
 
 ```bash
-docker exec fin-prod-postgres-1 pg_dump -U fin fin > backup.sql
+docker exec $(docker ps -qf name=<database-uuid>) pg_dump -U fin fin > backup.sql
 ```
 
-Take one before a reset, before a destructive migration, and before anything
-else that cannot be undone. Nothing else will — Coolify's scheduled backups
-cover standalone database resources, not a Postgres inside a compose stack,
-and this one is in the stack so that the whole app deploys as a unit.
+The uuid is the resource's, visible in Coolify or in its URL.
 
 ## Reaching it from another machine
 
