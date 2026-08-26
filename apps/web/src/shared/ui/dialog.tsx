@@ -40,11 +40,14 @@ export function Dialog({ open, title, onClose, children }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-zinc-900/30 p-6 pt-24">
+      {/* The panel sets its own foreground colour. It is not a portal (see
+          above), so it stays a DOM descendant of whatever opened it — and the
+          headline that opens the close-cycle dialog is `text-zinc-50`. */}
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="flex w-full max-w-md flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-lg"
+        className="flex w-full max-w-md flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 text-zinc-900 shadow-lg"
       >
         <div className="flex items-start justify-between gap-4">
           <h2 id={titleId} className="text-base font-semibold">
