@@ -292,12 +292,21 @@ describe('MainPage', () => {
     expect(headline).toHaveTextContent('R$ 3.556,00');
   });
 
-  // Never let a guess masquerade as a fact.
-  it('shows the closing balance without the estimates too', async () => {
+  /**
+   * The closing balance is the chain strip's last stage, and the confirmed
+   * reading was a second figure to hold in your head that read *higher* than
+   * the real one. `~estimativa` still tags every guess at its source, which
+   * is where §6's rule is actually enforced.
+   */
+  it('leaves the closing-balance pair off the headline', async () => {
     renderPage();
 
-    expect(await screen.findByText('Sem as estimativas')).toBeInTheDocument();
-    expect(screen.getByText('R$ 5.056,00')).toBeInTheDocument();
+    await screen.findByText(/fica livre depois das alocações/);
+
+    expect(screen.queryByText('Fecha com')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sem as estimativas')).not.toBeInTheDocument();
+    // Still the last stage of the chain, where it belongs.
+    expect(screen.getByText('Saldo final')).toBeInTheDocument();
   });
 
   /**

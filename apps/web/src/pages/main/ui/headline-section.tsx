@@ -59,16 +59,13 @@ export function HeadlineSection({
         fica livre depois das alocações.
       </p>
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-zinc-800 pt-3 text-xs">
-        <Qualifier label="Fecha com" value={headline.closing} />
-        {/* Never let a guess masquerade as a fact. */}
-        <Qualifier
-          label="Sem as estimativas"
-          value={headline.closingWithoutEstimates}
-          tone="text-amber-300"
-        />
-        {variance !== null && <Variance cents={variance} />}
-      </div>
+      {/* Nothing to qualify a projected cycle with, so the rule above it
+          would be a border under nothing. */}
+      {variance !== null && (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-zinc-800 pt-3 text-xs">
+          <Variance cents={variance} />
+        </div>
+      )}
     </section>
   );
 }
