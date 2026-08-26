@@ -1,0 +1,46 @@
+# The build context is the workspace root, because both images depend on
+# packages/contracts. Everything that is not source has to be kept out of it
+# by hand — a stray .env or a host node_modules would otherwise be copied
+# into a layer and survive there whatever a later step deletes.
+
+node_modules
+**/node_modules
+.pnpm-store
+
+dist
+build
+**/dist
+**/build
+*.tsbuildinfo
+.vite
+.turbo
+coverage
+
+# Secrets. The repository is public and an image is not.
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Personal financial data.
+*.xlsx
+*.xls
+*.csv
+*.ofx
+
+.git
+.github
+.claude
+.tmp
+docs
+*.md
+!README.md
+
+.DS_Store
+.idea
+.vscode
+*.log
+
+# The development database's compose file. The deployed app reaches the
+# database that is already running; it never starts one.
+docker-compose.yml
