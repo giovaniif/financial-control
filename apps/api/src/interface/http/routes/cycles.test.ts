@@ -5,6 +5,7 @@ import { ReadCycle } from '../../../application/budgeting/uc-3-1-read-cycle.js';
 import { ListCycles } from '../../../application/budgeting/uc-3-3-list-cycles.js';
 import {
   InMemoryAccountRepository,
+  InMemoryBucketRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
@@ -65,6 +66,7 @@ const serverWith = (...cycles: Cycle[]) => {
       new InMemorySettingsRepository(anchor),
       noHolidays,
       new InMemoryTemplateRepository(),
+      new InMemoryBucketRepository(),
     ),
   });
 };
@@ -145,6 +147,7 @@ describe('GET /cycles', () => {
         noHolidays,
         FixedClock.at('2026-08-10T12:00:00Z'),
         new InMemoryTemplateRepository(),
+        new InMemoryBucketRepository(),
       ),
     });
   };

@@ -78,7 +78,13 @@ const serverWith = (options: { cycles?: Cycle[]; buckets?: Bucket[] } = {}) => {
 
   return buildTestServer({
     clock,
-    buildDashboard: new BuildDashboard(cycles, settings, noHolidays, clock),
+    buildDashboard: new BuildDashboard(
+      cycles,
+      settings,
+      noHolidays,
+      clock,
+      new InMemoryBucketRepository(),
+    ),
     projectWealth: new ProjectWealth(buckets),
     manageBuckets: new ManageBuckets(buckets, cycles, settings, noHolidays),
   });

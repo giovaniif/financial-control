@@ -5,10 +5,12 @@ import type { Clock } from '../../domain/ports/clock.js';
 import type { HolidayCalendar } from '../../domain/ports/holiday-calendar.js';
 import type {
   AccountRepository,
+  BucketRepository,
   CycleRepository,
   RecurringTemplateRepository,
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
+import { allocateInto } from '../../domain/budgeting/allocation-generation.js';
 import { generateInto } from '../../domain/budgeting/template-generation.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { monthOf } from './month.js';
@@ -58,6 +60,7 @@ export class ListCycles {
     private readonly holidays: HolidayCalendar,
     private readonly clock: Clock,
     private readonly templates: RecurringTemplateRepository,
+    private readonly buckets: BucketRepository,
   ) {}
 
   async rollingWindow(
@@ -81,6 +84,7 @@ export class ListCycles {
     // carry in, so the window opens on what is actually in the accounts.
     let opening = Account.totalOf(await this.accounts.findAll());
     const templates = await this.templates.findAll();
+    const buckets = await this.buckets.findAll();
     const summaries: CycleSummaryView[] = [];
 
     for (const ref of refs) {
@@ -93,7 +97,12 @@ export class ListCycles {
       // Projected from templates but never persisted: listing the window is a
       // read, and writing twelve cycles because someone opened a dropdown
       // would materialise months the user has not touched.
-      const cycle = generateInto(base, templates, entryId).cycle;
+      // Allocations come after the templates: they apply to the Expected
+      // Surplus those entries produce.
+      const cycle = allocateInto(
+        generateInto(base, templates, entryId).cycle,
+        buckets,
+      );
 
       const chain = cycle.chain(estimates);
       summaries.push({

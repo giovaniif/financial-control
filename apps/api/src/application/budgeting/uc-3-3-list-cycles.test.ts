@@ -13,6 +13,7 @@ import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
 import {
   InMemoryAccountRepository,
+  InMemoryBucketRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
@@ -38,6 +39,7 @@ const listing = (options: {
     noHolidays,
     options.at === undefined ? clock : FixedClock.at(options.at),
     new InMemoryTemplateRepository(),
+    new InMemoryBucketRepository(),
   );
 
 const cycleWith = (month: string, reais: number) =>
@@ -161,6 +163,7 @@ describe('ListCycles balance chaining', () => {
       noHolidays,
       clock,
       new InMemoryTemplateRepository(),
+      new InMemoryBucketRepository(),
     );
 
     await useCase.rollingWindow();

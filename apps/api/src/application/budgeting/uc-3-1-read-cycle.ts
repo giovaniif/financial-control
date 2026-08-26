@@ -4,12 +4,14 @@ import { Cycle, Estimates } from '../../domain/budgeting/cycle.js';
 import type { LedgerEntry } from '../../domain/budgeting/ledger-entry.js';
 import type { HolidayCalendar } from '../../domain/ports/holiday-calendar.js';
 import type {
+  BucketRepository,
   CycleRepository,
   RecurringTemplateRepository,
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
 import { DomainError } from '../../domain/shared/domain-error.js';
 import { Money } from '../../domain/shared/money.js';
+import { allocateInto } from '../../domain/budgeting/allocation-generation.js';
 import { generateInto } from '../../domain/budgeting/template-generation.js';
 
 export class UnknownMonth extends DomainError {}
@@ -53,6 +55,7 @@ export class ReadCycle {
     private readonly settings: SettingsRepository,
     private readonly holidays: HolidayCalendar,
     private readonly templates: RecurringTemplateRepository,
+    private readonly buckets: BucketRepository,
   ) {}
 
   async byMonth(
@@ -77,7 +80,15 @@ export class ReadCycle {
       await this.cycles.save(generated.cycle);
     }
 
-    return toView(generated.cycle, estimates);
+    // Derived on top of what was persisted, never saved: a rule is a
+    // statement about every cycle it applies to, so it has to be re-read
+    // rather than frozen into a row that a rule change would leave stale.
+    const allocated = allocateInto(
+      generated.cycle,
+      await this.buckets.findAll(),
+    );
+
+    return toView(allocated, estimates);
   }
 
   /** Resolves a month against the configured anchor. */

@@ -7,12 +7,19 @@ import {
   ShiftPolicy,
 } from '../../domain/budgeting/cycle-ref.js';
 import { Cycle, Estimates } from '../../domain/budgeting/cycle.js';
-import { EntryKind, LedgerEntry } from '../../domain/budgeting/ledger-entry.js';
+import {
+  EntryKind,
+  LedgerEntry,
+  Origin,
+} from '../../domain/budgeting/ledger-entry.js';
+import { Allocation, Bucket } from '../../domain/goals/bucket.js';
 import { noHolidays } from '../../domain/ports/holiday-calendar.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
+import { Percentage } from '../../domain/shared/percentage.js';
 import { SettlementStatus } from '../../domain/shared/planned-actual.js';
 import {
+  InMemoryBucketRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
 } from '../testing/fakes.js';
@@ -56,13 +63,90 @@ const october = () =>
     ],
   });
 
-const building = (options: { cycles?: Cycle[] } = {}) =>
+const building = (options: { cycles?: Cycle[]; buckets?: Bucket[] } = {}) =>
   new BuildDashboard(
     new InMemoryCycleRepository(options.cycles ?? []),
     new InMemorySettingsRepository(anchor),
     noHolidays,
     clock,
+    new InMemoryBucketRepository(options.buckets ?? []),
   );
+
+/**
+ * UC-6.2 — the rules take their share of the cycle, so the chain's three
+ * stages stop being one number. The dashboard derives them the same way the
+ * cycle route and the rolling window do: three readers, one resolver.
+ */
+describe('BuildDashboard and the allocation rules', () => {
+  const reserve = () =>
+    Bucket.ongoing({
+      id: 'reserve',
+      name: 'Reserva',
+      rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(20)),
+      priority: 1,
+    });
+
+  /** The October fixture already carries a settled-in allocation of its own. */
+  const bare = () =>
+    Cycle.open({
+      id: '2026-10',
+      ref: ref('2026-10'),
+      openingBalance: Money.zero(),
+      entries: [
+        entry('Salary', EntryKind.Income, '2026-09-04', 18_000),
+        entry('Rent', EntryKind.Fixed, '2026-09-10', -8_000),
+      ],
+    });
+
+  it('takes the rules out of the surplus the cycle actually has', async () => {
+    const { headline } = await building({
+      cycles: [bare()],
+      buckets: [reserve()],
+    }).build();
+
+    // 18.000 − 8.000 = 10.000 expected; 20% of it is allocated.
+    expect(headline.freeCents).toBe(800_000);
+  });
+
+  it('leaves the figures alone when no bucket has a rule', async () => {
+    const { headline } = await building({ cycles: [bare()] }).build();
+
+    expect(headline.freeCents).toBe(1_000_000);
+  });
+
+  /**
+   * An allocation the rules already wrote is not written again — idempotency
+   * is keyed on the bucket the entry came from, which is also why a manual
+   * allocation entry, belonging to no bucket, does not block a rule.
+   */
+  it('does not allocate on top of one the rules already wrote', async () => {
+    const held = Cycle.open({
+      id: '2026-10',
+      ref: ref('2026-10'),
+      openingBalance: Money.zero(),
+      entries: [
+        entry('Salary', EntryKind.Income, '2026-09-04', 18_000),
+        entry('Rent', EntryKind.Fixed, '2026-09-10', -8_000),
+        LedgerEntry.create({
+          id: 'alloc-reserve@2026-10',
+          description: '→ Reserva',
+          kind: EntryKind.Allocation,
+          dueDate: ref('2026-10').end,
+          planned: reais(-1_500),
+          origin: Origin.fromAllocation('reserve'),
+        }),
+      ],
+    });
+
+    const { headline } = await building({
+      cycles: [held],
+      buckets: [reserve()],
+    }).build();
+
+    // The R$ 1.500 already there, not that plus a fresh 20%.
+    expect(headline.freeCents).toBe(850_000);
+  });
+});
 
 describe('BuildDashboard headline — the answer to Q1', () => {
   // The Dashboard opens on the current cycle but speaks about the next: the

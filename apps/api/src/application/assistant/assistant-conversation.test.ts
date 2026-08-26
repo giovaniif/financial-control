@@ -91,8 +91,20 @@ const wire = (
   const assistant = new AskAssistant(
     model,
     {
-      cycle: new ReadCycle(cycles, settings, noHolidays, templates),
-      dashboard: new BuildDashboard(cycles, settings, noHolidays, clock),
+      cycle: new ReadCycle(
+        cycles,
+        settings,
+        noHolidays,
+        templates,
+        new InMemoryBucketRepository(),
+      ),
+      dashboard: new BuildDashboard(
+        cycles,
+        settings,
+        noHolidays,
+        clock,
+        new InMemoryBucketRepository(),
+      ),
       cycles: new ListCycles(
         cycles,
         settings,
@@ -100,6 +112,7 @@ const wire = (
         noHolidays,
         clock,
         templates,
+        new InMemoryBucketRepository(),
       ),
       buckets: new ManageBuckets(buckets, cycles, settings, noHolidays),
       wealth: new ProjectWealth(buckets),

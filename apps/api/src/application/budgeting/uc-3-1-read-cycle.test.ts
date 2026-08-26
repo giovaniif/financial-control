@@ -16,6 +16,7 @@ import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
 import { SettlementStatus } from '../../domain/shared/planned-actual.js';
 import {
+  InMemoryBucketRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
@@ -59,6 +60,7 @@ const reading = (...cycles: Cycle[]) =>
     new InMemorySettingsRepository(anchor),
     noHolidays,
     new InMemoryTemplateRepository(),
+    new InMemoryBucketRepository(),
   );
 
 describe('ReadCycle.byMonth', () => {
@@ -158,6 +160,7 @@ describe('ReadCycle materialises the cycle from templates', () => {
         new InMemorySettingsRepository(anchor),
         noHolidays,
         new InMemoryTemplateRepository(templates),
+        new InMemoryBucketRepository(),
       ),
     };
   };
