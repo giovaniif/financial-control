@@ -200,14 +200,6 @@ describe('LedgerActions.addEntry', () => {
       }),
     ).rejects.toThrow(EntryNotInCycle);
   });
-
-  it('removes an entry', async () => {
-    const { actions, repository } = acting(populated());
-
-    await actions.removeEntry('2026-09', 'e-health');
-
-    expect((await reload(repository))?.entries).toHaveLength(0);
-  });
 });
 
 describe('LedgerActions.override', () => {
@@ -258,7 +250,6 @@ describe('LedgerActions on a closed cycle', () => {
         }),
     ],
     ['overriding', (a: LedgerActions) => a.override('2026-09', 'e-health', -1)],
-    ['removing', (a: LedgerActions) => a.removeEntry('2026-09', 'e-health')],
   ])('refuses %s', async (_name, act) => {
     const { actions } = acting(closed());
 

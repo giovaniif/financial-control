@@ -83,10 +83,6 @@ export class LedgerActions {
     return id;
   }
 
-  async removeEntry(month: string, entryId: string): Promise<void> {
-    await this.mutate(month, (cycle) => cycle.removeEntry(entryId));
-  }
-
   /** Changes one cycle's figure without touching whatever generated it. */
   async override(
     month: string,
