@@ -123,9 +123,13 @@ export function Disclosure({ label, children }: Props) {
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={toggle}
-        className="cursor-pointer rounded-lg border border-zinc-200 px-2 py-0.5 text-sm leading-none text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700"
+        /* No border: it sits beside a real button on every row it appears
+           on, and two outlines side by side read as two equal choices when
+           one is the action and the other is only a way in. Vertical, which
+           is what a per-row overflow control is. */
+        className="cursor-pointer rounded-lg px-1.5 py-1 text-base leading-none text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
       >
-        …
+        ⋮
       </button>
       {createPortal(
         <div
@@ -135,7 +139,11 @@ export function Disclosure({ label, children }: Props) {
           style={
             at === undefined ? undefined : { top: at.top, right: at.right }
           }
-          className="fixed z-40 flex min-w-44 flex-col items-stretch gap-1 rounded-xl border border-zinc-200 bg-white p-1 text-zinc-900 shadow-lg"
+          /* The panel styles its own items rather than every caller passing
+             a variant: being in a menu is what makes a button a menu row, and
+             that is something the container knows. Bordered pills inside a
+             bordered panel read as boxes in a box. */
+          className="fixed z-40 flex min-w-52 flex-col items-stretch rounded-xl border border-zinc-200 bg-white p-1 text-zinc-900 shadow-lg [&_button]:w-full [&_button]:rounded-md [&_button]:border-0 [&_button]:bg-transparent [&_button]:px-3 [&_button]:py-2 [&_button]:text-left [&_button]:font-normal [&_button]:hover:bg-zinc-100"
         >
           {children}
         </div>,
