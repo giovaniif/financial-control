@@ -18,7 +18,19 @@ export function BucketsSection({ buckets, selectedId, onSelect }: Props) {
         <CardTitle>Caixinhas</CardTitle>
         <CreateBucketButton existingCount={buckets.length} />
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {/* One row rather than a wrapping grid: these cards are peers being
+          compared, and a grid lets the number of buckets decide the shape —
+          a fifth one silently re-flows the four already there. Left to right
+          is also the order the funding actually runs in (UC-6.3).
+          Focusable so the cards past the edge are reachable without a
+          trackpad gesture (WCAG 2.1.1). */}
+      <div
+        role="group"
+        aria-label="Suas caixinhas"
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+        tabIndex={0}
+        className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1"
+      >
         {buckets.map((bucket) => (
           <button
             key={bucket.id}
@@ -30,7 +42,7 @@ export function BucketsSection({ buckets, selectedId, onSelect }: Props) {
             onClick={() => {
               onSelect(bucket.id);
             }}
-            className={`cursor-pointer rounded-xl border bg-white p-4 text-left transition-colors ${
+            className={`w-72 shrink-0 snap-start cursor-pointer rounded-xl border bg-white p-4 text-left transition-colors ${
               bucket.id === selectedId
                 ? 'border-zinc-900'
                 : 'border-zinc-200 hover:border-zinc-300'

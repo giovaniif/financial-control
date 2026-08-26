@@ -553,3 +553,25 @@ describe('SavingsPage projects what the buckets grow into', () => {
     );
   });
 });
+
+/**
+ * The cards are peers being compared, so they sit in one row that scrolls
+ * rather than a grid the bucket count reshapes. jsdom has no layout, so what
+ * is asserted is what would actually break: every bucket renders, and the
+ * strip past the edge is reachable without a trackpad gesture.
+ */
+describe('the caixinha strip', () => {
+  it('renders every bucket in one focusable row', async () => {
+    stub({ '/api/buckets': [bucket(), ongoing()] });
+    renderPage();
+
+    const strip = await screen.findByRole('group', {
+      name: 'Suas caixinhas',
+    });
+
+    expect(strip).toHaveAttribute('tabindex', '0');
+    expect(
+      within(strip).getAllByRole('button', { name: /^Selecionar / }),
+    ).toHaveLength(2);
+  });
+});
