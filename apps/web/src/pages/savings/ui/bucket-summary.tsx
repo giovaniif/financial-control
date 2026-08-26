@@ -9,20 +9,26 @@ import { Amount, Badge } from '@/shared/ui';
  */
 export function BucketSummary({ bucket }: { bucket: BucketView }) {
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <span className="font-medium">{bucket.name}</span>
-        <Badge tone={bucket.mode === 'GOAL' ? 'positive' : 'info'}>
-          {bucket.status === 'ARCHIVED'
-            ? 'arquivada'
-            : bucket.mode === 'GOAL'
-              ? 'meta'
-              : 'contínua'}
-        </Badge>
-        <Amount
-          cents={bucket.balance}
-          className="ml-auto text-sm font-semibold"
-        />
+    <div className="flex min-w-0 flex-col gap-2">
+      {/* The balance sits under the name rather than beside it. The card
+          shares its width with the actions trigger and can be as narrow as
+          the strip allows, so a name, a badge and an amount on one line had
+          nothing left to give and the amount ran off the card. */}
+      <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-medium">{bucket.name}</span>
+          {/* Only what the card does not already say. A goal shows a progress
+              bar and its target below; an ongoing one says it has no target
+              in words — so `meta` and `contínua` were labels for something
+              already on screen, and they cost the name the room to be read.
+              Archived is different: nothing else states it. */}
+          {bucket.status === 'ARCHIVED' && (
+            <span className="shrink-0">
+              <Badge tone="neutral">arquivada</Badge>
+            </span>
+          )}
+        </div>
+        <Amount cents={bucket.balance} className="text-sm font-semibold" />
       </div>
 
       {bucket.mode === 'GOAL' ? (
