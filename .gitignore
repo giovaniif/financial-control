@@ -20,10 +20,12 @@ build/
 # Test output
 coverage/
 
-# Environment — .env.example is committed, nothing else
+# Environment — only the example files are committed, and they carry names
+# without values.
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Platform
 .vercel/

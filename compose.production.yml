@@ -1,0 +1,68 @@
+# How the app actually runs: two containers on this machine, supervised by the
+# Coolify instance that is already here. Not a hosted environment — see
+# .claude/deployment.md.
+#
+# The database is deliberately absent. `fin-postgres` from docker-compose.yml
+# holds the real data and stays exactly where it is; this file joins its
+# network and never owns it.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      # Reached over the Docker network, so it is the container's own 5432 and
+      # not the 5434 that docker-compose.yml publishes to the host.
+      DATABASE_URL: ${DATABASE_URL:-postgresql://fin:fin@postgres:5432/fin?schema=public}
+      PORT: 3333
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+    # No published port. Nothing reaches the API except the web container,
+    # which is what deployment.md already says about the dev setup: only the
+    # web port needs to be open.
+    networks:
+      - default
+      - database
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3333/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      # Migrations run before the server listens, so the first probe must not
+      # be what decides the container is broken.
+      start_period: 60s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      # The one open port. Tailnet only — the app is unauthenticated, and
+      # anything that reaches this can read and rewrite every figure in it.
+      - '${WEB_PORT:-8090}:8080'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:8080/']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  default:
+  database:
+    # Created by docker-compose.yml, which owns it. External so that bringing
+    # this stack down can never take the database's network with it.
+    name: financial-control_default
+    external: true
