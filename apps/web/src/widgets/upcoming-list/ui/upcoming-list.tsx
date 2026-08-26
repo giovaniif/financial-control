@@ -16,7 +16,7 @@ export function UpcomingList({
   entries: UpcomingEntryResponse[];
 }) {
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex min-h-0 flex-col gap-2 lg:flex-1">
       <CardTitle>A vencer</CardTitle>
       {entries.length === 0 ? (
         <EmptyState
@@ -24,11 +24,11 @@ export function UpcomingList({
           body="Todos os lançamentos dos próximos ciclos já foram baixados."
         />
       ) : (
-        /* One cycle is about a dozen rows, so the page scrolls rather than
-           the list: everything on Main should be reachable by scrolling once.
-           The region keeps its name and stays focusable — harmless without a
-           scrollbar, and correct the moment a cycle is heavy enough to grow
-           one. */
+        /* From `lg` up the window is the frame, so this takes the height
+           left over and scrolls inside itself — settling a bill never means
+           scrolling the figures off the screen first. Below that the page
+           scrolls and this grows with its content. Focusable either way, or
+           the rows past the fold need a mouse (WCAG 2.1.1). */
         <ul
           role="region"
           aria-label="A vencer"
@@ -37,7 +37,7 @@ export function UpcomingList({
           // allows this for `tabpanel` only, and a worklist is not one.
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
           tabIndex={0}
-          className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white"
+          className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain"
         >
           {entries.map((entry) => (
             <li

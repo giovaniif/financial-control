@@ -529,7 +529,7 @@ describe('MainPage', () => {
     renderPage();
 
     expect(await screen.findByText('Apartment')).toBeInTheDocument();
-    expect(screen.getByText(/24% de/)).toBeInTheDocument();
+    expect(screen.getByText(/24% da meta/)).toBeInTheDocument();
     // Archived buckets are out of the picture entirely.
     expect(screen.queryByText('Europe Trip')).not.toBeInTheDocument();
   });
@@ -543,13 +543,13 @@ describe('MainPage', () => {
 
     renderPage();
 
-    const card = within(
-      await screen.findByRole('region', { name: 'Caixinhas' }),
-    );
+    const region = await screen.findByRole('region', { name: 'Caixinhas' });
+    const card = within(region);
 
     expect(await card.findByText('R$ 4.336,62')).toBeInTheDocument();
-    expect(card.getByText(/20% da Sobra Esperada/)).toBeInTheDocument();
-    expect(card.getByText(/acumulado/)).toBeInTheDocument();
+    // The rule and the balance sit in one line built from several nodes, so
+    // the assertion reads the line rather than a single text node.
+    expect(region).toHaveTextContent('20% · acum. R$ 36.000,00');
   });
 
   // UC-6.4 — a bucket the money did not reach must not read as funded.

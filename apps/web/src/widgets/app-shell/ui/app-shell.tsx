@@ -47,12 +47,12 @@ export function AppShell({ title, subtitle, children }: Props) {
   };
 
   return (
-    <div className="flex min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="flex min-h-screen bg-zinc-50 text-zinc-900 lg:h-screen lg:min-h-0 lg:overflow-hidden">
       {isWide && <Sidebar isCollapsed={isOpen} />}
       {!isWide && <NavDrawer isOpen={isNavOpen} onDismiss={dismissNav} />}
       <AssistantRail />
       {!isOpen && <ChatTab />}
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main className="flex min-w-0 flex-1 flex-col lg:min-h-0">
         <header className="sticky top-0 z-20 flex flex-col gap-2 border-b border-zinc-200 bg-white/85 px-4 py-2.5 backdrop-blur lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:gap-6 lg:px-8 lg:py-4">
           <div className="flex min-w-0 items-center gap-3">
             {!isWide && (
@@ -94,7 +94,11 @@ export function AppShell({ title, subtitle, children }: Props) {
         </header>
         {/* The bottom padding clears the floating chat button, which sits over
             the end of the content on every screen. */}
-        <div className="px-4 py-5 pb-24 sm:px-6 lg:px-8 lg:py-6 lg:pb-14">
+        {/* Below `lg` the page scrolls, because a phone cannot hold the
+            figures and a usable worklist at once. From `lg` up the window is
+            the frame and the screen fits inside it — only the list that grows
+            with the data scrolls. */}
+        <div className="flex flex-col px-4 py-5 pb-24 sm:px-6 lg:min-h-0 lg:flex-1 lg:px-8 lg:py-6 lg:pb-6">
           {children}
         </div>
       </main>

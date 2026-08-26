@@ -83,7 +83,7 @@ function Screen({
   position: CyclePosition | undefined;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4 lg:h-full lg:min-h-0">
       <HeadlineSection
         headline={figures.headline}
         position={position}
