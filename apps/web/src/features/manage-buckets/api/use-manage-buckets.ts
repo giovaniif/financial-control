@@ -24,7 +24,13 @@ function useBucketMutation<TInput>(send: (input: TInput) => Promise<unknown>) {
   });
 }
 
-/** UC-6.2, UC-6.3, UC-6.8, UC-7.1 — the rule, the order, the yield, archiving. */
+/**
+ * UC-6.1, UC-6.2, UC-6.3, UC-6.8, UC-7.1 — the target, the rule, the order,
+ * the yield, archiving.
+ *
+ * `target: null` is what stops a bucket aiming; the mode follows from it and
+ * is never sent, because the two disagreeing is the state UC-6.1 forbids.
+ */
 export function useUpdateBucket(id: string) {
   return useBucketMutation(
     (change: {
@@ -32,6 +38,7 @@ export function useUpdateBucket(id: string) {
       priority?: number;
       expectedYieldPercent?: number;
       status?: 'ARCHIVED';
+      target?: { amount: number; date: string } | null;
     }) =>
       api<BucketResponse>(`/buckets/${id}`, {
         method: 'PATCH',

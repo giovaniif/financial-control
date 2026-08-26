@@ -575,3 +575,65 @@ describe('the caixinha strip', () => {
     ).toHaveLength(2);
   });
 });
+
+/**
+ * UC-6.1 — a bucket the setup made ongoing could never become a goal, so its
+ * progress and completion date were unreachable. The mode is never chosen
+ * directly: it follows the target.
+ */
+describe('SavingsPage sets a goal on a bucket that exists', () => {
+  it('offers a goal to an ongoing caixinha', async () => {
+    stub({ '/api/buckets': [ongoing()] });
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Definir uma meta para/ }),
+    );
+
+    expect(screen.getByText(/Meta de/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Quanto quer juntar')).toHaveValue('');
+  });
+
+  it('refuses a goal with no date', async () => {
+    stub({ '/api/buckets': [ongoing()] });
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Definir uma meta para/ }),
+    );
+    await userEvent.type(screen.getByLabelText('Quanto quer juntar'), '60000');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar meta' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('precisa de uma data');
+  });
+
+  it('sends the target, and never the mode', async () => {
+    stub({ '/api/buckets': [ongoing()] });
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Definir uma meta para/ }),
+    );
+    // The mask reads digits as cents, as every money field here does.
+    await userEvent.type(
+      screen.getByLabelText('Quanto quer juntar'),
+      '6000000',
+    );
+    await userEvent.type(screen.getByLabelText('Até quando'), '2028-01-05');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar meta' }));
+
+    const mock = globalThis.fetch as ReturnType<typeof vi.fn>;
+    const calls = mock.mock.calls as unknown as [string, RequestInit?][];
+    const patch = calls.find(
+      (call) => call[1]?.method === 'PATCH' && call[0].includes('/buckets/'),
+    );
+    const sent = patch?.[1]?.body;
+    const body = JSON.parse(typeof sent === 'string' ? sent : '{}') as Record<
+      string,
+      unknown
+    >;
+
+    expect(body['target']).toEqual({ amount: 6_000_000, date: '2028-01-05' });
+    expect(body).not.toHaveProperty('mode');
+  });
+});
