@@ -220,17 +220,51 @@ describe('BuildDashboard for a chosen cycle', () => {
     ).rejects.toThrow(InvalidAnchor);
   });
 
-  // The worklist is anchored to today, not to whatever is being looked at:
-  // wandering back to a past cycle must not hide what is overdue now.
-  it('keeps the upcoming list anchored to today', async () => {
+  /**
+   * Everything else on Main describes the selected cycle, so the worklist
+   * does too — three cycles of the same recurring bills read as repetition
+   * rather than as a list of work.
+   */
+  it('leaves out another cycle\u2019s entries that are not yet late', async () => {
+    const { upcoming } = await building({
+      cycles: [september(), october()],
+    }).build('2026-09');
+
+    // October's are all still ahead of the fixed clock, so nothing keeps them.
+    expect(upcoming.map((one) => one.cycleMonth)).not.toContain('2026-10');
+  });
+
+  it('changes with the cycle the header selects', async () => {
     const chosen = await building({ cycles: [september(), october()] }).build(
       '2026-09',
     );
-    const unchosen = await building({
-      cycles: [september(), october()],
-    }).build();
+    const next = await building({ cycles: [september(), october()] }).build(
+      '2026-10',
+    );
 
-    expect(chosen.upcoming).toEqual(unchosen.upcoming);
+    expect(chosen.upcoming).not.toEqual(next.upcoming);
+  });
+
+  /**
+   * Main opens on the *next* cycle, and this is the only screen that settles
+   * an entry (UC-4.5) — so scoping an overdue one away would hide a late bill
+   * behind cycle navigation.
+   */
+  it('keeps an overdue entry whichever cycle is selected', async () => {
+    const late = Cycle.open({
+      id: '2026-09',
+      ref: ref('2026-09'),
+      openingBalance: Money.zero(),
+      entries: [entry('Late bill', EntryKind.Fixed, '2026-08-06', -500)],
+    });
+
+    const { upcoming } = await building({
+      cycles: [late, october()],
+    }).build('2026-10');
+
+    const overdue = upcoming.find((one) => one.description === 'Late bill');
+    expect(overdue?.isOverdue).toBe(true);
+    expect(upcoming[0]?.description).toBe('Late bill');
   });
 });
 

@@ -189,6 +189,7 @@ export class BuildDashboard {
       progress: progressOf(currentRef, currentCycle, today, estimates),
       varianceCents: varianceOf(chosenRef, currentRef, chosen),
       upcoming: await this.upcomingFrom(
+        chosenRef,
         window.slice(LOOK_BACK),
         today,
         estimates,
@@ -196,7 +197,20 @@ export class BuildDashboard {
     };
   }
 
+  /**
+   * The worklist for the cycle on screen.
+   *
+   * Everything else on Main describes the selected cycle, so this does too —
+   * three cycles of the same recurring bills read as a repetition rather than
+   * as a list of work.
+   *
+   * **Overdue entries survive the selection.** They are the one thing here
+   * that is about today rather than about a cycle, and Main opens on the
+   * *next* one — so scoping them away would hide a late bill behind cycle
+   * navigation, on the only screen that can settle it (UC-4.5).
+   */
   private async upcomingFrom(
+    chosen: CycleRef,
     window: readonly CycleRef[],
     today: LocalDate,
     estimates: Estimates,
@@ -219,6 +233,10 @@ export class BuildDashboard {
           continue;
         }
         const daysLate = entry.dueDate.daysUntil(today);
+        const isOverdue = daysLate > 0;
+        if (ref.month !== chosen.month && !isOverdue) {
+          continue;
+        }
         rows.push({
           id: entry.id,
           cycleMonth: ref.month,
@@ -226,7 +244,7 @@ export class BuildDashboard {
           dueDate: entry.dueDate.toISO(),
           amountCents: entry.amount.planned.cents,
           isEstimate: entry.isEstimate,
-          isOverdue: daysLate > 0,
+          isOverdue,
           daysLate: Math.max(0, daysLate),
         });
       }

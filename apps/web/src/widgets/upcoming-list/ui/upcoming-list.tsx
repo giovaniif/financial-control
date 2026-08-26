@@ -24,11 +24,11 @@ export function UpcomingList({
           body="Todos os lançamentos dos próximos ciclos já foram baixados."
         />
       ) : (
-        /* Three cycles of bills is a long list, so it scrolls inside itself
-           rather than pushing the chain and the caixinhas off the screen.
-           `tabIndex` is what makes the rows past the fold reachable without a
-           mouse; `overscroll-contain` stops a phone scrolling the page behind
-           it once the list has run out. */
+        /* One cycle is about a dozen rows, so the page scrolls rather than
+           the list: everything on Main should be reachable by scrolling once.
+           The region keeps its name and stays focusable — harmless without a
+           scrollbar, and correct the moment a cycle is heavy enough to grow
+           one. */
         <ul
           role="region"
           aria-label="A vencer"
@@ -37,7 +37,7 @@ export function UpcomingList({
           // allows this for `tabpanel` only, and a worklist is not one.
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
           tabIndex={0}
-          className="max-h-[60vh] divide-y divide-zinc-100 overflow-y-auto overscroll-contain rounded-xl border border-zinc-200 bg-white"
+          className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white"
         >
           {entries.map((entry) => (
             <li
