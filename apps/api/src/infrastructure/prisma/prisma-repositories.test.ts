@@ -476,7 +476,7 @@ describe.skipIf(databaseUrl === undefined || databaseUrl === '')(
       it('replaces the schedule wholesale rather than accumulating steps', async () => {
         await templates.save(salary());
         await templates.save(
-          salary().scheduleAmountFrom('2026-10', Money.fromCents(1_900_000)),
+          salary().chargeFrom('2026-10', Money.fromCents(1_900_000)),
         );
 
         const loaded = await templates.findById('tpl-salary');

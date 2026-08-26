@@ -123,7 +123,7 @@ export class ManageTemplates {
     const amount = Money.fromCents(input.amountCents);
 
     if (input.scope === EditScope.ThisAndFuture) {
-      const scheduled = template.scheduleAmountFrom(input.fromMonth, amount);
+      const scheduled = template.chargeFrom(input.fromMonth, amount);
       await this.templates.save(scheduled);
       return this.toView(scheduled, this.window(anchor));
     }
