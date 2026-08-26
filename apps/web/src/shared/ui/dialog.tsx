@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useEffect, useId } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Props {
   open: boolean;
@@ -38,7 +39,11 @@ export function Dialog({ open, title, onClose, children }: Props) {
     return null;
   }
 
-  return (
+  /* Rendered into `body` rather than in place. A dialog opened from inside a
+     collapsible panel must outlive the panel closing, and one opened from a
+     scrolling region must not be clipped by it — neither is true of a node
+     that stays where it was written. */
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-zinc-900/30 p-6 pt-24">
       {/* The panel sets its own foreground colour. It is not a portal (see
           above), so it stays a DOM descendant of whatever opened it — and the
@@ -64,6 +69,7 @@ export function Dialog({ open, title, onClose, children }: Props) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

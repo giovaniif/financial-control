@@ -269,14 +269,21 @@ describe('SavingsPage tells a goal from an ongoing commitment', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('offers to adjust the rule, record an event and archive', async () => {
+  /**
+   * The actions live on the caixinha they act on, so the trigger names it —
+   * five identical "Ações" would put the subject back in selection state,
+   * which is what moving them here removed.
+   */
+  it('keeps a caixinha\u2019s actions on the caixinha', async () => {
     stub({ '/api/buckets': [bucket({ name: 'Apartment' })] });
     renderPage();
 
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Ações de Apartment' }),
+    );
+
     expect(
-      await screen.findByRole('button', {
-        name: 'Ajustar a regra de Apartment',
-      }),
+      screen.getByRole('button', { name: 'Ajustar a regra de Apartment' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Registrar em Apartment' }),
@@ -284,6 +291,50 @@ describe('SavingsPage tells a goal from an ongoing commitment', () => {
     expect(
       screen.getByRole('button', { name: 'Arquivar Apartment' }),
     ).toBeInTheDocument();
+  });
+
+  it('keeps them out of the way until they are asked for', async () => {
+    stub({ '/api/buckets': [bucket({ name: 'Apartment' })] });
+    renderPage();
+
+    await screen.findByRole('button', { name: 'Ações de Apartment' });
+
+    expect(
+      screen.queryByRole('button', { name: 'Arquivar Apartment' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('closes on Escape and gives the trigger back its focus', async () => {
+    stub({ '/api/buckets': [bucket({ name: 'Apartment' })] });
+    renderPage();
+
+    const trigger = await screen.findByRole('button', {
+      name: 'Ações de Apartment',
+    });
+    await userEvent.click(trigger);
+    await userEvent.keyboard('{Escape}');
+
+    expect(
+      screen.queryByRole('button', { name: 'Arquivar Apartment' }),
+    ).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  /** Two caixinhas, and the action belongs to the one it was opened from. */
+  it('opens the actions of the caixinha they sit on', async () => {
+    stub({ '/api/buckets': [bucket({ name: 'Apartment' }), ongoing()] });
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Ações de Investments' }),
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Arquivar Investments' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Arquivar Apartment' }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -587,7 +638,10 @@ describe('SavingsPage sets a goal on a bucket that exists', () => {
     renderPage();
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /Definir uma meta para/ }),
+      await screen.findByRole('button', { name: 'Ações de Investments' }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: /Definir uma meta para/ }),
     );
 
     expect(screen.getByText(/Meta de/)).toBeInTheDocument();
@@ -599,7 +653,10 @@ describe('SavingsPage sets a goal on a bucket that exists', () => {
     renderPage();
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /Definir uma meta para/ }),
+      await screen.findByRole('button', { name: 'Ações de Investments' }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: /Definir uma meta para/ }),
     );
     await userEvent.type(screen.getByLabelText('Quanto quer juntar'), '60000');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar meta' }));
@@ -612,7 +669,10 @@ describe('SavingsPage sets a goal on a bucket that exists', () => {
     renderPage();
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /Definir uma meta para/ }),
+      await screen.findByRole('button', { name: 'Ações de Investments' }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: /Definir uma meta para/ }),
     );
     // The mask reads digits as cents, as every money field here does.
     await userEvent.type(
