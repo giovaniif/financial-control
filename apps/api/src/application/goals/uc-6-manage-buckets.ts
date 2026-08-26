@@ -145,6 +145,25 @@ export class ManageBuckets {
     );
   }
 
+  /**
+   * UC-6.1 — gives an existing bucket a target, or takes one away. Passing
+   * `undefined` drops it, which is what makes an ongoing bucket out of a goal
+   * whose finish line turned out not to exist.
+   */
+  async setTarget(
+    id: string,
+    target: { targetCents: number; targetDate: string } | undefined,
+  ): Promise<BucketView> {
+    return this.update(id, (bucket) =>
+      target === undefined
+        ? bucket.stopAiming()
+        : bucket.aimFor({
+            amount: Money.fromCents(target.targetCents),
+            date: LocalDate.parse(target.targetDate),
+          }),
+    );
+  }
+
   async archive(id: string): Promise<BucketView> {
     return this.update(id, (bucket) => bucket.archive());
   }

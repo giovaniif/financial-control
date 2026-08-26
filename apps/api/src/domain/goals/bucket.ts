@@ -322,6 +322,42 @@ export class Bucket {
     return this.with({ status: BucketStatus.Archived });
   }
 
+  /**
+   * Gives the bucket something to aim at — UC-6.1.
+   *
+   * `mode` and `target` move together because they are one invariant, not two
+   * fields: a goal with no target is the state `percentComplete` has no
+   * answer for, which is the specific bug UC-6.1 exists to prevent. Setting
+   * one without the other is therefore not something this aggregate can be
+   * asked to do.
+   *
+   * The event log is untouched. Contributions, yields and corrections belong
+   * to the bucket rather than to its mode, and the balance is the fold over
+   * them either way.
+   */
+  aimFor(target: BucketTarget): Bucket {
+    if (!target.amount.isPositive()) {
+      throw new InvalidBucket(
+        `${this.state.name} é uma meta, então o valor-alvo tem de ser maior que zero.`,
+      );
+    }
+
+    return this.with({ mode: BucketMode.Goal, target });
+  }
+
+  /**
+   * Takes the target away, leaving an ongoing commitment — the other half of
+   * UC-6.1, because a goal that turns out to have no finish line is as real
+   * as a pot that gains one.
+   *
+   * Not the same as archiving (UC-6.8), which is for a goal reached and
+   * spent. Dropping a target is not an ending, and nothing is dimmed or
+   * removed from the projections by it.
+   */
+  stopAiming(): Bucket {
+    return this.with({ mode: BucketMode.Ongoing, target: undefined });
+  }
+
   private append(event: BucketEvent): Bucket {
     return this.with({ events: [...this.state.events, event] });
   }

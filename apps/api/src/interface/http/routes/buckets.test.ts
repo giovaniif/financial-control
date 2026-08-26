@@ -39,6 +39,14 @@ const reserve = () =>
     priority: 1,
   });
 
+const ongoing = () =>
+  Bucket.ongoing({
+    id: 'b1',
+    name: 'Investimentos',
+    rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(10)),
+    priority: 1,
+  });
+
 const cycleWithSurplus = () =>
   Cycle.open({
     id: 'cycle-aug',
@@ -307,5 +315,60 @@ describe('allocating a cycle over the API', () => {
     });
 
     expect(response.statusCode).toBe(204);
+  });
+});
+
+/**
+ * UC-6.1 — a bucket changes what it is by gaining or losing a target, so the
+ * mode is never sent and never has to agree with anything.
+ */
+describe('PATCH /buckets/:id target', () => {
+  it('gives an ongoing bucket a goal', async () => {
+    const app = serverWith({ buckets: [ongoing()] });
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/buckets/b1',
+      payload: { target: { amount: 6_000_000, date: '2028-01-05' } },
+    });
+
+    const body = response.json<BucketResponse>();
+    expect(response.statusCode).toBe(200);
+    expect(body.mode).toBe('GOAL');
+    expect(body.target).toBe(6_000_000);
+    expect(body.percentComplete).not.toBeNull();
+  });
+
+  it('takes a target away again', async () => {
+    const app = serverWith({ buckets: [ongoing()] });
+
+    await app.inject({
+      method: 'PATCH',
+      url: '/buckets/b1',
+      payload: { target: { amount: 6_000_000, date: '2028-01-05' } },
+    });
+    const body = (
+      await app.inject({
+        method: 'PATCH',
+        url: '/buckets/b1',
+        payload: { target: null },
+      })
+    ).json<BucketResponse>();
+
+    expect(body.mode).toBe('ONGOING');
+    expect(body.target).toBeNull();
+    expect(body.percentComplete).toBeNull();
+  });
+
+  it('refuses a target it cannot read', async () => {
+    const app = serverWith({ buckets: [ongoing()] });
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/buckets/b1',
+      payload: { target: { amount: 6_000_000 } },
+    });
+
+    expect(response.statusCode).toBe(400);
   });
 });

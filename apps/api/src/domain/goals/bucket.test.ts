@@ -366,3 +366,61 @@ describe('resolveAllocations', () => {
     expect(result.isOvercommitted).toBe(false);
   });
 });
+
+/**
+ * UC-6.1 — the mode is a real invariant, so a bucket changes what it is by
+ * gaining or losing a target, never by having one set beside a stale mode.
+ */
+describe('Bucket.aimFor and Bucket.stopAiming', () => {
+  const ongoing = () =>
+    Bucket.ongoing({
+      id: 'b1',
+      name: 'Investimentos',
+      rule: Allocation.percentOfExpectedSurplus(Percentage.ofPercent(10)),
+      priority: 1,
+    });
+
+  const aim = {
+    amount: Money.fromCents(6_000_000),
+    date: LocalDate.parse('2028-01-05'),
+  };
+
+  it('turns an ongoing bucket into a goal', () => {
+    const aimed = ongoing().aimFor(aim);
+
+    expect(aimed.mode).toBe(BucketMode.Goal);
+    expect(aimed.isGoal).toBe(true);
+    expect(aimed.target?.amount.cents).toBe(6_000_000);
+  });
+
+  it('starts reporting progress once there is a target', () => {
+    expect(ongoing().percentComplete).toBeUndefined();
+    expect(ongoing().aimFor(aim).percentComplete).toBe(0);
+  });
+
+  it('refuses a target of zero or less', () => {
+    expect(() => ongoing().aimFor({ ...aim, amount: Money.zero() })).toThrow(
+      InvalidBucket,
+    );
+  });
+
+  it('turns a goal back into an ongoing commitment', () => {
+    const dropped = ongoing().aimFor(aim).stopAiming();
+
+    expect(dropped.mode).toBe(BucketMode.Ongoing);
+    expect(dropped.target).toBeUndefined();
+    expect(dropped.percentComplete).toBeUndefined();
+  });
+
+  /** The log belongs to the bucket, not to what it is aiming at. */
+  it('leaves the event log alone in both directions', () => {
+    const saved = ongoing().contribute('e1', '2026-09', Money.fromCents(5_000));
+
+    expect(saved.aimFor(aim).balance.cents).toBe(5_000);
+    expect(saved.aimFor(aim).stopAiming().events).toHaveLength(1);
+  });
+
+  it('leaves an archived bucket archived', () => {
+    expect(ongoing().archive().aimFor(aim).status).toBe(BucketStatus.Archived);
+  });
+});
