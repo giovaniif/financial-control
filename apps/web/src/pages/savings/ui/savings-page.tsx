@@ -6,6 +6,7 @@ import {
   AdjustRule,
   ArchiveBucket,
   CorrectBalance,
+  SetGoal,
   RecordEvent,
 } from '@/features/manage-buckets';
 import { useSelectedCycle } from '@/features/navigate-cycle';
@@ -56,6 +57,7 @@ export function SavingsPage() {
           {selected !== undefined && (
             <div className="flex justify-end gap-2">
               <AdjustRule bucket={selected} month={selectedMonth ?? ''} />
+              <SetGoal bucket={selected} />
               <CorrectBalance
                 bucketId={selected.id}
                 bucketName={selected.name}
