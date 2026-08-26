@@ -48,6 +48,16 @@ export interface DashboardResponse {
   headline: HeadlineResponse;
   kpis: KpiResponse[];
   progress: CycleProgressResponse;
+  /**
+   * How the cycle came out against its plan — UC-3.6. `null` for a projected
+   * cycle, which has no facts to compare a plan against. Zero is the
+   * different answer that everything settled went exactly to plan, so the two
+   * must not be rendered the same way.
+   *
+   * Negative is behind in both directions: a bill that cost more and a salary
+   * that arrived short are both negative.
+   */
+  variance: Cents | null;
   upcoming: UpcomingEntryResponse[];
 }
 

@@ -142,6 +142,33 @@ describe('GET /dashboard', () => {
     expect(body.upcoming.map((u) => u.description)).toEqual(['Salary', 'Rent']);
   });
 
+  /**
+   * UC-3.6 — `null` and `0` are different answers and the DTO has to keep
+   * them apart: the default cycle is the next one, which is projected.
+   */
+  it('sends no variance for a projected cycle', async () => {
+    const body = (
+      await serverWith({ cycles: [september()] }).inject({
+        method: 'GET',
+        url: '/dashboard',
+      })
+    ).json<DashboardResponse>();
+
+    expect(body.headline.cycleMonth).toBe('2026-10');
+    expect(body.variance).toBeNull();
+  });
+
+  it('sends the variance for a cycle that has one', async () => {
+    const body = (
+      await serverWith({ cycles: [september()] }).inject({
+        method: 'GET',
+        url: '/dashboard?month=2026-09',
+      })
+    ).json<DashboardResponse>();
+
+    expect(body.variance).toBe(0);
+  });
+
   it('answers for an empty app rather than failing', async () => {
     const response = await serverWith().inject({
       method: 'GET',

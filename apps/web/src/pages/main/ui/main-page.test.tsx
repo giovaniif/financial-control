@@ -20,6 +20,7 @@ const dashboard = (
   today: '2026-08-10',
   currentCycleMonth: '2026-08',
   estimates: 'included',
+  variance: null,
   headline: {
     cycleMonth: '2026-09',
     cycleLabel: 'Setembro de 2026',

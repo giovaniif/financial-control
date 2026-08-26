@@ -64,6 +64,7 @@ export function registerProjectionRoutes(
             plannedOut: view.progress.plannedOutCents,
             spentPercent: view.progress.spentPercent,
           },
+          variance: view.varianceCents,
           upcoming: view.upcoming.map((entry) => ({
             id: entry.id,
             cycleMonth: entry.cycleMonth,
