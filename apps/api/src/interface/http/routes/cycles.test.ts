@@ -9,6 +9,7 @@ import {
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
+  noOpeningBalances,
 } from '../../../application/testing/fakes.js';
 import { FixedClock } from '../../../application/testing/fixed-clock.js';
 import {
@@ -67,6 +68,7 @@ const serverWith = (...cycles: Cycle[]) => {
       noHolidays,
       new InMemoryTemplateRepository(),
       new InMemoryBucketRepository(),
+      noOpeningBalances,
     ),
   });
 };

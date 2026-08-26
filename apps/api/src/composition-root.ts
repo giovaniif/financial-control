@@ -100,13 +100,6 @@ export function createApp(): FastifyInstance {
     holidays,
     clock,
   );
-  const readCycle = new ReadCycle(
-    cycles,
-    settings,
-    holidays,
-    templates,
-    buckets,
-  );
   const listCycles = new ListCycles(
     cycles,
     settings,
@@ -115,6 +108,14 @@ export function createApp(): FastifyInstance {
     clock,
     templates,
     buckets,
+  );
+  const readCycle = new ReadCycle(
+    cycles,
+    settings,
+    holidays,
+    templates,
+    buckets,
+    listCycles,
   );
   const manageTemplates = new ManageTemplates(
     templates,
@@ -131,6 +132,7 @@ export function createApp(): FastifyInstance {
     holidays,
     clock,
     buckets,
+    listCycles,
   );
   const projectWealth = new ProjectWealth(buckets);
 

@@ -12,6 +12,7 @@ import type {
 import { LocalDate } from '../../domain/shared/local-date.js';
 import { Money } from '../../domain/shared/money.js';
 import { monthOf } from '../budgeting/month.js';
+import type { OpeningBalanceSource } from '../budgeting/uc-3-3-list-cycles.js';
 
 /** The one-sentence answer, and the three numbers that qualify it. */
 export interface HeadlineView {
@@ -117,6 +118,7 @@ export class BuildDashboard {
     private readonly holidays: HolidayCalendar,
     private readonly clock: Clock,
     private readonly buckets: BucketRepository,
+    private readonly openings: OpeningBalanceSource,
   ) {}
 
   /**
@@ -166,10 +168,15 @@ export class BuildDashboard {
     const withAllocations = (cycle: Cycle | undefined) =>
       cycle === undefined ? undefined : allocateInto(cycle, buckets);
 
-    const currentCycle = withAllocations(
-      await this.cycles.findByMonth(currentRef),
-    );
-    const chosen = withAllocations(await this.cycles.findByMonth(chosenRef));
+    const opened = async (ref: CycleRef) => {
+      const found = await this.cycles.findByMonth(ref);
+      return found?.withOpeningBalance(
+        await this.openings.openingBalanceOf(ref.month),
+      );
+    };
+
+    const currentCycle = withAllocations(await opened(currentRef));
+    const chosen = withAllocations(await opened(chosenRef));
 
     return {
       today: today.toISO(),

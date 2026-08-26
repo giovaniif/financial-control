@@ -13,6 +13,7 @@ import type {
 import { allocateInto } from '../../domain/budgeting/allocation-generation.js';
 import { generateInto } from '../../domain/budgeting/template-generation.js';
 import { LocalDate } from '../../domain/shared/local-date.js';
+import { Money } from '../../domain/shared/money.js';
 import { monthOf } from './month.js';
 import { entryId } from './uc-3-1-read-cycle.js';
 
@@ -40,6 +41,16 @@ export interface CycleSummaryView {
   readonly isMaterialised: boolean;
 }
 
+/**
+ * Whatever can say what a cycle opens on — {@link ListCycles} in production.
+ *
+ * Declared as a shape rather than the class so the readers that describe a
+ * single cycle depend on the question, not on the window that answers it.
+ */
+export interface OpeningBalanceSource {
+  openingBalanceOf(month: string): Promise<Money>;
+}
+
 /** The rolling projection: the current cycle and eleven ahead. */
 export const WINDOW = 12;
 
@@ -62,6 +73,23 @@ export class ListCycles {
     private readonly templates: RecurringTemplateRepository,
     private readonly buckets: BucketRepository,
   ) {}
+
+  /**
+   * What a cycle opens on, for readers that describe one cycle rather than
+   * the window.
+   *
+   * Derived here rather than copied into them: until a cycle is closed there
+   * is no stored closing balance to carry in, so the opening balance is a
+   * fold over the whole window from what the accounts actually hold (UC-1.2).
+   * Two readers already disagreed by reading the stored zero instead.
+   */
+  async openingBalanceOf(month: string): Promise<Money> {
+    const summary = (await this.rollingWindow()).find(
+      (one) => one.month === month,
+    );
+
+    return Money.fromCents(summary?.openingBalanceCents ?? 0);
+  }
 
   async rollingWindow(
     estimates: Estimates = Estimates.Included,

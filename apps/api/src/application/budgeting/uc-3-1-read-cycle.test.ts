@@ -20,8 +20,10 @@ import {
   InMemoryCycleRepository,
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
+  noOpeningBalances,
 } from '../testing/fakes.js';
 import { ReadCycle, UnknownMonth } from './uc-3-1-read-cycle.js';
+import type { OpeningBalanceSource } from './uc-3-3-list-cycles.js';
 
 const anchor = PaydayAnchor.of(5, ShiftPolicy.Preceding);
 const august = CycleRef.forMonth('2026-09', anchor, noHolidays);
@@ -54,18 +56,31 @@ const populated = () =>
     ],
   });
 
-const reading = (...cycles: Cycle[]) =>
+/**
+ * The opening balance is a fold over the whole rolling window, so it is asked
+ * for rather than read off the stored cycle — a stored one is meaningless
+ * until something closes. Tests that care about it say what it is.
+ */
+const opening = (cents: number) => ({
+  openingBalanceOf: () => Promise.resolve(Money.fromCents(cents)),
+});
+
+const reading = (
+  cycles: Cycle[],
+  openings: OpeningBalanceSource = noOpeningBalances,
+) =>
   new ReadCycle(
     new InMemoryCycleRepository(cycles),
     new InMemorySettingsRepository(anchor),
     noHolidays,
     new InMemoryTemplateRepository(),
     new InMemoryBucketRepository(),
+    openings,
   );
 
 describe('ReadCycle.byMonth', () => {
   it('reports the chain and the entries in due-date order', async () => {
-    const view = await reading(populated()).byMonth('2026-09');
+    const view = await reading([populated()]).byMonth('2026-09');
 
     expect(view.entries.map((e) => e.description)).toEqual([
       'Salary',
@@ -76,15 +91,30 @@ describe('ReadCycle.byMonth', () => {
   });
 
   it('carries the balance standing after each entry', async () => {
-    const view = await reading(populated()).byMonth('2026-09');
+    const view = await reading([populated()], opening(216_000)).byMonth(
+      '2026-09',
+    );
 
     expect(view.entries.map((e) => e.balanceCents)).toEqual([
       2_016_000, 1_255_000, 1_105_000,
     ]);
   });
 
+  /**
+   * UC-1.2 — the app's starting cash. Before anything closes there is no
+   * previous closing balance, so the cycle opens on what the accounts hold,
+   * and the stored zero is the absence of an answer rather than one.
+   */
+  it('opens on what it is told, not on the stored balance', async () => {
+    const view = await reading([populated()], opening(37_636)).byMonth(
+      '2026-09',
+    );
+
+    expect(view.chain.openingBalance.cents).toBe(37_636);
+  });
+
   it('states the cycle bounds, never a bare month name', async () => {
-    const view = await reading(populated()).byMonth('2026-09');
+    const view = await reading([populated()]).byMonth('2026-09');
 
     expect(view.label).toBe('Setembro de 2026');
     expect(view.start).toBe('2026-08-05');
@@ -92,7 +122,7 @@ describe('ReadCycle.byMonth', () => {
   });
 
   it('leaves the unconfirmed estimate out when asked for confirmed figures', async () => {
-    const view = await reading(populated()).byMonth(
+    const view = await reading([populated()]).byMonth(
       '2026-09',
       Estimates.Excluded,
     );
@@ -108,7 +138,7 @@ describe('ReadCycle.byMonth', () => {
       SettlementStatus.Paid,
     );
 
-    const view = await reading(settled).byMonth('2026-09');
+    const view = await reading([settled]).byMonth('2026-09');
     const rent = view.entries.find((e) => e.description === 'Rent');
 
     expect(rent?.actualCents).toBe(-780_000);
@@ -121,7 +151,7 @@ describe('ReadCycle.byMonth', () => {
       Money.fromCents(-800_000),
     );
 
-    const view = await reading(overridden).byMonth('2026-09');
+    const view = await reading([overridden]).byMonth('2026-09');
 
     expect(
       view.entries.find((e) => e.description === 'Rent')?.isOverridden,
@@ -133,14 +163,14 @@ describe('ReadCycle.byMonth', () => {
   it.each(['August-2026', '2026-14', ''])(
     'refuses the unparsable month %s',
     async (month) => {
-      await expect(reading().byMonth(month)).rejects.toThrow(UnknownMonth);
+      await expect(reading([]).byMonth(month)).rejects.toThrow(UnknownMonth);
     },
   );
 });
 
 describe('ReadCycle.refFor', () => {
   it('resolves a month against the configured anchor', async () => {
-    const ref = await reading().refFor('2026-09');
+    const ref = await reading([]).refFor('2026-09');
 
     expect(ref.start.toISO()).toBe('2026-08-05');
   });
@@ -161,6 +191,7 @@ describe('ReadCycle materialises the cycle from templates', () => {
         noHolidays,
         new InMemoryTemplateRepository(templates),
         new InMemoryBucketRepository(),
+        noOpeningBalances,
       ),
     };
   };

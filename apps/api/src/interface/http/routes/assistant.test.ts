@@ -33,6 +33,7 @@ import {
   InMemorySettingsRepository,
   InMemoryTemplateRepository,
   SequentialIdSource,
+  noOpeningBalances,
 } from '../../../application/testing/fakes.js';
 import { FixedClock } from '../../../application/testing/fixed-clock.js';
 import {
@@ -118,6 +119,7 @@ function assistantWith(
         noHolidays,
         templates,
         new InMemoryBucketRepository(),
+        noOpeningBalances,
       ),
       dashboard: new BuildDashboard(
         cycles,
@@ -125,6 +127,7 @@ function assistantWith(
         noHolidays,
         clock,
         new InMemoryBucketRepository(),
+        noOpeningBalances,
       ),
       cycles: new ListCycles(
         cycles,

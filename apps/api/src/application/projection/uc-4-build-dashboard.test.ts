@@ -22,6 +22,7 @@ import {
   InMemoryBucketRepository,
   InMemoryCycleRepository,
   InMemorySettingsRepository,
+  noOpeningBalances,
 } from '../testing/fakes.js';
 import { FixedClock } from '../testing/fixed-clock.js';
 import { BuildDashboard } from './uc-4-build-dashboard.js';
@@ -70,6 +71,7 @@ const building = (options: { cycles?: Cycle[]; buckets?: Bucket[] } = {}) =>
     noHolidays,
     clock,
     new InMemoryBucketRepository(options.buckets ?? []),
+    noOpeningBalances,
   );
 
 /**

@@ -10,9 +10,9 @@ import type {
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
 import { DomainError } from '../../domain/shared/domain-error.js';
-import { Money } from '../../domain/shared/money.js';
 import { allocateInto } from '../../domain/budgeting/allocation-generation.js';
 import { generateInto } from '../../domain/budgeting/template-generation.js';
+import type { OpeningBalanceSource } from './uc-3-3-list-cycles.js';
 
 export class UnknownMonth extends DomainError {}
 
@@ -56,6 +56,7 @@ export class ReadCycle {
     private readonly holidays: HolidayCalendar,
     private readonly templates: RecurringTemplateRepository,
     private readonly buckets: BucketRepository,
+    private readonly openings: OpeningBalanceSource,
   ) {}
 
   async byMonth(
@@ -63,9 +64,15 @@ export class ReadCycle {
     estimates: Estimates = Estimates.Included,
   ): Promise<CycleView> {
     const ref = await this.refFor(month);
+    // One definition of what a cycle opens on: until something closes there
+    // is no stored closing balance to carry in, and the stored zero is not an
+    // answer — it is the absence of one.
+    const opening = await this.openings.openingBalanceOf(month);
+    const found = await this.cycles.findByMonth(ref);
     const stored =
-      (await this.cycles.findByMonth(ref)) ??
-      Cycle.open({ id: month, ref, openingBalance: Money.zero() });
+      found === undefined
+        ? Cycle.open({ id: month, ref, openingBalance: opening })
+        : found.withOpeningBalance(opening);
 
     // Materialised on read: a cycle nobody has opened yet is still made of the
     // templates that apply to it. Generation is idempotent, so this is safe to
