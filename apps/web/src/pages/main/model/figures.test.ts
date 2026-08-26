@@ -17,6 +17,7 @@ describe('figuresFor', () => {
       headline: view.headline,
       kpis: view.kpis,
       upcoming: view.upcoming,
+      variance: view.variance,
     });
   });
 

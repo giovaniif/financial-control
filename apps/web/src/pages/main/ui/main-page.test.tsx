@@ -273,6 +273,66 @@ describe('MainPage', () => {
     expect(screen.getByText('R$ 5.056,00')).toBeInTheDocument();
   });
 
+  /**
+   * UC-3.6 — how the cycle came out, beside the figures it qualifies rather
+   * than as a fourth tile competing with the chain's three stages.
+   */
+  it('says a cycle came out worse than planned', async () => {
+    respondWith(dashboard({ variance: -3_000 }));
+
+    renderPage();
+
+    expect(await screen.findByText('Pior que o previsto')).toBeInTheDocument();
+    expect(screen.getByText('R$ 30,00')).toBeInTheDocument();
+  });
+
+  it('says a cycle came out better than planned', async () => {
+    respondWith(dashboard({ variance: 3_000 }));
+
+    renderPage();
+
+    expect(
+      await screen.findByText('Melhor que o previsto'),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * Income is not special-cased: variance is realised minus planned, so a
+   * salary that arrived short is behind exactly as a bill that cost more is.
+   */
+  it('reads income that arrived short as behind, not ahead', async () => {
+    respondWith(dashboard({ variance: -100_000 }));
+
+    renderPage();
+
+    expect(await screen.findByText('Pior que o previsto')).toBeInTheDocument();
+    expect(screen.queryByText('Melhor que o previsto')).not.toBeInTheDocument();
+  });
+
+  it('says so when everything settled went exactly to plan', async () => {
+    respondWith(dashboard({ variance: 0 }));
+
+    renderPage();
+
+    expect(await screen.findByText('Saiu como o previsto')).toBeInTheDocument();
+  });
+
+  /**
+   * A cycle in the future has no variance at all, which is a different thing
+   * from one where everything went to plan. It says nothing rather than zero.
+   */
+  it('says nothing about a projected cycle', async () => {
+    respondWith(dashboard({ variance: null }));
+
+    renderPage();
+
+    await screen.findByText(/fica livre depois das alocações/);
+
+    expect(screen.queryByText('Saiu como o previsto')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pior que o previsto')).not.toBeInTheDocument();
+    expect(screen.queryByText('Melhor que o previsto')).not.toBeInTheDocument();
+  });
+
   it('shows the four KPIs, each with the note saying what it is made of', async () => {
     renderPage();
 

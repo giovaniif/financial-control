@@ -1,4 +1,5 @@
 import type {
+  Cents,
   DashboardResponse,
   HeadlineResponse,
   KpiResponse,
@@ -9,6 +10,8 @@ export interface MainFigures {
   headline: HeadlineResponse;
   kpis: KpiResponse[];
   upcoming: UpcomingEntryResponse[];
+  /** UC-3.6 — `null` for a projected cycle, which has none. */
+  variance: Cents | null;
 }
 
 /**
@@ -21,7 +24,7 @@ export interface MainFigures {
  * prevent.
  */
 export function figuresFor(dashboard: DashboardResponse): MainFigures {
-  const { headline, kpis, upcoming } = dashboard;
+  const { headline, kpis, upcoming, variance } = dashboard;
 
-  return { headline, kpis, upcoming };
+  return { headline, kpis, upcoming, variance };
 }
