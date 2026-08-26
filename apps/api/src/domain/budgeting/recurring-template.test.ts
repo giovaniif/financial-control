@@ -92,7 +92,7 @@ describe('RecurringTemplate.create', () => {
     ])(
       'normalises a %s schedule step too',
       (_name, direction, given, expected) => {
-        const scheduled = template({ direction }).scheduleAmountFrom(
+        const scheduled = template({ direction }).chargeFrom(
           '2026-10',
           reais(given),
         );
@@ -192,7 +192,7 @@ describe('RecurringTemplate.amountFor', () => {
  * to correct a bill, and it must not leave the template looking like UC-2.4's
  * genuinely stepped one.
  */
-describe('RecurringTemplate.scheduleAmountFrom — only a real step is a step', () => {
+describe('RecurringTemplate.chargeFrom — only a real step is a step', () => {
   /**
    * A step at or before the start wins in every cycle the template can
    * produce, because resolution scans for the latest step at or before a
@@ -202,7 +202,7 @@ describe('RecurringTemplate.scheduleAmountFrom — only a real step is a step', 
   it.each(['2026-09', '2026-08'])(
     'sets the base amount when the change starts at or before the start (%s)',
     (fromMonth) => {
-      const changed = template().scheduleAmountFrom(fromMonth, reais(-400));
+      const changed = template().chargeFrom(fromMonth, reais(-400));
 
       expect(changed.hasValueSchedule).toBe(false);
       expect(changed.amountFor(cycle('2026-09')).cents).toBe(-40_000);
@@ -212,17 +212,54 @@ describe('RecurringTemplate.scheduleAmountFrom — only a real step is a step', 
 
   /** A change that starts later is a real step — UC-2.4 working as intended. */
   it('keeps a step when the change starts after the template does', () => {
-    const changed = template().scheduleAmountFrom('2026-11', reais(-400));
+    const changed = template().chargeFrom('2026-11', reais(-400));
 
     expect(changed.hasValueSchedule).toBe(true);
     expect(changed.amountFor(cycle('2026-09')).cents).toBe(-32_000);
     expect(changed.amountFor(cycle('2026-11')).cents).toBe(-40_000);
   });
+
+  /**
+   * UC-2.3 — "this cycle and all future" has to mean all of them. A later
+   * step left standing would silently end the change at its own cycle, which
+   * is neither what the scope says nor what the dialog promises.
+   */
+  it('supersedes the steps it is meant to replace', () => {
+    const climbing = template({
+      valueSchedule: [
+        { fromMonth: '2026-10', amount: reais(-1_250) },
+        { fromMonth: '2026-11', amount: reais(-1_300) },
+        { fromMonth: '2026-12', amount: reais(-1_340) },
+      ],
+    });
+
+    const changed = climbing.chargeFrom('2026-11', reais(-1_400));
+
+    expect(changed.amountFor(cycle('2026-10')).cents).toBe(-125_000);
+    expect(changed.amountFor(cycle('2026-11')).cents).toBe(-140_000);
+    expect(changed.amountFor(cycle('2026-12')).cents).toBe(-140_000);
+    expect(changed.amountFor(cycle('2027-06')).cents).toBe(-140_000);
+  });
+
+  /** Everything ahead goes, whatever it was worth. */
+  it('leaves nothing behind when it supersedes from the start', () => {
+    const climbing = template({
+      valueSchedule: [
+        { fromMonth: '2026-10', amount: reais(-1_250) },
+        { fromMonth: '2026-11', amount: reais(-1_300) },
+      ],
+    });
+
+    const changed = climbing.chargeFrom('2026-09', reais(-1_400));
+
+    expect(changed.hasValueSchedule).toBe(false);
+    expect(changed.amountFor(cycle('2026-11')).cents).toBe(-140_000);
+  });
 });
 
-describe('RecurringTemplate.scheduleAmountFrom', () => {
+describe('RecurringTemplate.chargeFrom', () => {
   it('applies the new amount from that cycle onward, leaving earlier ones alone', () => {
-    const raised = template({ amount: reais(-320) }).scheduleAmountFrom(
+    const raised = template({ amount: reais(-320) }).chargeFrom(
       '2026-11',
       reais(-400),
     );
@@ -233,15 +270,15 @@ describe('RecurringTemplate.scheduleAmountFrom', () => {
 
   it('replaces a step already starting at that cycle rather than stacking one', () => {
     const twice = template()
-      .scheduleAmountFrom('2026-11', reais(-400))
-      .scheduleAmountFrom('2026-11', reais(-450));
+      .chargeFrom('2026-11', reais(-400))
+      .chargeFrom('2026-11', reais(-450));
 
     expect(twice.valueSchedule).toHaveLength(1);
     expect(twice.amountFor(cycle('2026-11')).cents).toBe(-45_000);
   });
 
   it('rejects an unparsable cycle', () => {
-    expect(() => template().scheduleAmountFrom('2026-14', reais(-1))).toThrow(
+    expect(() => template().chargeFrom('2026-14', reais(-1))).toThrow(
       InvalidTemplate,
     );
   });
@@ -249,7 +286,7 @@ describe('RecurringTemplate.scheduleAmountFrom', () => {
   it('never mutates the template it changes', () => {
     const original = template();
 
-    original.scheduleAmountFrom('2026-11', reais(-400));
+    original.chargeFrom('2026-11', reais(-400));
 
     expect(original.hasValueSchedule).toBe(false);
   });

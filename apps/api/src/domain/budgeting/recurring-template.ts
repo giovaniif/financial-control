@@ -202,31 +202,38 @@ export class RecurringTemplate {
   }
 
   /**
-   * The amount from a cycle onward.
+   * What this charges from a cycle onward — UC-2.3's *this cycle and all
+   * future*.
+   *
+   * **It supersedes.** Every step at or after `fromMonth` goes, because "all
+   * future" that stopped at the next step would be neither what the scope
+   * says nor what the user was promised. That is why this is not a
+   * `scheduleStep` method: building UC-2.4's climb is `create`'s job, where
+   * the steps arrive together and none is meant to replace another.
    *
    * A change starting at or before the template's own start is the base
    * amount, not a step: resolution scans for the latest step at or before a
-   * cycle, so a step there would win in every cycle this template can produce
-   * and make `baseAmount` unreachable. Storing it as a step would leave an
-   * ordinary correction (UC-2.3) indistinguishable from a genuinely stepped
-   * amount (UC-2.4), which is what the user is shown.
+   * cycle, so a step there would win everywhere and make `baseAmount`
+   * unreachable — leaving an ordinary correction indistinguishable from a
+   * genuinely stepped amount, which is what the user is shown.
+   *
+   * Past cycles keep whatever they already resolved to: steps before
+   * `fromMonth` are untouched.
    */
-  scheduleAmountFrom(fromMonth: string, amount: Money): RecurringTemplate {
+  chargeFrom(fromMonth: string, amount: Money): RecurringTemplate {
     assertMonth(fromMonth);
 
     const next = signed(amount, this.state.direction);
-    if (fromMonth <= this.state.startMonth) {
-      return this.with({ baseAmount: next });
-    }
-
-    const withoutClash = this.state.valueSchedule.filter(
-      (step) => step.fromMonth !== fromMonth,
+    const kept = this.state.valueSchedule.filter(
+      (step) => step.fromMonth < fromMonth,
     );
 
+    if (fromMonth <= this.state.startMonth) {
+      return this.with({ baseAmount: next, valueSchedule: kept });
+    }
+
     return this.with({
-      valueSchedule: [...withoutClash, { fromMonth, amount: next }].sort(
-        (a, b) => a.fromMonth.localeCompare(b.fromMonth),
-      ),
+      valueSchedule: [...kept, { fromMonth, amount: next }],
     });
   }
 
