@@ -201,18 +201,31 @@ export class RecurringTemplate {
     return ref.dateForDayOfMonth(this.state.dueDayOfMonth);
   }
 
-  /** Appends a step, so the new amount applies from that cycle onward. */
+  /**
+   * The amount from a cycle onward.
+   *
+   * A change starting at or before the template's own start is the base
+   * amount, not a step: resolution scans for the latest step at or before a
+   * cycle, so a step there would win in every cycle this template can produce
+   * and make `baseAmount` unreachable. Storing it as a step would leave an
+   * ordinary correction (UC-2.3) indistinguishable from a genuinely stepped
+   * amount (UC-2.4), which is what the user is shown.
+   */
   scheduleAmountFrom(fromMonth: string, amount: Money): RecurringTemplate {
     assertMonth(fromMonth);
+
+    const next = signed(amount, this.state.direction);
+    if (fromMonth <= this.state.startMonth) {
+      return this.with({ baseAmount: next });
+    }
 
     const withoutClash = this.state.valueSchedule.filter(
       (step) => step.fromMonth !== fromMonth,
     );
-    const step = { fromMonth, amount: signed(amount, this.state.direction) };
 
     return this.with({
-      valueSchedule: [...withoutClash, step].sort((a, b) =>
-        a.fromMonth.localeCompare(b.fromMonth),
+      valueSchedule: [...withoutClash, { fromMonth, amount: next }].sort(
+        (a, b) => a.fromMonth.localeCompare(b.fromMonth),
       ),
     });
   }

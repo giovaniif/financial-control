@@ -96,8 +96,10 @@ function BillRow({
             {bill.name}
             {/* UC-2.6 — a guess is tagged everywhere it appears. */}
             {bill.isEstimate && <Badge tone="warning">~estimativa</Badge>}
+            {/* UC-2.4 — only a bill whose amount actually changes ahead. An
+                ordinary correction sets the amount and carries no badge. */}
             {bill.valueSchedule.length > 0 && (
-              <Badge tone="info">tabela de valores</Badge>
+              <Badge tone="info">o valor muda</Badge>
             )}
           </span>
         </td>

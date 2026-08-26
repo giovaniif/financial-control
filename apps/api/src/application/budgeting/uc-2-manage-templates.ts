@@ -205,12 +205,19 @@ export class ManageTemplates {
     template: RecurringTemplate,
     window: readonly CycleRef[],
   ): TemplateView {
+    const nextRef = window.find((ref) => template.appliesTo(ref));
+
     return {
       id: template.id,
       name: template.name,
       direction: template.direction,
       dueDayOfMonth: template.dueDayOfMonth,
-      amountCents: template.baseAmount.cents,
+      // The amount beside a next occurrence is the one that occurrence will
+      // charge — the base amount is what it charged before any step applied.
+      amountCents: (nextRef === undefined
+        ? template.baseAmount
+        : template.amountFor(nextRef)
+      ).cents,
       status: template.status,
       isEstimate: template.isEstimate,
       startMonth: template.startMonth,
@@ -219,7 +226,7 @@ export class ManageTemplates {
         fromMonth: step.fromMonth,
         amountCents: step.amount.cents,
       })),
-      nextOccurrenceMonth: window.find((ref) => template.appliesTo(ref))?.month,
+      nextOccurrenceMonth: nextRef?.month,
     };
   }
 }

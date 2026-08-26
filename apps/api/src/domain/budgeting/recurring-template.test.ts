@@ -187,6 +187,39 @@ describe('RecurringTemplate.amountFor', () => {
   });
 });
 
+/**
+ * UC-2.3 — changing an amount "this cycle and all future" is the ordinary way
+ * to correct a bill, and it must not leave the template looking like UC-2.4's
+ * genuinely stepped one.
+ */
+describe('RecurringTemplate.scheduleAmountFrom — only a real step is a step', () => {
+  /**
+   * A step at or before the start wins in every cycle the template can
+   * produce, because resolution scans for the latest step at or before a
+   * cycle. It is the base amount written somewhere the user then gets a badge
+   * about.
+   */
+  it.each(['2026-09', '2026-08'])(
+    'sets the base amount when the change starts at or before the start (%s)',
+    (fromMonth) => {
+      const changed = template().scheduleAmountFrom(fromMonth, reais(-400));
+
+      expect(changed.hasValueSchedule).toBe(false);
+      expect(changed.amountFor(cycle('2026-09')).cents).toBe(-40_000);
+      expect(changed.amountFor(cycle('2027-05')).cents).toBe(-40_000);
+    },
+  );
+
+  /** A change that starts later is a real step — UC-2.4 working as intended. */
+  it('keeps a step when the change starts after the template does', () => {
+    const changed = template().scheduleAmountFrom('2026-11', reais(-400));
+
+    expect(changed.hasValueSchedule).toBe(true);
+    expect(changed.amountFor(cycle('2026-09')).cents).toBe(-32_000);
+    expect(changed.amountFor(cycle('2026-11')).cents).toBe(-40_000);
+  });
+});
+
 describe('RecurringTemplate.scheduleAmountFrom', () => {
   it('applies the new amount from that cycle onward, leaving earlier ones alone', () => {
     const raised = template({ amount: reais(-320) }).scheduleAmountFrom(
