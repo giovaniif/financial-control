@@ -26,7 +26,14 @@ RUN printf '%s\n' \
   'fetch-retry-maxtimeout=180000' \
   'fetch-timeout=600000' \
   'network-concurrency=4' > .npmrc
-RUN pnpm install --frozen-lockfile --filter @fin/web...
+# The store is cached on the Docker host between builds, so a deploy that
+# changes no dependency fetches almost nothing. `sharing=locked` does two
+# jobs: it keeps concurrent builds from corrupting one store, and it stops
+# the two images installing against the network at the same time — this
+# link cannot carry both, which is what defeated the retry settings.
+RUN --mount=type=cache,target=/pnpm/store,sharing=locked \
+  pnpm config set store-dir /pnpm/store && \
+  pnpm install --frozen-lockfile --filter @fin/web...
 
 FROM deps AS build
 COPY packages/ packages/
