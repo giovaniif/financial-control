@@ -213,7 +213,10 @@ describe('SavingsPage tells a goal from an ongoing commitment', () => {
 
     const buckets = await screen.findByRole('region', { name: 'Caixinhas' });
 
-    expect(within(buckets).getByText('meta')).toBeInTheDocument();
+    // The progress bar and the target say it is a goal; a `meta` badge
+    // beside them was a label for what the card already showed.
+    expect(within(buckets).getByRole('progressbar')).toBeInTheDocument();
+    expect(within(buckets).queryByText('meta')).not.toBeInTheDocument();
     expect(buckets).toHaveTextContent('50% de R$ 60.000,00 até 31/12/2027');
     expect(buckets).toHaveTextContent('20% da Sobra Esperada por ciclo');
   });
@@ -224,11 +227,21 @@ describe('SavingsPage tells a goal from an ongoing commitment', () => {
 
     const buckets = await screen.findByRole('region', { name: 'Caixinhas' });
 
-    expect(within(buckets).getByText('contínua')).toBeInTheDocument();
     expect(buckets).toHaveTextContent(
       'R$ 1.778,00 por ciclo — sem objetivo a bater',
     );
+    expect(within(buckets).queryByText('contínua')).not.toBeInTheDocument();
     expect(within(buckets).queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  /** The one state no other part of the card states. */
+  it('still says when a caixinha is archived', async () => {
+    stub({ '/api/buckets': [bucket({ status: 'ARCHIVED' })] });
+    renderPage();
+
+    const buckets = await screen.findByRole('region', { name: 'Caixinhas' });
+
+    expect(within(buckets).getByText('arquivada')).toBeInTheDocument();
   });
 
   // The half that is missing is never invented: a goal without a target is
