@@ -18,7 +18,7 @@ reason above still holds unchanged.
 |---|---|
 | API (`apps/api`) | Container under Coolify. `pnpm dev` for development |
 | Web (`apps/web`) | Built to static files, behind nginx in a container. `pnpm dev` for development |
-| Database | PostgreSQL in Docker, from `docker-compose.yml` at the repo root — **the same container either way** |
+| Database | PostgreSQL in a container in the same stack — **one database, whichever way the app is running** |
 
 ## Deploying it
 
@@ -31,11 +31,13 @@ is worth reading before changing anything here.
 
 Two things about it are load-bearing:
 
-- **The database is not in it.** `fin-postgres` holds the real data and is
-  owned by `docker-compose.yml`. The API joins its network as an *external*
-  one, so bringing this stack down can never take the data's network with it,
-  and connects to `postgres:5432` — the container's port, not the 5434
-  published to the host.
+- **The database is in it, and there is only one.** It publishes 5434 to the
+  host, so `pnpm dev` reaches the same data through the connection string it
+  already has, while the API reaches it over the compose network at
+  `postgres:5432`. One machine, one user, one dataset — a second database for
+  development would diverge from the first entry settled against whichever
+  happened to be up. The data is a **named volume**, so `down` cannot take it
+  and only an explicit `down -v` ever will.
 - **Only the web port is published.** The API has no port at all and is
   reachable only through the web container's `/api` proxy, which is what
   `vite.config.ts` does in development.
@@ -56,7 +58,7 @@ pnpm db:reset   # delete the volume and start clean
 ```
 
 Port **5434**, not 5432: this machine already runs other projects' databases on
-5432 and 5433. The credentials in `docker-compose.yml` are committed on purpose
+5432 and 5433. The credentials in `compose.production.yml` are committed on purpose
 — they guard a container on `localhost` holding data that only exists on this
 machine, and pretending otherwise would just make the setup harder to run.
 
@@ -77,14 +79,17 @@ a new migration.
 
 **Back up before anything destructive.** There is no managed database taking
 snapshots, and the app no longer exports its own data (UC-1.6 is removed), so
-`pnpm db:reset` is exactly as final as it sounds. The backup is a dump:
+`pnpm db:reset` is exactly as final as it sounds — and it now takes the
+deployed database with it, because there is only one. The backup is a dump:
 
 ```bash
-docker exec fin-postgres pg_dump -U fin fin > backup.sql
+docker exec fin-prod-postgres-1 pg_dump -U fin fin > backup.sql
 ```
 
 Take one before a reset, before a destructive migration, and before anything
-else that cannot be undone. Nothing else will.
+else that cannot be undone. Nothing else will — Coolify's scheduled backups
+cover standalone database resources, not a Postgres inside a compose stack,
+and this one is in the stack so that the whole app deploys as a unit.
 
 ## Reaching it from another machine
 
