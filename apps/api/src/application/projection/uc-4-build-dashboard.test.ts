@@ -317,13 +317,117 @@ describe('BuildDashboard with estimates excluded', () => {
       '→ Reserve',
     ]);
   });
+});
 
-  // A projected negative that only an estimate causes is not a confirmed
-  // negative, so the alert follows the reading its figures were taken in.
+/**
+ * UC-3.6 — how the cycle came out: over the entries actually settled, did the
+ * facts match their plans?
+ *
+ * Distinct from UC-4.3's progress, which compares spend so far against the
+ * whole cycle's plan and mid-cycle mostly reports how far through the month
+ * today is.
+ */
+describe('BuildDashboard variance — ahead or behind', () => {
+  const september = (entries: LedgerEntry[]) =>
+    Cycle.open({
+      id: '2026-09',
+      ref: ref('2026-09'),
+      openingBalance: Money.zero(),
+      entries,
+    });
+
+  const rent = () => entry('Rent', EntryKind.Fixed, '2026-08-10', -1_000);
+  const salary = () => entry('Salary', EntryKind.Income, '2026-08-05', 18_000);
+
+  const varianceOf = async (cycle: Cycle) =>
+    (await building({ cycles: [cycle] }).build('2026-09')).varianceCents;
+
+  /** Nothing settled is a real answer of zero, not an absent one. */
+  it('is zero while nothing has been settled', async () => {
+    expect(await varianceOf(september([rent()]))).toBe(0);
+  });
+
+  it('is zero when the fact matched the plan', async () => {
+    const cycle = september([rent()]).settleEntry(
+      'Rent',
+      reais(-1_000),
+      SettlementStatus.Paid,
+    );
+
+    expect(await varianceOf(cycle)).toBe(0);
+  });
+
+  it('goes negative when a bill cost more than planned', async () => {
+    const cycle = september([rent()]).settleEntry(
+      'Rent',
+      reais(-1_200),
+      SettlementStatus.Paid,
+    );
+
+    expect(await varianceOf(cycle)).toBe(-20_000);
+  });
+
+  it('goes positive when a bill cost less than planned', async () => {
+    const cycle = september([rent()]).settleEntry(
+      'Rent',
+      reais(-800),
+      SettlementStatus.Paid,
+    );
+
+    expect(await varianceOf(cycle)).toBe(20_000);
+  });
+
+  /** Money that never left the account: the whole plan comes back. */
+  it('counts a skipped bill as the whole amount saved', async () => {
+    expect(await varianceOf(september([rent()]).skipEntry('Rent'))).toBe(
+      100_000,
+    );
+  });
 
   /**
-   * The alert that exists to quantify an estimate is the one thing that must
-   * not follow the toggle: it is what tells the user the two readings differ
-   * at all, and it states both figures itself.
+   * Negative is worse in both directions. Income is not special-cased: a
+   * salary that arrived short is behind, exactly as a bill that cost more is.
    */
+  it('goes negative when income arrived short', async () => {
+    const cycle = september([salary()]).settleEntry(
+      'Salary',
+      reais(17_000),
+      SettlementStatus.Received,
+    );
+
+    expect(await varianceOf(cycle)).toBe(-100_000);
+  });
+
+  it('sums what every settlement did', async () => {
+    const cycle = september([rent(), salary()])
+      .settleEntry('Rent', reais(-1_200), SettlementStatus.Paid)
+      .settleEntry('Salary', reais(18_500), SettlementStatus.Received);
+
+    expect(await varianceOf(cycle)).toBe(30_000);
+  });
+
+  /**
+   * A settled amount is a fact, whatever the entry was tagged as before it
+   * was settled: `~estimate` marks a figure nobody has confirmed, and
+   * settling one confirms it. Leaving it out would drop money that really
+   * moved.
+   */
+  it('counts a settled estimate, which is no longer a guess', async () => {
+    const cycle = september([
+      entry('Contractor', EntryKind.Fixed, '2026-08-20', -1_500, true),
+    ]).settleEntry('Contractor', reais(-1_700), SettlementStatus.Paid);
+
+    expect(await varianceOf(cycle)).toBe(-20_000);
+  });
+
+  /**
+   * A cycle in the future has no variance at all, which is not the same as a
+   * cycle where everything went to plan. The screen has to tell them apart.
+   */
+  it('has none for a projected cycle', async () => {
+    const view = await building({ cycles: [october()] }).build();
+
+    expect(view.headline.cycleMonth).toBe('2026-10');
+    expect(view.varianceCents).toBeNull();
+  });
 });

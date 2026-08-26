@@ -14,6 +14,7 @@ export const dashboard = (): DashboardResponse => ({
     closing: 355_600,
     closingWithoutEstimates: 505_600,
   },
+  variance: null,
   kpis: [
     { label: 'Total Outcome', amount: 911_000, note: 'everything out' },
     { label: 'Expected Surplus', amount: 889_000, note: 'to allocate' },

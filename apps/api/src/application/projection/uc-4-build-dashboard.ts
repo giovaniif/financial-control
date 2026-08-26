@@ -73,6 +73,12 @@ export interface DashboardView {
   readonly headline: HeadlineView;
   readonly kpis: readonly KpiView[];
   readonly progress: CycleProgressView;
+  /**
+   * How the chosen cycle came out against its plan — UC-3.6. `null` for a
+   * projected cycle, which has no facts to compare a plan against; zero is
+   * the different answer that everything settled went to plan.
+   */
+  readonly varianceCents: number | null;
   readonly upcoming: readonly UpcomingEntryView[];
 }
 
@@ -153,6 +159,7 @@ export class BuildDashboard {
       headline: headlineOf(chosenRef, chosen, estimates),
       kpis: kpisOf(chosen, estimates),
       progress: progressOf(currentRef, currentCycle, today, estimates),
+      varianceCents: varianceOf(chosenRef, currentRef, chosen),
       upcoming: await this.upcomingFrom(
         window.slice(LOOK_BACK),
         today,
@@ -248,6 +255,35 @@ function kpisOf(cycle: Cycle | undefined, estimates: Estimates): KpiView[] {
       note: 'dinheiro livre depois das alocações',
     },
   ];
+}
+
+/**
+ * What the settled entries actually did against what they were planned to do.
+ *
+ * The sign is uniform in both directions because `variance` is
+ * `realised − planned`: a bill that cost more and a salary that arrived short
+ * are both negative, and a skipped bill is positive by its whole amount
+ * because a skipped entry realises nothing.
+ *
+ * The estimate flag is deliberately not consulted. `~estimate` marks a figure
+ * nobody has confirmed, and settling one confirms it — excluding it here
+ * would drop money that really moved.
+ */
+function varianceOf(
+  chosen: CycleRef,
+  current: CycleRef,
+  cycle: Cycle | undefined,
+): number | null {
+  // Months are `YYYY-MM`, so they order lexically.
+  if (chosen.month > current.month) {
+    return null;
+  }
+
+  return Money.sum(
+    (cycle?.entries ?? [])
+      .map((entry) => entry.amount.variance)
+      .filter((variance) => variance !== undefined),
+  ).cents;
 }
 
 function progressOf(
