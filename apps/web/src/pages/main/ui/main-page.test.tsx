@@ -156,6 +156,13 @@ function respondWith(
   body: DashboardResponse,
   options: {
     buckets?: BucketResponse[];
+    fundings?: {
+      bucketId: string;
+      name: string;
+      requested: number;
+      funded: number;
+      isFullyFunded: boolean;
+    }[];
     cycles?: CycleSummaryResponse[];
     cycleFor?: (month: string, estimates: EstimateMode) => CycleResponse;
     assistantAvailable?: boolean;
@@ -163,6 +170,7 @@ function respondWith(
 ) {
   const {
     buckets = [],
+    fundings,
     cycles,
     cycleFor = (month, estimates) => cycle(month, estimates),
     assistantAvailable = true,
@@ -184,6 +192,29 @@ function respondWith(
           };
     },
     '/api/buckets': buckets,
+    // UC-6.4 — the rules resolved against the cycle, in priority order.
+    ...Object.fromEntries(
+      window_().cycles.map((one) => [
+        `/api/cycles/${one.month}/allocation-preview`,
+        {
+          month: one.month,
+          expectedSurplus: 2_168_308,
+          fundings:
+            fundings ??
+            buckets
+              .filter((one) => one.status === 'ACTIVE')
+              .map((one) => ({
+                bucketId: one.id,
+                name: one.name,
+                requested: 433_662,
+                funded: 433_662,
+                isFullyFunded: true,
+              })),
+          shortfall: 0,
+          isOvercommitted: false,
+        },
+      ]),
+    ),
     '/api/cycles': { estimates: 'included', cycles: months },
     ...Object.fromEntries(
       months.map((one) => [
@@ -468,18 +499,64 @@ describe('MainPage', () => {
     expect(screen.queryByText('Europe Trip')).not.toBeInTheDocument();
   });
 
-  // Reporting progress toward a target that does not exist is the bug UC-6.1
-  // exists to prevent.
-  it('shows an ongoing bucket as having nothing to complete', async () => {
+  /**
+   * The question the card exists to answer: how much goes into each one this
+   * cycle. The balance is what that is building, not the headline.
+   */
+  it('says what goes into a bucket this cycle, and what it has', async () => {
     respondWith(dashboard(), { buckets: [ongoing()] });
 
     renderPage();
 
-    expect(await screen.findByText('Investments')).toBeInTheDocument();
+    const card = within(
+      await screen.findByRole('region', { name: 'Caixinhas' }),
+    );
+
+    expect(await card.findByText('R$ 4.336,62')).toBeInTheDocument();
+    expect(card.getByText(/20% da Sobra Esperada/)).toBeInTheDocument();
+    expect(card.getByText(/acumulado/)).toBeInTheDocument();
+  });
+
+  // UC-6.4 — a bucket the money did not reach must not read as funded.
+  it('says when the rules could not fully fund a bucket', async () => {
+    respondWith(dashboard(), {
+      buckets: [ongoing()],
+      fundings: [
+        {
+          bucketId: 'b2',
+          name: 'Investments',
+          requested: 433_662,
+          funded: 100_000,
+          isFullyFunded: false,
+        },
+      ],
+    });
+
+    renderPage();
+
+    // Scoped: the chain strip carries amounts of its own, and one of them
+    // happens to be R$ 1.000,00.
+    const card = within(
+      await screen.findByRole('region', { name: 'Caixinhas' }),
+    );
+
+    // Awaited inside the card: the card renders from the buckets, and the
+    // funding arrives from the allocation preview a moment later.
+    expect(await card.findByText('R$ 1.000,00')).toBeInTheDocument();
+    expect(card.getByText(/parcial/)).toBeInTheDocument();
+  });
+
+  /** An ongoing bucket has nothing to complete, so it says nothing about it. */
+  it('leaves the empty "nothing to complete" line off every row', async () => {
+    respondWith(dashboard(), { buckets: [ongoing()] });
+
+    renderPage();
+
+    await screen.findByText('Investments');
+
     expect(
-      screen.getByText('contínua — sem objetivo a atingir'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/% de/)).not.toBeInTheDocument();
+      screen.queryByText('contínua — sem objetivo a atingir'),
+    ).not.toBeInTheDocument();
   });
 
   // UC-4.6 — one click through to the screen the bucket belongs to.
