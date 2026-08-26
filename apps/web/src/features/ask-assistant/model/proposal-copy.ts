@@ -70,6 +70,18 @@ export function describeProposal(kind: ProposalKind): ProposalCopy {
         cycleLead: null,
         cycleNote: 'Muda o que cada ciclo aloca a partir de agora.',
       };
+    case 'OVERRIDE_ENTRY':
+      return {
+        label: 'Alterar um valor só neste ciclo',
+        cycleLead: 'Vale só no ciclo',
+        cycleNote: null,
+      };
+    case 'REVERT_ENTRY_OVERRIDE':
+      return {
+        label: 'Voltar ao valor projetado',
+        cycleLead: 'Volta ao projetado no ciclo',
+        cycleNote: null,
+      };
     case 'OVERRIDE_CONTRIBUTION':
       return {
         label: 'Ajustar um aporte',

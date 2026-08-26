@@ -17,6 +17,8 @@ const KINDS: ProposalKind[] = [
   'CREATE_ONGOING_BUCKET',
   'CHANGE_ALLOCATION_RULE',
   'OVERRIDE_CONTRIBUTION',
+  'OVERRIDE_ENTRY',
+  'REVERT_ENTRY_OVERRIDE',
 ];
 
 describe('proposal copy', () => {
@@ -35,6 +37,26 @@ describe('proposal copy', () => {
         'Settle entry e1 in the 2026-09 cycle as paid, at its planned amount.',
       ),
     ).toBe('Dá baixa no ciclo Setembro de 2026.');
+  });
+
+  /** UC-3.7 — the cycle it changes is the whole point: the template is
+      untouched and every other cycle keeps its projected figure. */
+  it('names the cycle an entry override is confined to', () => {
+    expect(
+      describeCycle(
+        'OVERRIDE_ENTRY',
+        'Usar R$ -420,00 no lançamento power-1 só no ciclo 2026-10, sem mexer no que o gera.',
+      ),
+    ).toBe('Vale só no ciclo Outubro de 2026.');
+  });
+
+  it('names the cycle a revert puts back', () => {
+    expect(
+      describeCycle(
+        'REVERT_ENTRY_OVERRIDE',
+        'Voltar o lançamento power-1 do ciclo 2026-10 ao valor projetado.',
+      ),
+    ).toBe('Volta ao projetado no ciclo Outubro de 2026.');
   });
 
   it('names the cycle an override applies to', () => {

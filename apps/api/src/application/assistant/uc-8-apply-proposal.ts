@@ -127,6 +127,16 @@ export class ApplyProposal {
             : { actualCents: change.actual.cents }),
         });
         return;
+      case 'OVERRIDE_ENTRY':
+        await this.ledger.override(
+          change.month,
+          change.entryId,
+          change.amount.cents,
+        );
+        return;
+      case 'REVERT_ENTRY_OVERRIDE':
+        await this.ledger.revertOverride(change.month, change.entryId);
+        return;
       case 'ADD_ENTRY':
         await this.ledger.addEntry({
           month: change.month,

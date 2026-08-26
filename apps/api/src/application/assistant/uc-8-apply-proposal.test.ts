@@ -412,6 +412,100 @@ describe('ApplyProposal — every kind routes into the use case that owns it', (
   });
 });
 
+/**
+ * UC-3.7 — one cycle's figure changes without touching the template behind
+ * it, and can be put back. The Ledger screen carried this before it was
+ * removed; it is a proposal now, like the ad-hoc entry beside it.
+ */
+describe('ApplyProposal — overriding one cycle\u2019s figure (UC-3.7)', () => {
+  it('changes the figure without touching what generated it', async () => {
+    const { apply, shown, cycles } = wire();
+
+    await apply.confirm(
+      me,
+      await shown({
+        kind: 'OVERRIDE_ENTRY',
+        month: '2026-10',
+        entryId: 'rent-1',
+        amount: reais(-8_000),
+      }),
+    );
+
+    const overridden = (await october(cycles)).entries.find(
+      (candidate) => candidate.id === 'rent-1',
+    );
+    expect(overridden?.amount.planned.cents).toBe(-800_000);
+    expect(overridden?.isOverridden).toBe(true);
+  });
+
+  /**
+   * UC-3.7 asks for reverting in one action, and the domain keeps the
+   * projected amount on the origin precisely so it is possible.
+   */
+  it('puts the figure back to the one that was projected', async () => {
+    const { apply, shown, cycles } = wire();
+
+    await apply.confirm(
+      me,
+      await shown({
+        kind: 'OVERRIDE_ENTRY',
+        month: '2026-10',
+        entryId: 'rent-1',
+        amount: reais(-8_000),
+      }),
+    );
+    await apply.confirm(
+      me,
+      await shown({
+        kind: 'REVERT_ENTRY_OVERRIDE',
+        month: '2026-10',
+        entryId: 'rent-1',
+      }),
+    );
+
+    const reverted = (await october(cycles)).entries.find(
+      (candidate) => candidate.id === 'rent-1',
+    );
+    expect(reverted?.amount.planned.cents).toBe(-761_000);
+    expect(reverted?.isOverridden).toBe(false);
+  });
+
+  /**
+   * The assistant enforces nothing (DOMAIN_MODEL §6): the domain refuses, and
+   * the refusal reaches the user as the reason it gave.
+   */
+  it('lets the domain refuse reverting an entry that was never overridden', async () => {
+    const { apply, shown } = wire();
+
+    await expect(
+      apply.confirm(
+        me,
+        await shown({
+          kind: 'REVERT_ENTRY_OVERRIDE',
+          month: '2026-10',
+          entryId: 'rent-1',
+        }),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('lets the domain refuse a cycle it cannot find', async () => {
+    const { apply, shown } = wire();
+
+    await expect(
+      apply.confirm(
+        me,
+        await shown({
+          kind: 'OVERRIDE_ENTRY',
+          month: '2027-03',
+          entryId: 'rent-1',
+          amount: reais(-8_000),
+        }),
+      ),
+    ).rejects.toBeInstanceOf(CycleNotFound);
+  });
+});
+
 describe('ApplyProposal — the confirmation is the boundary', () => {
   it('refuses a confirmation naming a proposal nobody made', async () => {
     const { apply } = wire();
