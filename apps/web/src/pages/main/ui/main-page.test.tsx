@@ -473,16 +473,43 @@ describe('MainPage', () => {
    * settled by hand, so the two-click path has to live here as well as the
    * one-click one.
    */
-  it('offers to settle at an amount other than the planned one', async () => {
+  /**
+   * The ⋯ shows what can be done rather than leaping into a form, and the two
+   * amount-changing items are worded apart: one records what moved, the other
+   * changes what the cycle expects (UC-3.7).
+   */
+  it('offers the entry\u2019s other actions behind a menu', async () => {
     respondWith(dashboard({ upcoming: [upcoming()] }));
 
     renderPage();
 
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Ações de Electricity' }),
+    );
+
     expect(
-      await screen.findByRole('button', {
-        name: 'Dar baixa com outro valor',
+      screen.getByRole('button', { name: 'Pagar com outro valor' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: 'Mudar o valor de Electricity neste mês',
       }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Ignorar Electricity neste mês' }),
+    ).toBeInTheDocument();
+  });
+
+  it('does not open a form until one is asked for', async () => {
+    respondWith(dashboard({ upcoming: [upcoming()] }));
+
+    renderPage();
+
+    await screen.findByRole('button', { name: 'Ações de Electricity' });
+
+    expect(
+      screen.queryByRole('button', { name: 'Pagar com outro valor' }),
+    ).not.toBeInTheDocument();
   });
 
   it('offers to confirm money coming in, not settle it', async () => {
