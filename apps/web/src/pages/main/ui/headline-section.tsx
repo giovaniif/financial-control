@@ -1,4 +1,4 @@
-import type { CyclePosition, HeadlineResponse } from '@fin/contracts';
+import type { Cents, CyclePosition, HeadlineResponse } from '@fin/contracts';
 import type { ReactNode } from 'react';
 
 import { formatBRL } from '@/shared/lib';
@@ -14,12 +14,20 @@ const eyebrows: Record<CyclePosition, string> = {
 interface Props {
   headline: HeadlineResponse;
   position: CyclePosition | undefined;
+  /** UC-3.6 — how the cycle came out. `null` for a projected one, which
+      has nothing to compare a plan against. */
+  variance: Cents | null;
   /** What can be done to the cycle being described — closing it, or reopening it. */
   action?: ReactNode;
 }
 
 /** UC-4.1 — the answer as one sentence, and the three numbers qualifying it. */
-export function HeadlineSection({ headline, position, action }: Props) {
+export function HeadlineSection({
+  headline,
+  position,
+  variance,
+  action,
+}: Props) {
   return (
     <section
       aria-label="A resposta"
@@ -59,8 +67,30 @@ export function HeadlineSection({ headline, position, action }: Props) {
           value={headline.closingWithoutEstimates}
           tone="text-amber-300"
         />
+        {variance !== null && <Variance cents={variance} />}
       </div>
     </section>
+  );
+}
+
+/**
+ * UC-3.6 — how the cycle came out against its plan.
+ *
+ * The direction is in the words rather than only in the colour, and it needs
+ * no special case for income: `variance` is realised minus planned, so a
+ * salary that arrived short and a bill that cost more are both negative.
+ */
+function Variance({ cents }: { cents: number }) {
+  if (cents === 0) {
+    return <span className="text-zinc-400">Saiu como o previsto</span>;
+  }
+
+  return (
+    <Qualifier
+      label={cents < 0 ? 'Pior que o previsto' : 'Melhor que o previsto'}
+      value={cents}
+      tone={cents < 0 ? 'text-red-300' : 'text-green-300'}
+    />
   );
 }
 

@@ -93,6 +93,7 @@ function Screen({
       <HeadlineSection
         headline={figures.headline}
         position={position}
+        variance={figures.variance}
         action={<CloseSection cycle={cycle} today={today} />}
       />
       <KpiSection kpis={figures.kpis} />
