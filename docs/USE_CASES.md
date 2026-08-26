@@ -277,8 +277,15 @@ one — the user's question is always asked from the middle of the cycle they ar
 **UC-4.1 — Read the answer as one sentence**
 The headline, in plain language:
 *"In the August cycle you'll receive R$ 18.000, pay R$ 9.110, and R$ 3.556 stays free after allocations."*
-Beside it, the two numbers that qualify it: the **closing balance**, and **the closing balance without the
-unconfirmed estimates**. Everything else on the screen is evidence for that sentence.
+Beneath it, one line qualifying it: how the cycle came out against its plan (UC-3.6), and nothing at all for a
+projected cycle, which has no facts to compare against. Everything else on the screen is evidence for that
+sentence.
+
+*The closing-balance pair was removed.* The closing balance is the last stage of the chain strip a few rows
+down, so stating it here printed it twice. The confirmed-only reading went with it for a stronger reason: it
+is *higher* than the real figure, because excluding estimates drops estimated **bills**, which are negative —
+a number offered as the safer reading that reads as the better one. Estimates are still tagged at source on
+every bill (UC-2.6), and the API keeps both readings for the assistant (UC-8.2).
 
 **UC-4.2 — See the headline figures** — *removed*
 Total Outcome, Expected Surplus and Net Surplus sat as three tiles above the chain strip — which carries all
@@ -306,12 +313,16 @@ than shown (UC-8.1), from the same figures.
 
 **UC-4.4 — Toggle estimates globally** — *removed*
 A header control switched every figure between **Confirmed only** and **Including estimates**. It asked the
-user to hold two readings of every number in their head, and the one place the difference actually decides
-something — the closing balance — states both readings side by side without being asked (UC-4.1).
+user to hold two readings of every number in their head for a difference that decides something in one place
+at most.
 
-The app answers **including estimates**, and `~estimate` still tags every unconfirmed figure at its source
-(UC-2.6), which is where the warning belongs. The API keeps both readings: the assistant can still be asked
-for either, and the headline's second number is computed from the confirmed one.
+The app answers **including estimates**. The headline briefly kept the confirmed closing balance beside the
+real one, and that went too (UC-4.1): a figure that is *higher* than the real one — excluding estimates drops
+estimated bills, which are negative — is not a safer reading, it is a misleading one.
+
+`~estimate` tags every unconfirmed figure at its source (UC-2.6), which is where the warning belongs and
+where §6's rule is actually enforced. The API keeps both readings, so the assistant can still be asked for
+either.
 
 **UC-4.5 — Work the upcoming list**
 The next obligations by date, each settleable inline. Overdue items are called out with how late they are and
