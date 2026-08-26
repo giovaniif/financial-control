@@ -21,8 +21,10 @@ export function useOverrideEntry() {
 
   return useMutation({
     mutationFn: ({ month, entryId, amount }: Override) =>
+      // PUT, paired with the DELETE on the same path that reverts it: this
+      // replaces a figure that is already there rather than adding one.
       api<null>(`/cycles/${month}/entries/${entryId}/override`, {
-        method: 'POST',
+        method: 'PUT',
         body: JSON.stringify({ amount } satisfies OverrideEntryRequest),
       }),
     onSuccess: async () => {
