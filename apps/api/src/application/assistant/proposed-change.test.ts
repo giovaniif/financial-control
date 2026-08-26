@@ -161,6 +161,25 @@ describe('summarise — the sentence the user confirms', () => {
       },
       'Colocar R$ 500,00 na caixinha reserve no ciclo 2026-10, só desta vez.',
     ],
+    [
+      'overriding one cycle\u2019s figure',
+      {
+        kind: 'OVERRIDE_ENTRY',
+        month: '2026-10',
+        entryId: 'power-1',
+        amount: reais(-420),
+      },
+      'Usar R$ -420,00 no lançamento power-1 só no ciclo 2026-10, sem mexer no que o gera.',
+    ],
+    [
+      'putting a figure back to the projected one',
+      {
+        kind: 'REVERT_ENTRY_OVERRIDE',
+        month: '2026-10',
+        entryId: 'power-1',
+      },
+      'Voltar o lançamento power-1 do ciclo 2026-10 ao valor projetado.',
+    ],
   ])('describes %s', (_name, change, expected) => {
     expect(summarise(change)).toBe(expected);
   });

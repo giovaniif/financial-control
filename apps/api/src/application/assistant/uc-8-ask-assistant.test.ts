@@ -304,6 +304,8 @@ describe('AskAssistant — the tool set', () => {
       'propose_ongoing_bucket',
       'propose_allocation_rule_change',
       'propose_contribution_override',
+      'propose_override_entry',
+      'propose_revert_entry_override',
     ]);
   });
 

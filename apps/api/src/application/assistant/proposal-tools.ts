@@ -357,6 +357,48 @@ export const PROPOSAL_TOOLS: readonly ProposalToolSpec[] = [
       amount: requireCents(args, 'amountInCents'),
     }),
   },
+  {
+    tool: {
+      name: 'propose_override_entry',
+      description:
+        'Propose changing what one entry is worth in a single cycle, leaving the recurring template that generates it alone. Use this when a bill is different this month only; use propose_template_amount_change when the new figure holds from now on.',
+      inputSchema: schema(
+        {
+          month: MONTH_FIELD,
+          entryId: { type: 'string', description: "the entry's id" },
+          amountInCents: CENTS_FIELD(
+            'what this cycle should use instead, negative for money going out',
+          ),
+        },
+        ['month', 'entryId', 'amountInCents'],
+      ),
+    },
+    compose: (args) => ({
+      kind: 'OVERRIDE_ENTRY',
+      month: requireMonth(args, 'month'),
+      entryId: requireText(args, 'entryId'),
+      amount: requireCents(args, 'amountInCents'),
+    }),
+  },
+  {
+    tool: {
+      name: 'propose_revert_entry_override',
+      description:
+        'Propose putting an overridden entry back to the figure its template projected. Read the cycle first: only an entry already marked as overridden can be reverted.',
+      inputSchema: schema(
+        {
+          month: MONTH_FIELD,
+          entryId: { type: 'string', description: "the entry's id" },
+        },
+        ['month', 'entryId'],
+      ),
+    },
+    compose: (args) => ({
+      kind: 'REVERT_ENTRY_OVERRIDE',
+      month: requireMonth(args, 'month'),
+      entryId: requireText(args, 'entryId'),
+    }),
+  },
 ];
 
 const MONTH = /^\d{4}-\d{2}$/;

@@ -102,6 +102,20 @@ export type ProposedChange =
       readonly bucketId: string;
       readonly rule: AllocationRule;
     }
+  /** UC-3.7 — one cycle's figure, without touching the template behind it.
+   * Distinct from OVERRIDE_CONTRIBUTION, which is a bucket's aporte. */
+  | {
+      readonly kind: 'OVERRIDE_ENTRY';
+      readonly month: string;
+      readonly entryId: string;
+      readonly amount: Money;
+    }
+  /** UC-3.7 — back to whatever was projected before the override. */
+  | {
+      readonly kind: 'REVERT_ENTRY_OVERRIDE';
+      readonly month: string;
+      readonly entryId: string;
+    }
   /** UC-6.5 */
   | {
       readonly kind: 'OVERRIDE_CONTRIBUTION';
@@ -148,6 +162,10 @@ export function summarise(change: ProposedChange): string {
       return `Criar a caixinha contínua “${change.name}” — ${describeRule(change.rule)} por ciclo, prioridade #${String(change.priority)}.`;
     case 'CHANGE_ALLOCATION_RULE':
       return `Mudar a caixinha ${change.bucketId} para receber ${describeRule(change.rule)} por ciclo.`;
+    case 'OVERRIDE_ENTRY':
+      return `Usar ${money(change.amount)} no lançamento ${change.entryId} só no ciclo ${change.month}, sem mexer no que o gera.`;
+    case 'REVERT_ENTRY_OVERRIDE':
+      return `Voltar o lançamento ${change.entryId} do ciclo ${change.month} ao valor projetado.`;
     case 'OVERRIDE_CONTRIBUTION':
       return `Colocar ${money(change.amount)} na caixinha ${change.bucketId} no ciclo ${change.month}, só desta vez.`;
     default: {
