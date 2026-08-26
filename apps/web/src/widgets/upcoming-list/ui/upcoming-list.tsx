@@ -4,6 +4,8 @@ import { SettleEntry } from '@/features/settle-entry';
 import { formatDayMonth } from '@/shared/lib';
 import { Amount, Badge, CardTitle, EmptyState } from '@/shared/ui';
 
+import { EntryActions } from './entry-actions.js';
+
 /**
  * UC-4.5 — the next obligations, each settleable inline. With the Ledger
  * screen gone this is the only place an entry is settled by hand, so it
@@ -80,7 +82,9 @@ export function UpcomingList({
                   month={entry.cycleMonth}
                   entryId={entry.id}
                   planned={entry.amount}
+                  isEstimate={entry.isEstimate}
                 />
+                <EntryActions entry={entry} />
               </div>
             </li>
           ))}
