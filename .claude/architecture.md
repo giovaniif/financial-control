@@ -36,19 +36,21 @@ to be shared beyond DTOs, that is a signal the boundary is wrong.
 src/
   domain/                # pure. no I/O, no framework, no Prisma, no Date.now()
     budgeting/           cycle.ts, ledger-entry.ts, recurring-template.ts, cycle-ref.ts
-    cards/               card.ts, invoice.ts, installment-plan.ts
-    goals/               bucket.ts, bucket-event.ts, allocation-rule.ts
+    goals/               bucket.ts, bucket-event.ts, allocation.ts
     shared/              money.ts, percentage.ts, planned-actual.ts, date-range.ts
-    ports/               clock.ts, holiday-calendar.ts, repositories.ts
+    ports/               clock.ts, holiday-calendar.ts, language-model.ts,
+                         repositories.ts
 
-  application/           # one interactor per use case, named for its id
-    budgeting/           uc-3-5-settle-entry.ts, uc-3-8-close-cycle.ts, ...
-    cards/               uc-5-1-register-purchase.ts, ...
-    goals/               uc-6-7-correct-balance.ts, ...
+  application/           # interactors named for the use case ids they serve
+    budgeting/           uc-3-ledger-actions.ts, uc-3-8-close-cycle.ts, ...
+    goals/               uc-6-manage-buckets.ts
     projection/          uc-4-build-dashboard.ts, uc-7-project-wealth.ts, ...
+    setup/               uc-1-5-converse-setup.ts, ...
+    assistant/           uc-8-ask-assistant.ts, uc-8-apply-proposal.ts
 
   infrastructure/
     prisma/              schema.prisma, migrations/, repositories/, mappers/
+    anthropic/  gemini/  ollama/     # one adapter per LanguageModel vendor
     clock/  holidays/
 
   interface/
@@ -113,9 +115,9 @@ Feature-Sliced Design. Layers, top to bottom:
 src/
   app/        # providers, router, global styles — composition root
   pages/      # route-level compositions
-  widgets/    # self-contained composite blocks (ChainStrip, UpcomingList, AlertList)
-  features/   # user actions with behaviour (settle-entry, register-purchase)
-  entities/   # domain nouns and their UI (cycle, ledger-entry, card, bucket)
+  widgets/    # self-contained composite blocks (AppShell, ChainStrip, UpcomingList)
+  features/   # user actions with behaviour (settle-entry, ask-assistant)
+  entities/   # domain nouns and their UI (cycle, dashboard, template, bucket)
   shared/     # ui kit, api client, lib, config — no domain knowledge
 ```
 
@@ -130,7 +132,7 @@ Within a layer, code is organised into **slices** (`features/settle-entry/`,
 ### Slice rules
 
 - **No cross-imports between slices of the same layer.** `features/settle-entry` cannot
-  import `features/register-purchase`. If they need to share, the shared part belongs one
+  import `features/ask-assistant`. If they need to share, the shared part belongs one
   layer down (`entities` or `shared`).
 - **Every slice has a public API** — an `index.ts` re-exporting what is meant to be used.
   Importing a slice's internals from outside is a lint error. Import
@@ -146,7 +148,7 @@ Within a layer, code is organised into **slices** (`features/settle-entry/`,
 | `entities` | A domain noun: its types, its display components, its queries | `entities/cycle`, `entities/bucket` |
 | `features` | One user action, end to end, including its mutation | `features/settle-entry` |
 | `widgets` | Composite blocks combining entities and features | `widgets/chain-strip` |
-| `pages` | Route compositions, layout, data orchestration | `pages/ledger` |
+| `pages` | Route compositions, layout, data orchestration | `pages/main` |
 | `app` | Providers, router, theme | `app/providers/query-provider` |
 
 ### Conventions
