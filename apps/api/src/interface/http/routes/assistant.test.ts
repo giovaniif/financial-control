@@ -112,8 +112,20 @@ function assistantWith(
   const assistant = new AskAssistant(
     model,
     {
-      cycle: new ReadCycle(cycles, settings, noHolidays, templates),
-      dashboard: new BuildDashboard(cycles, settings, noHolidays, clock),
+      cycle: new ReadCycle(
+        cycles,
+        settings,
+        noHolidays,
+        templates,
+        new InMemoryBucketRepository(),
+      ),
+      dashboard: new BuildDashboard(
+        cycles,
+        settings,
+        noHolidays,
+        clock,
+        new InMemoryBucketRepository(),
+      ),
       cycles: new ListCycles(
         cycles,
         settings,
@@ -121,6 +133,7 @@ function assistantWith(
         noHolidays,
         clock,
         templates,
+        new InMemoryBucketRepository(),
       ),
       buckets: manageBuckets,
       wealth: new ProjectWealth(buckets),

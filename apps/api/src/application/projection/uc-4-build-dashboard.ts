@@ -1,9 +1,11 @@
+import { allocateInto } from '../../domain/budgeting/allocation-generation.js';
 import { CycleRef } from '../../domain/budgeting/cycle-ref.js';
 import type { Cycle } from '../../domain/budgeting/cycle.js';
 import { Estimates } from '../../domain/budgeting/cycle.js';
 import type { Clock } from '../../domain/ports/clock.js';
 import type { HolidayCalendar } from '../../domain/ports/holiday-calendar.js';
 import type {
+  BucketRepository,
   CycleRepository,
   SettingsRepository,
 } from '../../domain/ports/repositories.js';
@@ -104,6 +106,7 @@ export class BuildDashboard {
     private readonly settings: SettingsRepository,
     private readonly holidays: HolidayCalendar,
     private readonly clock: Clock,
+    private readonly buckets: BucketRepository,
   ) {}
 
   /**
@@ -147,8 +150,16 @@ export class BuildDashboard {
         ? nextRef
         : CycleRef.forMonth(month, anchor, this.holidays);
 
-    const currentCycle = await this.cycles.findByMonth(currentRef);
-    const chosen = await this.cycles.findByMonth(chosenRef);
+    // The same derivation the cycle route and the rolling window apply, so
+    // the three cannot report different figures for one cycle.
+    const buckets = await this.buckets.findAll();
+    const withAllocations = (cycle: Cycle | undefined) =>
+      cycle === undefined ? undefined : allocateInto(cycle, buckets);
+
+    const currentCycle = withAllocations(
+      await this.cycles.findByMonth(currentRef),
+    );
+    const chosen = withAllocations(await this.cycles.findByMonth(chosenRef));
 
     return {
       today: today.toISO(),
