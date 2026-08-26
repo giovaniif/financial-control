@@ -91,7 +91,17 @@ export interface DashboardView {
  */
 const LOOK_BACK = 1;
 const HORIZON = 4;
-const UPCOMING_LIMIT = 8;
+/**
+ * A guard on the payload, not a decision about what the user sees.
+ *
+ * The worklist is bounded by the cycles it covers — the current one, the next
+ * and the one after — which is a bound that answers "what should I act on".
+ * A row count answers nothing, and this list is the only place an entry is
+ * settled by hand (UC-4.5), so one it drops cannot be settled at all.
+ *
+ * Three cycles of a heavy month come nowhere near this.
+ */
+const UPCOMING_CEILING = 500;
 
 /**
  * UC-4 — the screen that answers "how much will I pay next cycle, and how
@@ -222,7 +232,7 @@ export class BuildDashboard {
           ? a.dueDate.localeCompare(b.dueDate)
           : Number(b.isOverdue) - Number(a.isOverdue),
       )
-      .slice(0, UPCOMING_LIMIT);
+      .slice(0, UPCOMING_CEILING);
   }
 }
 
