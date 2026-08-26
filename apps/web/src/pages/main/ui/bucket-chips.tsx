@@ -3,14 +3,16 @@ import { Link } from 'react-router';
 
 import { useBuckets } from '@/entities/bucket';
 import { useAllocationPreview } from '@/features/manage-buckets';
-import { formatPercent } from '@/shared/lib';
+import { formatBRL, formatPercent } from '@/shared/lib';
 import { Amount, Card, CardTitle } from '@/shared/ui';
 
 /**
  * UC-4.6 — each bucket as a compact chip, one click through to UC-6.
  *
- * The figure is what goes in **this cycle**, because that is what the card is
- * read for. The balance is what that is building, and follows it.
+ * A row rather than a list, because this card sits between the figures and
+ * the worklist and every line it takes is a line the worklist does not get.
+ * The figure is what goes in **this cycle**, which is what the card is read
+ * for; the rule and the balance follow it, abbreviated.
  */
 export function BucketChips({ month }: { month: string | undefined }) {
   const { data } = useBuckets();
@@ -28,43 +30,36 @@ export function BucketChips({ month }: { month: string | undefined }) {
   );
 
   return (
-    <Card label="Caixinhas" className="flex flex-col gap-3">
+    <Card label="Caixinhas" className="flex flex-col gap-2">
       <CardTitle>Caixinhas</CardTitle>
-      {buckets.map((bucket) => (
-        <Link
-          key={bucket.id}
-          to="/savings"
-          className="flex flex-col gap-1 rounded-lg transition-colors hover:bg-zinc-50"
-        >
-          <div className="flex items-baseline justify-between gap-3 text-sm">
-            <span>{bucket.name}</span>
+      {/* Focusable so the chips past the edge are reachable without a
+          trackpad gesture (WCAG 2.1.1), as on the savings screen. */}
+      <div
+        role="group"
+        aria-label="Suas caixinhas"
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+        tabIndex={0}
+        className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1"
+      >
+        {buckets.map((bucket) => (
+          <Link
+            key={bucket.id}
+            to="/savings"
+            /* Shares the width when there is room and stops at a readable
+               minimum when there is not — past that the strip scrolls rather
+               than the chips becoming unreadable. */
+            className="flex min-w-52 flex-1 flex-col gap-0.5 rounded-lg border border-zinc-200 px-3 py-2 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
+          >
+            <span className="truncate text-xs text-zinc-600">
+              {bucket.name}
+            </span>
             <Contribution funding={funding.get(bucket.id)} />
-          </div>
-          <span className="text-xs text-zinc-500">
-            {describeRule(bucket.rule)} · acumulado{' '}
-            <Amount cents={bucket.balance} />
-          </span>
-          {/* A goal shows progress; an ongoing bucket has nothing to complete. */}
-          {bucket.percentComplete !== null && (
-            <>
-              <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
-                <div
-                  className="h-full rounded-full bg-teal-600"
-                  style={{ width: `${String(bucket.percentComplete)}%` }}
-                />
-              </div>
-              <span className="text-xs text-zinc-500">
-                {bucket.percentComplete}% de{' '}
-                {bucket.target === null ? (
-                  '—'
-                ) : (
-                  <Amount cents={bucket.target} />
-                )}
-              </span>
-            </>
-          )}
-        </Link>
-      ))}
+            <span className="truncate text-[11px] text-zinc-400">
+              {qualifier(bucket)} · acum. {formatBRL(bucket.balance)}
+            </span>
+          </Link>
+        ))}
+      </div>
     </Card>
   );
 }
@@ -75,21 +70,30 @@ export function BucketChips({ month }: { month: string | undefined }) {
  */
 function Contribution({ funding }: { funding: FundingResponse | undefined }) {
   if (funding === undefined) {
-    return <span className="text-xs text-zinc-400">—</span>;
+    return <span className="font-mono text-sm text-zinc-400">—</span>;
   }
 
   return (
-    <span className="flex items-baseline gap-2 whitespace-nowrap">
+    <span className="flex items-baseline gap-1.5">
+      <Amount cents={funding.funded} className="text-sm" />
       {!funding.isFullyFunded && (
-        <span className="text-xs text-amber-700">parcial</span>
+        <span className="text-[11px] text-amber-700">parcial</span>
       )}
-      <Amount cents={funding.funded} className="text-xs" />
     </span>
   );
 }
 
-function describeRule(rule: BucketResponse['rule']): string {
-  return rule.kind === 'PERCENT'
-    ? `${formatPercent(rule.percent)} da Sobra Esperada`
-    : 'valor fixo por ciclo';
+/**
+ * UC-4.6 — a goal is read by how far along it is, an ongoing bucket by the
+ * rate it is fed at. Both as a label rather than a sentence: this line
+ * repeats on every chip, and the sentence was what made the card tall.
+ */
+function qualifier(bucket: BucketResponse): string {
+  if (bucket.percentComplete !== null) {
+    return `${String(bucket.percentComplete)}% da meta`;
+  }
+
+  return bucket.rule.kind === 'PERCENT'
+    ? formatPercent(bucket.rule.percent)
+    : 'valor fixo';
 }
