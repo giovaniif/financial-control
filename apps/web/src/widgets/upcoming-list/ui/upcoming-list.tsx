@@ -24,7 +24,21 @@ export function UpcomingList({
           body="Todos os lançamentos dos próximos ciclos já foram baixados."
         />
       ) : (
-        <ul className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+        /* Three cycles of bills is a long list, so it scrolls inside itself
+           rather than pushing the chain and the caixinhas off the screen.
+           `tabIndex` is what makes the rows past the fold reachable without a
+           mouse; `overscroll-contain` stops a phone scrolling the page behind
+           it once the list has run out. */
+        <ul
+          role="region"
+          aria-label="A vencer"
+          // A scrollable region has to be focusable or its rows past the
+          // fold cannot be reached without a mouse (WCAG 2.1.1). The rule
+          // allows this for `tabpanel` only, and a worklist is not one.
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+          tabIndex={0}
+          className="max-h-[60vh] divide-y divide-zinc-100 overflow-y-auto overscroll-contain rounded-xl border border-zinc-200 bg-white"
+        >
           {entries.map((entry) => (
             <li
               key={entry.id}
