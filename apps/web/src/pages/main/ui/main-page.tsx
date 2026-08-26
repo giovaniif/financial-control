@@ -1,8 +1,4 @@
-import type {
-  CyclePosition,
-  CycleProgressResponse,
-  CycleResponse,
-} from '@fin/contracts';
+import type { CyclePosition, CycleResponse } from '@fin/contracts';
 import { useEffect } from 'react';
 
 import { useCycle } from '@/entities/cycle';
@@ -18,8 +14,6 @@ import { BucketChips } from './bucket-chips.js';
 import { ChainSection } from './chain-section.js';
 import { CloseSection } from './close-section.js';
 import { HeadlineSection } from './headline-section.js';
-import { KpiSection } from './kpi-section.js';
-import { ProgressSection } from './progress-section.js';
 
 /**
  * UC-4 — the screen that justifies the whole payday-cycle model.
@@ -64,7 +58,6 @@ export function MainPage() {
       ) : (
         <Screen
           figures={figuresFor(data)}
-          progress={data.progress}
           cycle={cycle}
           today={data.today}
           position={selected?.position}
@@ -77,13 +70,11 @@ export function MainPage() {
 /** The figures, in the order the calculation chain reads. */
 function Screen({
   figures,
-  progress,
   cycle,
   today,
   position,
 }: {
   figures: MainFigures;
-  progress: CycleProgressResponse;
   cycle: CycleResponse | undefined;
   today: string;
   position: CyclePosition | undefined;
@@ -96,12 +87,8 @@ function Screen({
         variance={figures.variance}
         action={<CloseSection cycle={cycle} today={today} />}
       />
-      <KpiSection kpis={figures.kpis} />
       <ChainSection cycle={cycle} />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <ProgressSection progress={progress} />
-        <BucketChips />
-      </div>
+      <BucketChips />
       <UpcomingList entries={figures.upcoming} />
     </div>
   );
