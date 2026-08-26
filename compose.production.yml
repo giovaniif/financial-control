@@ -55,7 +55,12 @@ services:
     ports:
       # The one open port. Tailnet only — the app is unauthenticated, and
       # anything that reaches this can read and rewrite every figure in it.
-      - '${WEB_PORT:-8090}:8080'
+      #
+      # 7333 rather than anything in the 8000s: this machine has 8000, 8080,
+      # 8081 and 8096 taken already, and the 8000s are where a dev server
+      # lands when 3000 and 5173 are busy. A deployed app that restarts on
+      # boot must not be what a future `pnpm dev` collides with.
+      - '${WEB_PORT:-7333}:8080'
     depends_on:
       api:
         condition: service_healthy
