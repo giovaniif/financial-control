@@ -388,6 +388,32 @@ describe('MainPage', () => {
     expect(screen.getByText('Sobra Líquida')).toBeInTheDocument();
   });
 
+  /**
+   * UC-4.5 — the only place an entry is settled by hand, so it renders every
+   * row it is given. jsdom has no layout, so what is asserted here is the
+   * part that would actually break: a region that scrolls has to be reachable
+   * from a keyboard, or its later rows are unreachable without a mouse.
+   */
+  it('renders every entry it is given, in a region a keyboard can scroll', async () => {
+    respondWith(
+      dashboard({
+        upcoming: Array.from({ length: 20 }, (_unused, index) =>
+          upcoming({
+            id: `e${String(index)}`,
+            description: `Bill ${String(index)}`,
+          }),
+        ),
+      }),
+    );
+
+    renderPage();
+
+    const list = await screen.findByRole('region', { name: 'A vencer' });
+
+    expect(within(list).getAllByRole('listitem')).toHaveLength(20);
+    expect(list).toHaveAttribute('tabindex', '0');
+  });
+
   it('says when there is nothing due', async () => {
     renderPage();
 
