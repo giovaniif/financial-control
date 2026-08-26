@@ -65,6 +65,42 @@ describe('RecurringTemplate.create', () => {
       EntryKind.Fixed,
     );
   });
+
+  /**
+   * The direction is what the user chose; the sign is bookkeeping. "320" and
+   * "-320" are the same statement about a bill, so the aggregate settles it
+   * rather than leaving each caller to remember — a positive OUT would reach
+   * the chain as a FIXED entry that *adds* money.
+   */
+  describe('the sign follows the direction', () => {
+    it.each([
+      ['an outgoing amount typed as positive', Direction.Out, 320, -32_000],
+      ['an outgoing amount already negative', Direction.Out, -320, -32_000],
+      ['income typed as negative', Direction.In, -18_000, 1_800_000],
+      ['income already positive', Direction.In, 18_000, 1_800_000],
+    ])('normalises %s', (_name, direction, given, expected) => {
+      expect(
+        template({ direction, amount: reais(given) }).amountFor(
+          cycle('2026-09'),
+        ).cents,
+      ).toBe(expected);
+    });
+
+    it.each([
+      ['outgoing', Direction.Out, 250, -25_000],
+      ['income', Direction.In, -250, 25_000],
+    ])(
+      'normalises a %s schedule step too',
+      (_name, direction, given, expected) => {
+        const scheduled = template({ direction }).scheduleAmountFrom(
+          '2026-10',
+          reais(given),
+        );
+
+        expect(scheduled.amountFor(cycle('2026-10')).cents).toBe(expected);
+      },
+    );
+  });
 });
 
 describe('RecurringTemplate.appliesTo', () => {

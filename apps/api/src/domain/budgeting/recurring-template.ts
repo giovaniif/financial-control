@@ -95,12 +95,15 @@ export class RecurringTemplate {
       name: input.name.trim(),
       direction: input.direction,
       dueDayOfMonth: input.dueDayOfMonth,
-      baseAmount: input.amount,
+      baseAmount: signed(input.amount, input.direction),
       // Sorted so resolution is a scan for the latest step at or before a
       // cycle, whatever order the steps arrived in.
-      valueSchedule: [...(input.valueSchedule ?? [])].sort((a, b) =>
-        a.fromMonth.localeCompare(b.fromMonth),
-      ),
+      valueSchedule: [...(input.valueSchedule ?? [])]
+        .map((step) => ({
+          ...step,
+          amount: signed(step.amount, input.direction),
+        }))
+        .sort((a, b) => a.fromMonth.localeCompare(b.fromMonth)),
       startMonth: input.startMonth,
       endMonth: input.endMonth,
       status: input.status ?? TemplateStatus.Active,
@@ -205,9 +208,10 @@ export class RecurringTemplate {
     const withoutClash = this.state.valueSchedule.filter(
       (step) => step.fromMonth !== fromMonth,
     );
+    const step = { fromMonth, amount: signed(amount, this.state.direction) };
 
     return this.with({
-      valueSchedule: [...withoutClash, { fromMonth, amount }].sort((a, b) =>
+      valueSchedule: [...withoutClash, step].sort((a, b) =>
         a.fromMonth.localeCompare(b.fromMonth),
       ),
     });
@@ -268,4 +272,19 @@ function assertMonth(month: string): void {
   if (!MONTH.test(month)) {
     throw new InvalidTemplate(`Não é um mês no formato YYYY-MM: "${month}".`);
   }
+}
+
+/**
+ * The amount an `IN` or `OUT` template holds, signed the way the ledger signs
+ * it: outgoing money is negative, incoming money is positive.
+ *
+ * The direction is what the user chose and the sign is bookkeeping, so the
+ * aggregate settles it rather than trusting every caller to agree —
+ * `"320"` and `"-320"` are the same statement about a bill. Left to the
+ * callers they did disagree: the setup conversation negated and the Profile
+ * form did not, so a bill added by hand generated a `FIXED` entry that added
+ * money to the cycle instead of taking it out.
+ */
+function signed(amount: Money, direction: Direction): Money {
+  return direction === Direction.In ? amount.abs() : amount.abs().negate();
 }

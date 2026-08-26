@@ -89,6 +89,38 @@ describe('ManageTemplates.create', () => {
     expect(await templateRepo.findById('tpl-1')).toBeDefined();
   });
 
+  /**
+   * The Profile form sends a magnitude and a direction separately, so a bill
+   * arrives here positive. Before the aggregate owned the relationship this
+   * stored a positive OUT, which generates a FIXED entry that *adds* money —
+   * the chain then reported a smaller total outcome than the bills it listed.
+   */
+  it('stores a bill as an outcome however the caller signed it', async () => {
+    const { useCase } = managing();
+
+    const created = await useCase.create({
+      name: 'Cartão de crédito',
+      direction: Direction.Out,
+      dueDayOfMonth: 7,
+      amountCents: 310_000,
+    });
+
+    expect(created.amountCents).toBe(-310_000);
+  });
+
+  it('stores income as incoming however the caller signed it', async () => {
+    const { useCase } = managing();
+
+    const created = await useCase.create({
+      name: 'Salário',
+      direction: Direction.In,
+      dueDayOfMonth: 5,
+      amountCents: -1_800_000,
+    });
+
+    expect(created.amountCents).toBe(1_800_000);
+  });
+
   it('starts from the current cycle when no start is given', async () => {
     const { useCase } = managing();
 
