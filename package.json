@@ -16,9 +16,9 @@
     "test": "pnpm run --silent tmpdir && TMPDIR=\"$PWD/.tmp\" turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "db:up": "docker compose up -d",
-    "db:down": "docker compose down",
-    "db:reset": "docker compose down -v && docker compose up -d"
+    "db:up": "docker compose -f compose.production.yml up -d postgres",
+    "db:down": "docker compose -f compose.production.yml stop postgres",
+    "db:reset": "docker compose -f compose.production.yml down -v && docker compose -f compose.production.yml up -d postgres"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",

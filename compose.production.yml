@@ -1,12 +1,38 @@
-# How the app actually runs: two containers on this machine, supervised by the
-# Coolify instance that is already here. Not a hosted environment — see
+# How the app actually runs: three containers on this machine, supervised by
+# the Coolify instance that is already here. Not a hosted environment — see
 # .claude/deployment.md.
 #
-# The database is deliberately absent. `fin-postgres` from docker-compose.yml
-# holds the real data and stays exactly where it is; this file joins its
-# network and never owns it.
+# This is the only definition of the database. It publishes 5434 exactly as
+# the development compose file used to, so `pnpm dev` reaches the same data
+# through the same connection string — one machine, one user, one dataset.
 
 services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fin}
+      POSTGRES_DB: ${POSTGRES_DB:-fin}
+    ports:
+      # 5434, not 5432: this machine already runs other projects' databases on
+      # 5432 and 5433. `pnpm dev` connects here.
+      - '${POSTGRES_PORT:-5434}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Creates fin_test beside fin on first boot. The tests truncate every
+      # table, so they must never point at the development database.
+      - ./scripts/create-test-database.sql:/docker-entrypoint-initdb.d/10-create-test-database.sql:ro
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-fin} -d ${POSTGRES_DB:-fin}',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api:
     build:
       context: .
@@ -14,7 +40,7 @@ services:
     restart: unless-stopped
     environment:
       # Reached over the Docker network, so it is the container's own 5432 and
-      # not the 5434 that docker-compose.yml publishes to the host.
+      # not the 5434 published to the host for `pnpm dev`.
       DATABASE_URL: ${DATABASE_URL:-postgresql://fin:fin@postgres:5432/fin?schema=public}
       PORT: 3333
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
@@ -23,9 +49,9 @@ services:
     # No published port. Nothing reaches the API except the web container,
     # which is what deployment.md already says about the dev setup: only the
     # web port needs to be open.
-    networks:
-      - default
-      - database
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -59,10 +85,7 @@ services:
       timeout: 5s
       retries: 5
 
-networks:
-  default:
-  database:
-    # Created by docker-compose.yml, which owns it. External so that bringing
-    # this stack down can never take the database's network with it.
-    name: financial-control_default
-    external: true
+volumes:
+  # The data. Named rather than bound, so `docker compose down` cannot take it
+  # and only an explicit `down -v` ever will.
+  postgres-data:
