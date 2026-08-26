@@ -230,7 +230,7 @@ function AmountForm({
             setScope('THIS_AND_FUTURE');
           }}
           title="Neste ciclo e nos futuros"
-          body="Este ciclo e todos os seguintes passam a usar o novo valor, registrado como uma tabela de valores."
+          body="Este ciclo e todos os seguintes passam a usar o novo valor."
         />
       </fieldset>
 
