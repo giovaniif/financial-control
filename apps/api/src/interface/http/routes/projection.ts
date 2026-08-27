@@ -51,19 +51,6 @@ export function registerProjectionRoutes(
             closing: view.headline.closingCents,
             closingWithoutEstimates: view.headline.closingWithoutEstimatesCents,
           },
-          kpis: view.kpis.map((kpi) => ({
-            label: kpi.label,
-            amount: kpi.amountCents,
-            note: kpi.note,
-          })),
-          progress: {
-            dayOfCycle: view.progress.dayOfCycle,
-            cycleLength: view.progress.cycleLength,
-            timePercent: view.progress.timePercent,
-            spent: view.progress.spentCents,
-            plannedOut: view.progress.plannedOutCents,
-            spentPercent: view.progress.spentPercent,
-          },
           variance: view.varianceCents,
           upcoming: view.upcoming.map((entry) => ({
             id: entry.id,

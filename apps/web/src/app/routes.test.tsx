@@ -41,7 +41,6 @@ const dashboard = {
     closing: 0,
     closingWithoutEstimates: 0,
   },
-  kpis: [],
   progress: {
     dayOfCycle: 1,
     cycleLength: 30,

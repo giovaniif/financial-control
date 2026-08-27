@@ -268,62 +268,6 @@ describe('BuildDashboard for a chosen cycle', () => {
   });
 });
 
-describe('BuildDashboard KPIs', () => {
-  it('reports the chain figures in the order the chain runs', async () => {
-    const { kpis } = await building({ cycles: [october()] }).build();
-
-    expect(kpis.map((k) => k.label)).toEqual([
-      'Total de saídas',
-      'Sobra Esperada',
-      'Sobra Líquida',
-    ]);
-    expect(kpis[1]?.amountCents).toBe(889_000);
-  });
-});
-
-describe('BuildDashboard cycle progress', () => {
-  it('reports how far through the cycle today is', async () => {
-    const september = Cycle.open({
-      id: '2026-09',
-      ref: ref('2026-09'),
-      openingBalance: Money.zero(),
-      entries: [entry('Rent', EntryKind.Fixed, '2026-08-10', -1_000)],
-    });
-
-    const { progress } = await building({ cycles: [september] }).build();
-
-    // 5 Aug – 3 Sep is 30 days, and today is the 6th day.
-    expect(progress.cycleLength).toBe(30);
-    expect(progress.dayOfCycle).toBe(6);
-    expect(progress.timePercent).toBe(20);
-  });
-
-  // The gap between time and spend is the signal.
-  it('reports spend against what was planned', async () => {
-    const september = Cycle.open({
-      id: '2026-09',
-      ref: ref('2026-09'),
-      openingBalance: Money.zero(),
-      entries: [
-        entry('Rent', EntryKind.Fixed, '2026-08-10', -1_000),
-        entry('Power', EntryKind.Fixed, '2026-08-15', -1_000),
-      ],
-    }).settleEntry('Rent', reais(-1_000), SettlementStatus.Paid);
-
-    const { progress } = await building({ cycles: [september] }).build();
-
-    expect(progress.spentCents).toBe(100_000);
-    expect(progress.plannedOutCents).toBe(200_000);
-    expect(progress.spentPercent).toBe(50);
-  });
-
-  it('reports no spend for a cycle with nothing planned', async () => {
-    const { progress } = await building().build();
-
-    expect(progress.spentPercent).toBe(0);
-  });
-});
-
 describe('BuildDashboard upcoming list', () => {
   it('lists what is unsettled, soonest first', async () => {
     const { upcoming } = await building({ cycles: [october()] }).build();
@@ -444,37 +388,6 @@ describe('BuildDashboard with estimates excluded', () => {
     expect(headline.closingWithoutEstimatesCents).toBe(505_600);
   });
 
-  it('reports the KPI tiles in the same reading', async () => {
-    const { kpis } = await confirmed();
-
-    expect(kpis[0]?.amountCents).toBe(761_000);
-    expect(kpis[1]?.amountCents).toBe(1_039_000);
-  });
-
-  // Progress describes the current cycle rather than the chosen one, so it
-  // follows the toggle for the cycle it actually reports — which the view
-  // names, so the two are never confused.
-  it('measures spend against the planned outcome of the same reading', async () => {
-    const september = Cycle.open({
-      id: '2026-09',
-      ref: ref('2026-09'),
-      openingBalance: Money.zero(),
-      entries: [
-        entry('Rent', EntryKind.Fixed, '2026-08-10', -1_000),
-        entry('Contractor Costs', EntryKind.Fixed, '2026-08-15', -1_000, true),
-      ],
-    });
-
-    const included = await building({ cycles: [september] }).build();
-    const excluded = await building({ cycles: [september] }).build(
-      undefined,
-      Estimates.Excluded,
-    );
-
-    expect(included.progress.plannedOutCents).toBe(200_000);
-    expect(excluded.progress.plannedOutCents).toBe(100_000);
-  });
-
   // The worklist counts the same entries the chain does, so a figure and the
   // list it is made of can never disagree.
   it('leaves an unconfirmed entry out of the upcoming list', async () => {
@@ -490,11 +403,8 @@ describe('BuildDashboard with estimates excluded', () => {
 
 /**
  * UC-3.6 — how the cycle came out: over the entries actually settled, did the
- * facts match their plans?
- *
- * Distinct from UC-4.3's progress, which compares spend so far against the
- * whole cycle's plan and mid-cycle mostly reports how far through the month
- * today is.
+ * facts match their plans? Only the settled ones, which is what separates it
+ * from any reading of the cycle's whole plan.
  */
 describe('BuildDashboard variance — ahead or behind', () => {
   const september = (entries: LedgerEntry[]) =>

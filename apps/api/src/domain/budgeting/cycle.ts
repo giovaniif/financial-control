@@ -49,12 +49,6 @@ export interface RunningBalanceRow {
   readonly balance: Money;
 }
 
-export interface LowWaterMark {
-  readonly balance: Money;
-  readonly date: LocalDate;
-  readonly entry: LedgerEntry;
-}
-
 interface CycleState {
   readonly id: string;
   readonly ref: CycleRef;
