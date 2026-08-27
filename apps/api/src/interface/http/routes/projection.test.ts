@@ -127,18 +127,6 @@ describe('GET /dashboard', () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it('carries the KPIs and the progress reading', async () => {
-    const body = (
-      await serverWith({ cycles: [september()] }).inject({
-        method: 'GET',
-        url: '/dashboard',
-      })
-    ).json<DashboardResponse>();
-
-    expect(body.kpis).toHaveLength(3);
-    expect(body.progress.cycleLength).toBeGreaterThan(0);
-  });
-
   it('lists what is unsettled', async () => {
     const body = (
       await serverWith({ cycles: [september()] }).inject({

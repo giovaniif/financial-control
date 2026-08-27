@@ -27,22 +27,6 @@ export interface HeadlineView {
   readonly closingWithoutEstimatesCents: number;
 }
 
-export interface KpiView {
-  readonly label: string;
-  readonly amountCents: number;
-  readonly note: string;
-}
-
-/** How far through the cycle today is, against how much has gone out. */
-export interface CycleProgressView {
-  readonly dayOfCycle: number;
-  readonly cycleLength: number;
-  readonly timePercent: number;
-  readonly spentCents: number;
-  readonly plannedOutCents: number;
-  readonly spentPercent: number;
-}
-
 export interface UpcomingEntryView {
   readonly id: string;
   readonly cycleMonth: string;
@@ -58,28 +42,16 @@ export interface UpcomingEntryView {
   readonly projectedAmountCents: number | null;
 }
 
-export const AlertSeverity = {
-  Critical: 'CRITICAL',
-  Warning: 'WARNING',
-  Info: 'INFO',
-} as const;
-
-export type AlertSeverity = (typeof AlertSeverity)[keyof typeof AlertSeverity];
-
-export interface AlertView {
-  readonly severity: AlertSeverity;
-  readonly title: string;
-  readonly body: string;
-}
-
 export interface DashboardView {
   readonly today: string;
   readonly currentCycleMonth: string;
-  /** Which reading every figure below was taken in — UC-4.4. */
+  /**
+   * Which reading every figure below was taken in. The global toggle that
+   * first asked for this is gone (UC-4.4), but both readings remain so the
+   * assistant can be asked for either (UC-8.2).
+   */
   readonly estimates: Estimates;
   readonly headline: HeadlineView;
-  readonly kpis: readonly KpiView[];
-  readonly progress: CycleProgressView;
   /**
    * How the chosen cycle came out against its plan — UC-3.6. `null` for a
    * projected cycle, which has no facts to compare a plan against; zero is
@@ -179,7 +151,6 @@ export class BuildDashboard {
       );
     };
 
-    const currentCycle = withAllocations(await opened(currentRef));
     const chosen = withAllocations(await opened(chosenRef));
 
     return {
@@ -189,8 +160,6 @@ export class BuildDashboard {
       currentCycleMonth: currentRef.month,
       estimates,
       headline: headlineOf(chosenRef, chosen, estimates),
-      kpis: kpisOf(chosen, estimates),
-      progress: progressOf(currentRef, currentCycle, today, estimates),
       varianceCents: varianceOf(chosenRef, currentRef, chosen),
       upcoming: await this.upcomingFrom(
         chosenRef,
@@ -287,28 +256,6 @@ function headlineOf(
   };
 }
 
-function kpisOf(cycle: Cycle | undefined, estimates: Estimates): KpiView[] {
-  const chain = cycle?.chain(estimates);
-
-  return [
-    {
-      label: 'Total de saídas',
-      amountCents: chain?.totalOutcome.cents ?? 0,
-      note: 'tudo o que sai da conta',
-    },
-    {
-      label: 'Sobra Esperada',
-      amountCents: chain?.expectedSurplus.cents ?? 0,
-      note: 'o que há para alocar',
-    },
-    {
-      label: 'Sobra Líquida',
-      amountCents: chain?.netSurplus.cents ?? 0,
-      note: 'dinheiro livre depois das alocações',
-    },
-  ];
-}
-
 /**
  * What the settled entries actually did against what they were planned to do.
  *
@@ -336,35 +283,4 @@ function varianceOf(
       .map((entry) => entry.amount.variance)
       .filter((variance) => variance !== undefined),
   ).cents;
-}
-
-function progressOf(
-  ref: CycleRef,
-  cycle: Cycle | undefined,
-  today: LocalDate,
-  estimates: Estimates,
-): CycleProgressView {
-  const length = ref.range.days;
-  const dayOfCycle = Math.min(
-    length,
-    Math.max(1, ref.start.daysUntil(today) + 1),
-  );
-
-  const planned = cycle?.chain(estimates).totalOutcome ?? Money.zero();
-  const spent = Money.sum(
-    (cycle?.entries ?? [])
-      .filter((entry) => entry.isSettled && entry.realised.isNegative())
-      .map((entry) => entry.realised),
-  ).abs();
-
-  return {
-    dayOfCycle,
-    cycleLength: length,
-    timePercent: Math.round((dayOfCycle / length) * 100),
-    spentCents: spent.cents,
-    plannedOutCents: planned.cents,
-    spentPercent: planned.isZero()
-      ? 0
-      : Math.round((spent.cents / planned.cents) * 100),
-  };
 }

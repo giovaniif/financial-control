@@ -82,7 +82,7 @@ function AskFromElsewhere() {
 
 function stubStream(stream: SseStub, routes: Record<string, unknown> = {}) {
   stubApi({
-    '/api/dashboard': { headline: {}, kpis: [] },
+    '/api/dashboard': { headline: {} },
     [`/api/cycles/${MONTH}`]: { month: MONTH, chain: {}, entries: [] },
     '/api/assistant/messages': () => stream.response,
     ...routes,
@@ -287,7 +287,7 @@ describe('AssistantPanel', () => {
   /** UC-8.5 — no key is a state the app is expected to be in, not a crash. */
   it('says the assistant is switched off and leaves the screen working', async () => {
     stubApi({
-      '/api/dashboard': { headline: {}, kpis: [] },
+      '/api/dashboard': { headline: {} },
       [`/api/cycles/${MONTH}`]: { month: MONTH, chain: {}, entries: [] },
       '/api/setup': {
         anchorConfigured: true,

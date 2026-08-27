@@ -14,21 +14,6 @@ export interface HeadlineResponse {
   closingWithoutEstimates: Cents;
 }
 
-export interface KpiResponse {
-  label: string;
-  amount: Cents;
-  note: string;
-}
-
-export interface CycleProgressResponse {
-  dayOfCycle: number;
-  cycleLength: number;
-  timePercent: number;
-  spent: Cents;
-  plannedOut: Cents;
-  spentPercent: number;
-}
-
 export interface UpcomingEntryResponse {
   id: string;
   cycleMonth: string;
@@ -50,8 +35,6 @@ export interface DashboardResponse {
   /** Which reading every figure below was taken in — UC-4.4. */
   estimates: EstimateMode;
   headline: HeadlineResponse;
-  kpis: KpiResponse[];
-  progress: CycleProgressResponse;
   /**
    * How the cycle came out against its plan — UC-3.6. `null` for a projected
    * cycle, which has no facts to compare a plan against. Zero is the

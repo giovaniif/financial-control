@@ -59,11 +59,9 @@ export type {
 } from './buckets.js';
 export type {
   BucketProjectionResponse,
-  CycleProgressResponse,
   DashboardResponse,
   HeadlineResponse,
   HorizonResponse,
-  KpiResponse,
   RetirementResponse,
   UpcomingEntryResponse,
   WealthProjectionResponse,

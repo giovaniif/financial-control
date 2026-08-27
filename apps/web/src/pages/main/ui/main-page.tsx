@@ -1,4 +1,8 @@
-import type { CyclePosition, CycleResponse } from '@fin/contracts';
+import type {
+  CyclePosition,
+  CycleResponse,
+  DashboardResponse,
+} from '@fin/contracts';
 import { useEffect } from 'react';
 
 import { useCycle } from '@/entities/cycle';
@@ -8,8 +12,6 @@ import { EmptyState, Skeleton } from '@/shared/ui';
 import { AppShell } from '@/widgets/app-shell';
 import { UpcomingList } from '@/widgets/upcoming-list';
 
-import type { MainFigures } from '../model/figures.js';
-import { figuresFor } from '../model/figures.js';
 import { BucketChips } from './bucket-chips.js';
 import { ChainSection } from './chain-section.js';
 import { CloseSection } from './close-section.js';
@@ -59,7 +61,7 @@ export function MainPage() {
         />
       ) : (
         <Screen
-          figures={figuresFor(data)}
+          figures={data}
           cycle={cycle}
           month={month}
           today={data.today}
@@ -78,7 +80,8 @@ function Screen({
   today,
   position,
 }: {
-  figures: MainFigures;
+  /** The read model itself: the page renders what the server answered. */
+  figures: DashboardResponse;
   cycle: CycleResponse | undefined;
   month: string | undefined;
   today: string;

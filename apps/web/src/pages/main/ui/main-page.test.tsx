@@ -32,28 +32,6 @@ const dashboard = (
     closingWithoutEstimates: 505_600,
     ...overrides.headline,
   },
-  kpis: [
-    { label: 'Total Outcome', amount: 911_000, note: 'everything out' },
-    { label: 'Expected Surplus', amount: 889_000, note: 'to allocate' },
-    {
-      label: 'Net Surplus',
-      amount: 355_600,
-      note: 'free cash after allocations',
-    },
-    {
-      label: 'Lowest point in cycle',
-      amount: 355_600,
-      note: 'on 2026-09-28, after Contractor Costs',
-    },
-  ],
-  progress: {
-    dayOfCycle: 6,
-    cycleLength: 30,
-    timePercent: 20,
-    spent: 100_000,
-    plannedOut: 200_000,
-    spentPercent: 50,
-  },
   upcoming: [],
   ...overrides,
 });
@@ -141,13 +119,6 @@ function confirmedDashboard(body: DashboardResponse): DashboardResponse {
       closing: confirmedChain.closingBalance,
       closingWithoutEstimates: confirmedChain.closingBalance,
     },
-    kpis: body.kpis.map((kpi) =>
-      kpi.label === 'Total Outcome'
-        ? { ...kpi, amount: confirmedChain.totalOutcome }
-        : kpi.label === 'Net Surplus'
-          ? { ...kpi, amount: confirmedChain.netSurplus }
-          : kpi,
-    ),
     upcoming: body.upcoming.filter((entry) => !entry.isEstimate),
   };
 }
