@@ -38,6 +38,10 @@ export interface UpcomingEntryResponse {
   isEstimate: boolean;
   isOverdue: boolean;
   daysLate: number;
+  /** UC-3.7 — this cycle's figure was changed without touching its template. */
+  isOverridden: boolean;
+  /** What reverting restores, and `null` when there is nothing to revert. */
+  projectedAmount: Cents | null;
 }
 
 export interface DashboardResponse {

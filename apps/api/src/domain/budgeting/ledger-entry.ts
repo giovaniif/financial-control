@@ -156,6 +156,16 @@ export class LedgerEntry {
     return this.state.origin.kind === 'OVERRIDE';
   }
 
+  /**
+   * What reverting would put back, and nothing when there is nothing to
+   * revert. Narrowing the origin union lives here rather than at every
+   * caller, for the same reason `isOverridden` does.
+   */
+  get projectedAmount(): Money | undefined {
+    const { origin } = this.state;
+    return origin.kind === 'OVERRIDE' ? origin.projected : undefined;
+  }
+
   settle(actual: Money, status: SettlementStatus): LedgerEntry {
     return this.with({ amount: this.state.amount.settle(actual, status) });
   }

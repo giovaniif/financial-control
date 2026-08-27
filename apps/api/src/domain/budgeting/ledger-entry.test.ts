@@ -131,6 +131,23 @@ describe('LedgerEntry.override', () => {
     expect(reverted.amount.planned.cents).toBe(-32000);
   });
 
+  it('offers the projected amount only while something is overridden', () => {
+    const plain = generated();
+    const overridden = plain.override(Money.fromCents(-45000));
+
+    expect(plain.projectedAmount).toBeUndefined();
+    expect(overridden.projectedAmount?.cents).toBe(-32000);
+    expect(overridden.revertOverride().projectedAmount).toBeUndefined();
+  });
+
+  it('offers the first projected amount after a second override', () => {
+    const twice = generated()
+      .override(Money.fromCents(-45000))
+      .override(Money.fromCents(-50000));
+
+    expect(twice.projectedAmount?.cents).toBe(-32000);
+  });
+
   it('refuses to override something already settled', () => {
     const settled = generated().settle(
       Money.fromCents(-32000),

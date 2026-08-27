@@ -259,6 +259,8 @@ const upcoming = (overrides = {}) => ({
   isEstimate: false,
   isOverdue: false,
   daysLate: 0,
+  isOverridden: false,
+  projectedAmount: null,
   ...overrides,
 });
 

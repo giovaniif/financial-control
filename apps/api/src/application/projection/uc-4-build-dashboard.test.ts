@@ -336,6 +336,35 @@ describe('BuildDashboard upcoming list', () => {
     ]);
   });
 
+  /**
+   * UC-3.7 — the worklist is the only place an override can be undone, so it
+   * has to carry both the fact and the figure. Without the figure the menu
+   * would offer a change whose result the user cannot see.
+   */
+  it('says which entries are overridden, and what they were', async () => {
+    const overridden = Cycle.open({
+      id: '2026-10',
+      ref: ref('2026-10'),
+      openingBalance: Money.zero(),
+      entries: [
+        entry('Rent', EntryKind.Fixed, '2026-09-10', -7_610).override(
+          reais(-9_000),
+        ),
+        entry('Salary', EntryKind.Income, '2026-09-04', 18_000),
+      ],
+    });
+
+    const { upcoming } = await building({ cycles: [overridden] }).build();
+    const rent = upcoming.find((one) => one.description === 'Rent');
+    const salary = upcoming.find((one) => one.description === 'Salary');
+
+    expect(rent?.isOverridden).toBe(true);
+    expect(rent?.amountCents).toBe(-900_000);
+    expect(rent?.projectedAmountCents).toBe(-761_000);
+    expect(salary?.isOverridden).toBe(false);
+    expect(salary?.projectedAmountCents).toBeNull();
+  });
+
   it('puts an overdue entry first and says how late it is', async () => {
     const september = Cycle.open({
       id: '2026-09',
