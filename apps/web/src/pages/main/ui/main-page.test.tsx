@@ -658,7 +658,7 @@ describe('MainPage', () => {
   });
 });
 
-// UC-4.4 — one control, and every figure on the screen answers the same way.
+// The server answers in one reading and the screen shows what it was sent.
 describe('MainPage and the assistant', () => {
   // UC-8.5 — the figures are the app; the assistant is how you ask about them.
   it('leaves every figure working when the assistant is switched off', async () => {

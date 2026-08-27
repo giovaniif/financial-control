@@ -65,8 +65,10 @@ describe('OnboardingPage', () => {
     expect(hasSkippedSetup()).toBe(true);
   });
 
-  // UC-1.6 — restore stays on Profile. On a first run it competes with the one
-  // decision this screen exists to get someone through.
+  // UC-1.6 is removed and nothing restores a backup any more. Asserted here
+  // because first run is where such a shortcut would be tempting to add back,
+  // and it would compete with the one decision this screen exists to get
+  // someone through.
   it('offers no way to start from a backup instead', async () => {
     stubApi({});
     renderPage();

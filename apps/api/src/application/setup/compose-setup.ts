@@ -210,7 +210,7 @@ function composeBucket(bucket: DraftBucket, index: number): SetupBucket {
 /**
  * UC-1.5 — the end of the conversation: nothing the user said has touched the
  * database until this runs, and then all of it does at once, through the same
- * restore a backup file goes through (UC-1.6).
+ * the setup conversation writes its draft through (UC-1.5).
  */
 export class CompleteSetup {
   constructor(

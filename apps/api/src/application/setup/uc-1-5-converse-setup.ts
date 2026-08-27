@@ -998,7 +998,7 @@ function billSpec(
           // Optional on purpose. Strict tool use never omits a required
           // field, so requiring this would have a model that was told
           // nothing invent a day — and a bill dated wrong lands in the wrong
-          // cycle, which is the error UC-5.4 exists to prevent.
+          // cycle, which the assignment rule makes silent — DOMAIN_MODEL §2.
           dueDayOfMonth: dayField(
             'the day of the month it falls due. Leave it out when the user has not said which day',
           ),

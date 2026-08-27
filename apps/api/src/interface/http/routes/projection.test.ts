@@ -244,7 +244,7 @@ describe('GET /wealth', () => {
 });
 
 /**
- * UC-4.4 — the toggle is global, so the dashboard has to answer in both
+ * UC-8.2 — the assistant can be asked for either reading, so it answers in both
  * readings from the same endpoint. Matches `GET /cycles/:month`, which has
  * taken `estimates` since it was written.
  */

@@ -409,6 +409,4 @@ describe('ProfilePage', () => {
       screen.queryByRole('button', { name: 'Exportar' }),
     ).not.toBeInTheDocument();
   });
-
-  // UC-1.6 — nothing else takes snapshots, so this is the only way back.
 });

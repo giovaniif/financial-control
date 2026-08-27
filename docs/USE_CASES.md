@@ -157,6 +157,22 @@ undone from a `pg_dump` or not at all — see `.claude/deployment.md`. That is a
 oversight: the machinery that wrote a whole dataset back into the repositories survives as the write path for
 the setup conversation (UC-1.5), and is no longer offered as a feature.
 
+**UC-1.7 — Resolve a due day the cycle cannot reach**
+A payday anchor slices the calendar into cycles, and a cycle does not always contain every day of the month it
+is named for. With pay on the 5th the *August 2026* cycle runs 3 Jul – 4 Aug, so a bill due on the 10th falls
+in it twice over and a bill due on the 4th of some months falls in no cycle at all.
+
+The app **never refuses the bill**. It names each cycle that cannot reach the day, and offers that cycle's own
+last day instead — stated in the user's own numbers, cycle by cycle, before anything is written.
+
+*Why it matters:* the alternative is a bill the user entered and the app silently dropped. A due day is the
+thing that assigns an entry to a cycle (§2), so a day no cycle contains is the one input that can make an
+entry vanish rather than merely land somewhere unexpected.
+
+The offered entry is the template's own, not an override: an override carries a projected amount and offers a
+revert to it (UC-3.7), and there is no projection here to revert to. Every other cycle still generates the
+bill on its real due day, and a cycle already holding one is left alone.
+
 ---
 
 ### UC-2 — Recurring templates
