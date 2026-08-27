@@ -157,17 +157,18 @@ describe('CycleRef.contains — the assignment rule', () => {
     expect(august.contains(date(iso))).toBe(expected);
   });
 
-  // UC-5.4: an invoice belongs to the cycle containing its DUE date, not the
-  // dates of the purchases on it. Two purchases nine days apart, on either
-  // side of the card's closing day, are a whole cycle apart in cash terms.
-  it('puts an invoice due 10 Sep in the October cycle', () => {
+  // The assignment rule, DOMAIN_MODEL §2: an entry belongs to the cycle whose
+  // range contains its due date, and a cycle is named for the month it is
+  // *spent* in. So a bill due in September belongs to the October cycle, and
+  // the month in the date is never the month in the label.
+  it('puts a bill due 10 Sep in the October cycle', () => {
     const october = forMonth('2026-10');
 
     expect(october.contains(date('2026-09-10'))).toBe(true);
     expect(forMonth('2026-09').contains(date('2026-09-10'))).toBe(false);
   });
 
-  it('puts an invoice due 10 Oct in the November cycle', () => {
+  it('puts a bill due 10 Oct in the November cycle', () => {
     const november = forMonth('2026-11');
 
     expect(november.contains(date('2026-10-10'))).toBe(true);

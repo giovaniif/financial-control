@@ -106,7 +106,7 @@ export class BuildDashboard {
    * on, not a view of the chosen cycle, and looking back at a settled cycle
    * must not hide what is overdue now.
    *
-   * `estimates` is the global toggle of UC-4.4, and it reaches every figure
+   * `estimates` picks the reading, and it reaches every figure
    * here — the chain already computes both readings, so there is no second
    * code path and nothing for a client to reconcile.
    */

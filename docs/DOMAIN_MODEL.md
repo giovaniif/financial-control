@@ -324,6 +324,7 @@ src/
     budgeting/        uc-3-ledger-actions.ts, uc-3-8-close-cycle.ts, …
     goals/            uc-6-manage-buckets.ts
     projection/       uc-4-build-dashboard.ts, uc-7-project-wealth.ts
+    spend/            spend-ceiling.ts
     setup/            uc-1-5-converse-setup.ts, setup-draft.ts, compose-setup.ts,
                       setup-document.ts, write-setup-document.ts
     assistant/        uc-8-ask-assistant.ts, uc-8-apply-proposal.ts
@@ -355,11 +356,11 @@ are enforced by `eslint-plugin-boundaries` — see `.claude/architecture.md`.
 src/
   app/         providers, router, global styles, the persistent shell
   pages/       main/ profile/ savings/ onboarding/
-  widgets/     chain-strip/ upcoming-list/ alert-list/ bucket-event-log/ wealth-bars/
-  features/    ask-assistant/ settle-entry/ toggle-estimates/ navigate-cycle/
-               configure-anchor/ manage-accounts/ manage-templates/
-               manage-buckets/ create-bucket/
-  entities/    cycle/ ledger-entry/ bucket/ template/ account/
+  widgets/     app-shell/ chain-strip/ upcoming-list/
+  features/    ask-assistant/ settle-entry/ navigate-cycle/ close-cycle/
+               override-entry/ configure-anchor/ manage-accounts/
+               manage-templates/ manage-buckets/ create-bucket/
+  entities/    account/ bucket/ cycle/ dashboard/ template/
   shared/      ui/ api/ lib/ config/
 ```
 

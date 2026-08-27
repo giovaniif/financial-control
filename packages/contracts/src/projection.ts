@@ -32,7 +32,11 @@ export interface UpcomingEntryResponse {
 export interface DashboardResponse {
   today: string;
   currentCycleMonth: string;
-  /** Which reading every figure below was taken in — UC-4.4. */
+  /**
+   * Which reading every figure below was taken in. Both survive the toggle
+   * that first asked for them (UC-4.4, removed) so the assistant can be asked
+   * for either — UC-8.2.
+   */
   estimates: EstimateMode;
   headline: HeadlineResponse;
   /**

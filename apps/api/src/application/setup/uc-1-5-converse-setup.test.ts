@@ -232,8 +232,8 @@ describe('ConverseSetup', () => {
    * Strict tool use never omits a required field, so anything a user can
    * plausibly leave unsaid has to be optional — and an optional field the
    * model did not fill in is a question, never a default. A defaulted due day
-   * is a bill dated into the wrong cycle, which is what UC-5.4 exists to
-   * prevent.
+   * is a bill dated into the wrong cycle, and the due date is what assigns
+   * an entry to one — DOMAIN_MODEL §2.
    */
   it('leaves an unstated due day unanswered rather than defaulting it', async () => {
     const { converse, conversations } = wire([
@@ -617,7 +617,8 @@ describe('ConverseSetup', () => {
    * FIN-128 — an absent optional field is not one rule, and what a wrong value
    * costs is what decides. A defaulted account kind is visible on the record
    * and corrected in a call; a defaulted due day files money into a cycle
-   * nobody chose and nobody sees, which is the error UC-5.4 exists to prevent.
+   * nobody chose and nobody sees, because the due date is what assigns an
+   * entry to a cycle — DOMAIN_MODEL §2.
    */
   it('assumes an account kind nobody stated but never a bill due day', async () => {
     const { converse, conversations } = wire([

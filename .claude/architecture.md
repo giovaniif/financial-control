@@ -47,6 +47,7 @@ src/
     projection/          uc-4-build-dashboard.ts, uc-7-project-wealth.ts, ...
     setup/               uc-1-5-converse-setup.ts, ...
     assistant/           uc-8-ask-assistant.ts, uc-8-apply-proposal.ts
+    spend/               spend-ceiling.ts
 
   infrastructure/
     prisma/              schema.prisma, migrations/, repositories/, mappers/

@@ -37,7 +37,7 @@ const entry = (
   });
 
 /**
- * The worked example from USE_CASES §4 UC-4.2: R$ 18.000 in, R$ 9.110 out,
+ * The worked example from USE_CASES §4: R$ 18.000 in, R$ 9.110 out,
  * R$ 5.334 allocated, R$ 3.556 free — with an unconfirmed R$ 1.500 estimate
  * among the outgoings.
  */

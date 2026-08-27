@@ -13,7 +13,7 @@ export interface AccountRepository {
   findById(id: string): Promise<Account | undefined>;
   save(account: Account): Promise<void>;
   delete(id: string): Promise<void>;
-  /** A restore replaces rather than merges — see UC-1.6. */
+  /** Writing a whole dataset replaces rather than merges — see UC-1.5. */
   deleteAll(): Promise<void>;
 }
 
