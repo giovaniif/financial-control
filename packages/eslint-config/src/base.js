@@ -70,10 +70,11 @@ export function baseConfig({ tsconfigRootDir }) {
       settings: { vitest: { typecheck: true } },
     },
     {
-      // Config files sit outside every package's tsconfig `include`, so the
-      // project service cannot type them. They still get the syntactic rules,
-      // and they are the one place a default export is required.
-      files: ['*.{js,mjs,cjs,ts}'],
+      // Config files and ops scripts sit outside every package's tsconfig
+      // `include`, so the project service cannot type them. They still get the
+      // syntactic rules, and they are the one place a default export is
+      // required.
+      files: ['*.{js,mjs,cjs,ts}', 'scripts/**/*.{js,mjs,cjs}'],
       extends: [tseslint.configs.disableTypeChecked],
       languageOptions: { parserOptions: { projectService: false } },
       rules: { 'import/no-default-export': 'off' },

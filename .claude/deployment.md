@@ -76,10 +76,17 @@ and a wrong default that quietly connects somewhere is worse than a missing one.
 database, so migrations and the application share it and Prisma needs no
 separate `directUrl`.
 
-`fin_test` lives beside `fin` and the tests truncate every table in it. It was
-created by hand when the database was split out — a managed resource has no
-init-script hook, so a rebuilt one needs `create database fin_test owner fin`
-before `pnpm check` will pass.
+`fin_test` lives beside `fin` and the tests truncate every table in it. A
+managed resource has no init-script hook, so a rebuilt database needs both
+halves before `pnpm check` will pass — the database, then its schema:
+
+```bash
+docker exec <container> psql -U fin -d postgres -c 'create database fin_test owner fin'
+pnpm --filter @fin/api db:deploy:test
+```
+
+The second is the one that is easy to forget, and forgetting it fails as 42
+repository tests naming a missing table rather than a missing schema.
 
 ## Migrations
 

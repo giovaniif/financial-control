@@ -123,7 +123,16 @@ and readable; a stack of `vi.mock` calls is neither.
 ### `apps/api/src/infrastructure` — thin, DB-backed
 
 Prisma repository tests need a live PostgreSQL, so they are skipped unless `DATABASE_URL`
-is set and the database is up — it is a Coolify resource and normally always is. Keep them to SQL that logic depends on — filters,
+is set — the database is a Coolify resource and normally always up. Prepare the test
+database once from the committed migrations:
+
+```bash
+pnpm --filter @fin/api db:deploy:test
+```
+
+**They skip on a missing `DATABASE_URL`, never on a missing schema.** An unprepared
+`fin_test` is 42 hard failures naming a missing table, which reads like a broken
+repository rather than a database nobody built. Keep them to SQL that logic depends on — filters,
 ordering, joins — not re-testing Prisma itself.
 
 ### `apps/api/src/interface` — the wiring
