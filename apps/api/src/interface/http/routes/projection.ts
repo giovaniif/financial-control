@@ -74,6 +74,8 @@ export function registerProjectionRoutes(
             isEstimate: entry.isEstimate,
             isOverdue: entry.isOverdue,
             daysLate: entry.daysLate,
+            isOverridden: entry.isOverridden,
+            projectedAmount: entry.projectedAmountCents,
           })),
         };
         return body;

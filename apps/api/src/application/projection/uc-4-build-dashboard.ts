@@ -52,6 +52,10 @@ export interface UpcomingEntryView {
   readonly isEstimate: boolean;
   readonly isOverdue: boolean;
   readonly daysLate: number;
+  /** UC-3.7 — this cycle's figure was changed on its own. */
+  readonly isOverridden: boolean;
+  /** What reverting would put back, and null when there is nothing to revert. */
+  readonly projectedAmountCents: number | null;
 }
 
 export const AlertSeverity = {
@@ -246,6 +250,8 @@ export class BuildDashboard {
           isEstimate: entry.isEstimate,
           isOverdue,
           daysLate: Math.max(0, daysLate),
+          isOverridden: entry.isOverridden,
+          projectedAmountCents: entry.projectedAmount?.cents ?? null,
         });
       }
     }

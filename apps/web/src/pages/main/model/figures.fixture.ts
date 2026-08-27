@@ -43,6 +43,8 @@ export const dashboard = (): DashboardResponse => ({
       isEstimate: false,
       isOverdue: false,
       daysLate: 0,
+      isOverridden: false,
+      projectedAmount: null,
     },
     {
       id: 'e2',
@@ -53,6 +55,8 @@ export const dashboard = (): DashboardResponse => ({
       isEstimate: true,
       isOverdue: false,
       daysLate: 0,
+      isOverridden: false,
+      projectedAmount: null,
     },
   ],
 });
