@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '@/shared/testing';
 
 import { OverrideEntry } from './override-entry.js';
+import { RevertOverride } from './revert-override.js';
 
 function stubApi() {
   const fetchMock = vi.fn(() =>
@@ -87,5 +88,53 @@ describe('OverrideEntry', () => {
         screen.queryByLabelText('Valor neste ciclo'),
       ).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('RevertOverride', () => {
+  const renderRevert = () =>
+    renderWithProviders(
+      <RevertOverride
+        month="2026-09"
+        entryId="e-rent"
+        description="Aluguel"
+        projectedAmount={-761_000}
+      />,
+    );
+
+  /**
+   * UC-3.7 — the projected value goes back in one action. DELETE on the same
+   * path that PUT sets it: asserted on the request so the verb cannot drift
+   * the way it did in FIN-170.
+   */
+  it('deletes the override at the route that answers for it', async () => {
+    const fetchMock = stubApi();
+    renderRevert();
+
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /Voltar Aluguel ao valor previsto/,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/cycles/2026-09/entries/e-rent/override',
+        expect.objectContaining({ method: 'DELETE' }),
+      );
+    });
+  });
+
+  /**
+   * Without the figure the item asks for a change whose result cannot be
+   * seen, which makes it two decisions instead of one.
+   */
+  it('names the amount it would put back', () => {
+    stubApi();
+    renderRevert();
+
+    expect(
+      screen.getByRole('button', { name: /-R\$\s*7\.610,00/ }),
+    ).toBeInTheDocument();
   });
 });

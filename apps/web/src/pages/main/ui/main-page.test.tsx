@@ -502,6 +502,58 @@ describe('MainPage', () => {
     ).toBeInTheDocument();
   });
 
+  /**
+   * UC-3.7 — an override was a one-way door from this screen until the way
+   * back was offered here. It is shown only when there is something to
+   * revert, so an ordinary entry's menu is unchanged.
+   */
+  it('offers the way back only on an overridden entry', async () => {
+    respondWith(
+      dashboard({
+        upcoming: [upcoming({ isOverridden: true, projectedAmount: -28_000 })],
+      }),
+    );
+
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Ações de Electricity' }),
+    );
+
+    expect(
+      screen.getByRole('button', {
+        name: /Voltar Electricity ao valor previsto/,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers no way back on an entry nobody overrode', async () => {
+    respondWith(dashboard({ upcoming: [upcoming()] }));
+
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Ações de Electricity' }),
+    );
+
+    expect(
+      screen.queryByRole('button', { name: /Voltar ao previsto/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  /** Marked at source, the way `~estimativa` marks an unconfirmed figure. */
+  it('marks an overridden entry in the worklist', async () => {
+    respondWith(
+      dashboard({
+        upcoming: [upcoming({ isOverridden: true, projectedAmount: -28_000 })],
+      }),
+    );
+
+    renderPage();
+
+    expect(await screen.findByText('alterado')).toBeInTheDocument();
+  });
+
   it('does not open a form until one is asked for', async () => {
     respondWith(dashboard({ upcoming: [upcoming()] }));
 
