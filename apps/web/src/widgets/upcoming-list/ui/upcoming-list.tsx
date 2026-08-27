@@ -72,6 +72,10 @@ export function UpcomingList({
                   rather than squeezing the description out of the first. */}
               <div className="flex items-center gap-2 self-end sm:self-auto">
                 {entry.isEstimate && <Badge tone="warning">~estimativa</Badge>}
+                {/* `info`, not `warning`: an estimate is a caveat about a
+                    figure nobody confirmed, this is a figure the user changed
+                    on purpose for this cycle (UC-3.7). */}
+                {entry.isOverridden && <Badge tone="info">alterado</Badge>}
                 {entry.isOverdue && (
                   <Badge tone="critical">
                     {entry.daysLate} dia{entry.daysLate === 1 ? '' : 's'} de

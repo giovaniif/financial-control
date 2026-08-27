@@ -1,6 +1,6 @@
 import type { UpcomingEntryResponse } from '@fin/contracts';
 
-import { OverrideEntry } from '@/features/override-entry';
+import { OverrideEntry, RevertOverride } from '@/features/override-entry';
 import { SettleWithAmount, SkipEntry } from '@/features/settle-entry';
 import { Disclosure } from '@/shared/ui';
 
@@ -30,7 +30,18 @@ export function EntryActions({ entry }: { entry: UpcomingEntryResponse }) {
           description={entry.description}
           planned={entry.amount}
         />
+        {/* Below the divider with the other discard, not beside the
+            override: grouping it there reads as a toggle rather than as
+            throwing this cycle's figure away (UC-3.7). */}
         <div className="mt-1 border-t border-zinc-100 pt-1">
+          {entry.isOverridden && entry.projectedAmount !== null && (
+            <RevertOverride
+              month={entry.cycleMonth}
+              entryId={entry.id}
+              description={entry.description}
+              projectedAmount={entry.projectedAmount}
+            />
+          )}
           <SkipEntry
             month={entry.cycleMonth}
             entryId={entry.id}
